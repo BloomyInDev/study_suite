@@ -1,6 +1,11 @@
-import { VERSION } from '@studysuite/shared'
+import { createDb } from '@studysuite/db'
+import { loadConfig } from './config.js'
+import { runWatchLoop } from './watch/loop.js'
 
-// validate workspace resolution
-void VERSION
+const config = loadConfig()
+const db = createDb(config.databaseUrl)
 
-console.log('scraper booted')
+runWatchLoop(config, db).catch(err => {
+  console.error('[scraper] Fatal error:', err)
+  process.exit(1)
+})

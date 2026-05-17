@@ -4,12 +4,14 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "scrape": "tsx src/index.ts --once",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@studysuite/db": "workspace:*",
-    "@studysuite/shared": "workspace:*"
+    "@studysuite/shared": "workspace:*",
+    "playwright": "^1.52.0"
   },
   "devDependencies": {
     "@studysuite/tsconfig": "workspace:*",
