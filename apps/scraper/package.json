@@ -1,0 +1,20 @@
+{
+  "name": "@studysuite/scraper",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@studysuite/db": "workspace:*",
+    "@studysuite/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@studysuite/tsconfig": "workspace:*",
+    "@types/node": "^22.15.18",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

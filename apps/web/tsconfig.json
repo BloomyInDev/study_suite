@@ -1,0 +1,10 @@
+{
+  "extends": "@studysuite/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "jsx": "preserve",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"]
+  },
+  "include": ["src", "env.d.ts"]
+}
