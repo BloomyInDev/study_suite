@@ -1,7 +1,10 @@
 node_modules/
 dist/
 .env
+**/.env
 .turbo/
 coverage/
 .DS_Store
 *.tsbuildinfo
+apps/scraper/dump.json
+apps/scraper/dump.html
