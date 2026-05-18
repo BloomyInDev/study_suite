@@ -7,9 +7,12 @@ export interface RawEvent {
 
 export async function extractRawEvents(page: Page): Promise<RawEvent[]> {
   return page.$$eval('#Planning > div', els =>
-    els.map(el => ({
-      rawText: (el as HTMLElement).innerText,
-      left: parseInt((el as HTMLElement).style.left, 10),
-    })),
+    els.flatMap(el => {
+      const wrapper = el as HTMLElement
+      const left = parseInt(wrapper.style.left, 10)
+      const textEl = wrapper.querySelector<HTMLElement>('.eventText')
+      const rawText = (textEl ?? wrapper).innerText.trim()
+      return rawText ? [{ rawText, left }] : []
+    }),
   )
 }
