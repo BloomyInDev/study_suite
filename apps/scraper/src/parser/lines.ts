@@ -7,42 +7,53 @@ export interface CategorizedLines {
   groups: StudentGroup[]
 }
 
+// A path line is the building hierarchy; recognizable by ' / ' after NBSP normalization
+const PATH_REGEX = / \/ /
+
+function isPathLine(line: string): boolean {
+  return PATH_REGEX.test(line)
+}
+
 export function categorizeLines(
   middleLines: string[],
-  knownGroupNames: Set<string>,
+  _knownGroupNames: Set<string>,
 ): CategorizedLines {
-  const teacherIndices = middleLines
+  const teacherIdxs = middleLines
     .map((l, i) => (isTeacherLine(l) ? i : -1))
     .filter(i => i !== -1)
 
-  if (teacherIndices.length > 0) {
-    const first = teacherIndices[0]
-    const last = teacherIndices[teacherIndices.length - 1]
-    return {
-      rooms: middleLines.slice(0, first).filter(l => !isTeacherLine(l)).map(name => ({ name })),
-      teachers: middleLines.filter(isTeacherLine).map(parseTeacherLine),
-      groups: middleLines
-        .slice(last + 1)
-        .filter(l => !isTeacherLine(l))
-        .map(internalName => ({ internalName })),
+  let roomsEnd: number
+  let groupsStart: number
+
+  if (teacherIdxs.length > 0) {
+    roomsEnd = teacherIdxs[0]!
+    groupsStart = teacherIdxs[teacherIdxs.length - 1]! + 1
+  } else {
+    const pathIdxs = middleLines
+      .map((l, i) => (isPathLine(l) ? i : -1))
+      .filter(i => i !== -1)
+    if (pathIdxs.length > 0) {
+      const lastP = pathIdxs[pathIdxs.length - 1]!
+      roomsEnd = lastP + 1
+      groupsStart = lastP + 1
+    } else {
+      // No teacher, no path — treat everything as groups (e.g. all-hands events)
+      roomsEnd = 0
+      groupsStart = 0
     }
   }
 
-  // No teacher lines: split by first known group name.
-  // v1 limitation: if DB is empty, all lines are treated as rooms.
-  const firstGroupIdx = middleLines.findIndex(l => knownGroupNames.has(l))
+  const rooms: Location[] = middleLines
+    .slice(0, roomsEnd)
+    .filter(l => !isPathLine(l) && !isTeacherLine(l))
+    .map(name => ({ name }))
 
-  if (firstGroupIdx === -1) {
-    return {
-      rooms: middleLines.map(name => ({ name })),
-      teachers: [],
-      groups: [],
-    }
-  }
+  const teachers: Teacher[] = teacherIdxs.map(i => parseTeacherLine(middleLines[i]!))
 
-  return {
-    rooms: middleLines.slice(0, firstGroupIdx).map(name => ({ name })),
-    teachers: [],
-    groups: middleLines.slice(firstGroupIdx).map(internalName => ({ internalName })),
-  }
+  const groups: StudentGroup[] = middleLines
+    .slice(groupsStart)
+    .filter(l => !isPathLine(l) && !isTeacherLine(l))
+    .map(internalName => ({ internalName }))
+
+  return { rooms, teachers, groups }
 }
