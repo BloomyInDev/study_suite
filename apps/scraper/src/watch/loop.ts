@@ -1,6 +1,6 @@
 import { createDb, studentGroups } from '@studysuite/db'
 import type { Config } from '../config.js'
-import { scrapeCurrentWeek } from '../scrape/scrape-week.js'
+import { scrapeAllWeeks } from '../scrape/scrape-week.js'
 
 type Db = ReturnType<typeof createDb>
 
@@ -24,9 +24,9 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
     console.log(`[scraper] Starting scrape at ${new Date().toISOString()}`)
 
     try {
-      const result = await scrapeCurrentWeek(config, db, knownGroupNames)
+      const result = await scrapeAllWeeks(config, db, knownGroupNames)
       console.log(
-        `[scraper] Done — added: ${result.added}, removed: ${result.removed}, ` +
+        `[scraper] Done — ${result.weeks} weeks, added: ${result.added}, removed: ${result.removed}, ` +
           `updated: ${result.updated}, duration: ${result.durationMs}ms`,
       )
     } catch (err) {

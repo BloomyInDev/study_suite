@@ -19,13 +19,12 @@ export async function gotoWeek(page: Page, weekId: number): Promise<void> {
   await page.waitForSelector('.gwt-PopupPanel', { state: 'detached' })
 }
 
-export async function getWeekRange(page: Page): Promise<{ first: number; last: number }> {
+export async function getAllWeekIds(page: Page): Promise<number[]> {
   return page.evaluate(() => {
     const container = document.querySelector('#x-auto-26')
     if (!container) throw new Error('#x-auto-26 not found')
-    const children = Array.from(container.children)
-    const first = children[0]?.id.replace(/^x-auto-/, '') ?? ''
-    const last = children[children.length - 1]?.id.replace(/^x-auto-/, '') ?? ''
-    return { first: parseInt(first, 10), last: parseInt(last, 10) }
+    return Array.from(container.children)
+      .map(el => parseInt(el.id.replace(/^x-auto-/, ''), 10))
+      .filter(n => !isNaN(n))
   })
 }
