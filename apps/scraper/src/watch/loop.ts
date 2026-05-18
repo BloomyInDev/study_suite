@@ -13,7 +13,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export async function runWatchLoop(config: Config, db: Db): Promise<void> {
+export async function runWatchLoop(config: Config, db: Db, runOnce = false): Promise<void> {
   process.on('SIGINT', () => {
     console.log('\n[scraper] Shutting down')
     process.exit(0)
@@ -33,7 +33,7 @@ export async function runWatchLoop(config: Config, db: Db): Promise<void> {
       console.error('[scraper] Error during scrape:', err)
     }
 
-    if (config.runOnce) break
+    if (runOnce) break
 
     console.log(`[scraper] Next run in ${config.intervalMs / 1000}s`)
     await sleep(config.intervalMs)

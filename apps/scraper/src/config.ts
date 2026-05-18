@@ -1,23 +1,24 @@
-export interface Config {
-  proseconsultUrl: string
-  databaseUrl: string
-  headless: boolean
-  intervalMs: number
-  runOnce: boolean
-}
+import { z } from 'zod'
+import { loadConfig, zBool, zInt } from '@studysuite/shared/config'
+import { fileURLToPath } from 'node:url'
+import { dirname, resolve } from 'node:path'
 
-export function loadConfig(): Config {
-  const proseconsultUrl = process.env.PROSECONSULT_URL
-  if (!proseconsultUrl) throw new Error('PROSECONSULT_URL is required')
+const schema = z.object({
+  proseconsultUrl: z.string().url(),
+  databaseUrl: z.string().min(1),
+  headless: zBool.default(true),
+  intervalMs: zInt.positive().default(1_800_000),
+})
 
-  const databaseUrl = process.env.DATABASE_URL
-  if (!databaseUrl) throw new Error('DATABASE_URL is required')
+export const config = loadConfig({
+  schema,
+  yamlPath: resolve(dirname(fileURLToPath(import.meta.url)), '..', 'config.yaml'),
+  envMap: {
+    PROSECONSULT_URL: 'proseconsultUrl',
+    DATABASE_URL: 'databaseUrl',
+    HEADLESS: 'headless',
+    SCRAPE_INTERVAL_MS: 'intervalMs',
+  },
+})
 
-  return {
-    proseconsultUrl,
-    databaseUrl,
-    headless: process.env.HEADLESS !== 'false',
-    intervalMs: parseInt(process.env.SCRAPE_INTERVAL_MS ?? '1800000', 10),
-    runOnce: process.argv.includes('--once'),
-  }
-}
+export type Config = z.infer<typeof schema>

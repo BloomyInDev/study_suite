@@ -1,8 +1,4 @@
 import { Hono } from 'hono'
-import { VERSION } from '@studysuite/shared'
-
-// validate workspace resolution
-void VERSION
 
 const app = new Hono()
 

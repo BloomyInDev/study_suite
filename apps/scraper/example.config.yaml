@@ -1,0 +1,9 @@
+# Scraper configuration
+# Copy this file to config.yaml and adjust for your environment.
+# cp example.config.yaml config.yaml
+# All values can be set here. Env vars take precedence when defined.
+
+headless: true
+intervalMs: 1800000
+# proseconsultUrl: https://...
+# databaseUrl: postgres://...
