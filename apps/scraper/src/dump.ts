@@ -10,10 +10,10 @@ import { parseEventText } from './parser/event-text.js'
 
 const outPath = path.resolve(process.cwd(), 'dump.json')
 
-const { browser, page } = await launchBrowser(config.headless)
+const { browser, page } = await launchBrowser(config.scrape.headless)
 
 try {
-  await gotoPlanning(page, config.proseconsultUrl)
+  await gotoPlanning(page, config.scrape.url)
 
   // Collect all week button IDs — filter out navigation arrows by checking button text
   const weekIds = await page.evaluate(() => {
@@ -50,7 +50,7 @@ try {
     console.log(`[dump] ${i + 1}/${weekIds.length} — week ${weekId} (${weekDates[0] ?? '?'}) — ${rawEvents.length} events`)
   }
 
-  const output = JSON.stringify({ scrapedAt: new Date().toISOString(), url: config.proseconsultUrl, weeks }, null, 2)
+  const output = JSON.stringify({ scrapedAt: new Date().toISOString(), url: config.scrape.url, weeks }, null, 2)
   await writeFile(outPath, output, 'utf-8')
   console.log(`[dump] written to ${outPath}`)
 } finally {

@@ -1,12 +1,10 @@
-# Scraper configuration
+# API configuration
 # Copy this file to config.yaml and adjust for your environment.
 # cp example.config.yaml config.yaml
 # All values can be set here. Env vars take precedence when defined.
 
+server:
+  port: 3000
+
 database:
   # url: postgres://user:pass@localhost:5432/study_suite
-
-scrape:
-  # url: https://...
-  headless: true
-  intervalMs: 1800000

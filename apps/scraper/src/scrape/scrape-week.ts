@@ -22,10 +22,10 @@ export async function scrapeCurrentWeek(
   knownGroupNames: Set<string>,
 ): Promise<{ added: number; removed: number; updated: number; durationMs: number }> {
   const t0 = Date.now()
-  const { browser, page } = await launchBrowser(config.headless)
+  const { browser, page } = await launchBrowser(config.scrape.headless)
 
   try {
-    await gotoPlanning(page, config.proseconsultUrl)
+    await gotoPlanning(page, config.scrape.url)
 
     const weekDates = await readWeekDates(page)
     const columnWidth = await computeColumnWidth(page)

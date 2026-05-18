@@ -35,7 +35,7 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
 
     if (runOnce) break
 
-    console.log(`[scraper] Next run in ${config.intervalMs / 1000}s`)
-    await sleep(config.intervalMs)
+    console.log(`[scraper] Next run in ${config.scrape.intervalMs / 1000}s`)
+    await sleep(config.scrape.intervalMs)
   }
 }
