@@ -13,6 +13,21 @@ export const useGroupsStore = defineStore('groups', {
   getters: {
     selectedGroups: (state): Group[] =>
       state.allGroups.filter(g => state.selectedGroupIds.includes(g.id)),
+
+    effectiveGroupIds: (state): string[] => {
+      const ids = new Set(state.selectedGroupIds)
+      const addAncestors = (groupId: string) => {
+        const group = state.allGroups.find(g => g.id === groupId)
+        for (const parent of group?.parents ?? []) {
+          if (!ids.has(parent.id)) {
+            ids.add(parent.id)
+            addAncestors(parent.id)
+          }
+        }
+      }
+      for (const id of state.selectedGroupIds) addAncestors(id)
+      return [...ids]
+    },
   },
 
   actions: {

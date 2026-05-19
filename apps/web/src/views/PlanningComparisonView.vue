@@ -67,7 +67,7 @@ const isToday = (dateStr: string) => {
 }
 
 watch(
-  [date, () => groupsStore.selectedGroupIds],
+  [date, () => groupsStore.effectiveGroupIds],
   async ([newDate, newGroupIds], _, onCleanup) => {
     let cancelled = false
     onCleanup(() => { cancelled = true })

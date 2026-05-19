@@ -19,7 +19,7 @@ let intervalId: ReturnType<typeof setInterval> | null = null
 onMounted(async () => {
   loading.value = true
   try {
-    events.value = await eventsStore.fetchUpcoming(groupStore.selectedGroupIds, 10)
+    events.value = await eventsStore.fetchUpcoming(groupStore.effectiveGroupIds, 10)
   } finally {
     loading.value = false
   }

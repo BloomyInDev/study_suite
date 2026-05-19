@@ -25,7 +25,7 @@ onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 watch(
-  [() => groups.selectedGroupIds, date],
+  [() => groups.effectiveGroupIds, date],
   async ([newGroupIds, newDate], [_oldIds, oldDate]) => {
     if (newGroupIds.length === 0) { events.value = []; return }
     if (oldDate && mondayOfWeek(newDate as Date).getTime() === mondayOfWeek(oldDate as Date).getTime()) return
