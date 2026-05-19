@@ -1,0 +1,10 @@
+.git
+**/node_modules
+apps/web/dist
+data/
+*.log
+.env*
+!.env.example
+.vscode
+.playwright-mcp
+ressources

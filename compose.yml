@@ -9,3 +9,47 @@ services:
       - "5432:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+      PORT: 3000
+      CORS_ORIGIN: "*"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      # Override VITE_API_URL here if the API is on a different public URL
+      # args:
+      #   VITE_API_URL: https://api.example.com
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+
+  scraper:
+    build:
+      context: .
+      dockerfile: apps/scraper/Dockerfile
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # The scraper runs once and exits. Use a cron / orchestrator to schedule it.
+    profiles:
+      - scraper
