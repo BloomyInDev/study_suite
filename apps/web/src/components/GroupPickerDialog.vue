@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import type { Group } from '../lib/types.js'
 import { useGroupsStore } from '../stores/groups.js'
+
+interface TreeNode {
+  group: Group
+  depth: number
+  isLeaf: boolean
+}
 
 const props = defineProps<{ modelValue: boolean }>()
 const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
@@ -8,16 +15,59 @@ const emit = defineEmits<{ 'update:modelValue': [value: boolean] }>()
 const groups = useGroupsStore()
 const search = ref('')
 const selected = ref<string[]>([...groups.selectedGroupIds])
+const collapsed = ref<Set<string>>(new Set())
 
 const show = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })
 
-const filtered = computed(() => {
-  const q = search.value.toLowerCase()
-  return q ? groups.allGroups.filter(g => g.internalName.toLowerCase().includes(q)) : groups.allGroups
+function buildTree(list: Group[]): TreeNode[] {
+  const nodes: TreeNode[] = []
+  const visited = new Set<string>()
+
+  function traverse(group: Group, depth: number) {
+    if (visited.has(group.id)) return
+    visited.add(group.id)
+    const childRefs = group.children ?? []
+    const isLeaf = childRefs.length === 0
+    nodes.push({ group, depth, isLeaf })
+    if (!collapsed.value.has(group.id)) {
+      for (const ref of childRefs) {
+        const child = list.find(g => g.id === ref.id)
+        if (child) traverse(child, depth + 1)
+      }
+    }
+  }
+
+  const roots = list.filter(g => !g.parents?.length)
+  for (const root of roots) traverse(root, 0)
+
+  // groups not reachable from roots (data inconsistency guard)
+  for (const g of list) {
+    if (!visited.has(g.id)) nodes.push({ group: g, depth: 0, isLeaf: !g.children?.length })
+  }
+
+  return nodes
+}
+
+const treeNodes = computed(() => buildTree(groups.allGroups))
+
+const displayNodes = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q) return treeNodes.value
+  // flat filtered list when searching
+  return groups.allGroups
+    .filter(g => g.internalName.toLowerCase().includes(q))
+    .map(g => ({ group: g, depth: 0, isLeaf: !g.children?.length }))
 })
+
+function toggleCollapse(id: string) {
+  if (collapsed.value.has(id)) collapsed.value.delete(id)
+  else collapsed.value.add(id)
+  // trigger reactivity
+  collapsed.value = new Set(collapsed.value)
+}
 
 const confirm = () => {
   groups.select(selected.value)
@@ -38,24 +88,48 @@ const confirm = () => {
           density="compact"
           hide-details
           class="mb-3"
+          clearable
         />
-        <v-list lines="one" select-strategy="classic" v-model:selected="selected" density="compact" max-height="320" style="overflow-y: auto">
+        <v-list
+          v-model:selected="selected"
+          select-strategy="classic"
+          lines="one"
+          density="compact"
+          max-height="360"
+          style="overflow-y: auto"
+        >
           <v-list-item
-            v-for="g in filtered"
-            :key="g.id"
-            :value="g.id"
-            :title="g.internalName"
+            v-for="node in displayNodes"
+            :key="node.group.id"
+            :value="node.group.id"
+            :style="{ paddingLeft: `${node.depth * 20 + 8}px` }"
           >
             <template #prepend="{ isSelected }">
               <v-checkbox-btn :model-value="isSelected" />
+            </template>
+
+            <v-list-item-title :class="node.isLeaf ? '' : 'font-weight-medium'">
+              {{ node.group.internalName }}
+            </v-list-item-title>
+
+            <template v-if="!node.isLeaf && !search" #append>
+              <v-btn
+                :icon="collapsed.has(node.group.id) ? 'mdi-chevron-right' : 'mdi-chevron-down'"
+                variant="text"
+                size="x-small"
+                density="compact"
+                @click.stop="toggleCollapse(node.group.id)"
+              />
             </template>
           </v-list-item>
         </v-list>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn variant="text" @click="show = false" v-if="groups.selectedGroupIds.length > 0">Annuler</v-btn>
-        <v-btn color="primary" variant="flat" @click="confirm" :disabled="selected.length === 0">
+        <v-btn v-if="groups.selectedGroupIds.length > 0" variant="text" @click="show = false">
+          Annuler
+        </v-btn>
+        <v-btn color="primary" variant="flat" :disabled="selected.length === 0" @click="confirm">
           Valider ({{ selected.length }})
         </v-btn>
       </v-card-actions>
