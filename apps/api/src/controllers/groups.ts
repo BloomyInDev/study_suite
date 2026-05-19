@@ -1,10 +1,13 @@
 import { zValidator } from '@hono/zod-validator'
-import { eventStudentGroups, events, studentGroups } from '@studysuite/db'
+import { eventStudentGroups, events, studentGroupMemberships, studentGroups } from '@studysuite/db'
 import { and, asc, eq, gt, inArray, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { db } from '../db.js'
 import { eventToDto } from '../lib/serialize.js'
 import { OptionalDateRangeSchema } from '../schemas/query.js'
+
+const ParentBodySchema = z.object({ parentId: z.string().uuid() })
 
 const withRelations = {
   eventLocations: { with: { location: true as const } },
@@ -66,4 +69,24 @@ export default new Hono()
       orderBy: asc(events.startDate),
     })
     return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
+  })
+  .post('/:id/parents', zValidator('json', ParentBodySchema), async (c) => {
+    const childId = c.req.param('id')
+    const { parentId } = c.req.valid('json')
+    if (parentId === childId)
+      return c.json({ error: { code: 'BAD_REQUEST', message: 'A group cannot be its own parent' } }, 400)
+    const [child] = await db.select().from(studentGroups).where(eq(studentGroups.id, childId))
+    if (!child) return c.json({ error: { code: 'NOT_FOUND', message: 'Group not found' } }, 404)
+    const [parent] = await db.select().from(studentGroups).where(eq(studentGroups.id, parentId))
+    if (!parent) return c.json({ error: { code: 'NOT_FOUND', message: 'Parent group not found' } }, 404)
+    await db.insert(studentGroupMemberships).values({ parentId, childId }).onConflictDoNothing()
+    return c.json({ data: { parentId, childId } }, 201)
+  })
+  .delete('/:id/parents/:parentId', async (c) => {
+    const childId = c.req.param('id')
+    const parentId = c.req.param('parentId')
+    await db
+      .delete(studentGroupMemberships)
+      .where(and(eq(studentGroupMemberships.parentId, parentId), eq(studentGroupMemberships.childId, childId)))
+    return c.json({ data: { parentId, childId } })
   })
