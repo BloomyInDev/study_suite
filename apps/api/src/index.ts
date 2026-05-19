@@ -13,7 +13,7 @@ const api = new Hono()
   .route('/groups', groupsController)
 
 const app = new Hono()
-  .use('*', cors({ origin: 'http://localhost:5173' }))
+  .use('*', cors({ origin: config.server.corsOrigin }))
   .get('/health', (c) => c.json({ status: 'ok' }))
   .route('/api', api)
 
