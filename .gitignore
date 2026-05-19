@@ -10,3 +10,4 @@ apps/scraper/dump.json
 apps/scraper/dump.html
 apps/*/config.yaml
 !apps/*/example.config.yaml
+data/
