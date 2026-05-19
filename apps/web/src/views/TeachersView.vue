@@ -91,7 +91,7 @@ async function openTeacher(teacher: Teacher) {
         lg="3"
         @click="openTeacher(teacher)"
       >
-        <TeacherCard :teacher="teacher" />
+        <TeacherCard :teacher="teacher" :available="teacher.available" />
       </v-col>
       <v-col v-if="filtered.length === 0" cols="12">
         <v-alert type="info" variant="tonal">Aucun enseignant trouvé.</v-alert>
