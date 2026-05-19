@@ -7,15 +7,11 @@ import {
 } from '@studysuite/db'
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { db } from '../db.js'
 import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
 import { eventToDto } from '../lib/serialize.js'
-import { z } from 'zod'
-import {
-  DateParamSchema,
-  FilteredEventsSchema,
-  LimitSchema,
-} from '../schemas/query.js'
+import { DateFormatSchema, DateParamSchema, FilteredEventsSchema, LimitSchema } from '../schemas/query.js'
 
 const withRelations = {
   eventLocations: { with: { location: true as const } },
@@ -23,88 +19,80 @@ const withRelations = {
   eventStudentGroups: { with: { studentGroup: true as const } },
 }
 
-const app = new Hono()
-
-app.get('/week', zValidator('query', DateParamSchema), async (c) => {
-  const { date, dateFormat } = c.req.valid('query')
-  const from = weekMondayUTC(new Date(date))
-  const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000)
-  const rows = await db.query.events.findMany({
-    where: and(gte(events.startDate, from), lt(events.startDate, to)),
-    with: withRelations,
-    orderBy: asc(events.startDate),
+export default new Hono()
+  .get('/week', zValidator('query', DateParamSchema), async (c) => {
+    const { date, dateFormat } = c.req.valid('query')
+    const from = weekMondayUTC(new Date(date))
+    const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const rows = await db.query.events.findMany({
+      where: and(gte(events.startDate, from), lt(events.startDate, to)),
+      with: withRelations,
+      orderBy: asc(events.startDate),
+    })
+    return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
   })
-  return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
-})
-
-app.get('/day', zValidator('query', DateParamSchema), async (c) => {
-  const { date, dateFormat } = c.req.valid('query')
-  const from = dayStartUTC(new Date(date))
-  const to = dayEndUTC(new Date(date))
-  const rows = await db.query.events.findMany({
-    where: and(gte(events.startDate, from), lt(events.startDate, to)),
-    with: withRelations,
-    orderBy: asc(events.startDate),
+  .get('/day', zValidator('query', DateParamSchema), async (c) => {
+    const { date, dateFormat } = c.req.valid('query')
+    const from = dayStartUTC(new Date(date))
+    const to = dayEndUTC(new Date(date))
+    const rows = await db.query.events.findMany({
+      where: and(gte(events.startDate, from), lt(events.startDate, to)),
+      with: withRelations,
+      orderBy: asc(events.startDate),
+    })
+    return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
   })
-  return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
-})
-
-app.get('/upcoming', zValidator('query', LimitSchema), async (c) => {
-  const { limit, dateFormat } = c.req.valid('query')
-  const now = new Date()
-  const rows = await db.query.events.findMany({
-    where: gte(events.startDate, now),
-    with: withRelations,
-    orderBy: asc(events.startDate),
-    limit,
+  .get('/upcoming', zValidator('query', LimitSchema), async (c) => {
+    const { limit, dateFormat } = c.req.valid('query')
+    const rows = await db.query.events.findMany({
+      where: gte(events.startDate, new Date()),
+      with: withRelations,
+      orderBy: asc(events.startDate),
+      limit,
+    })
+    return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
   })
-  return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
-})
-
-app.get('/', zValidator('query', FilteredEventsSchema), async (c) => {
-  const { from, to, teacherId, roomId, groupId, dateFormat } = c.req.valid('query')
-  const conditions = [gte(events.startDate, from), lt(events.startDate, to)]
-  if (teacherId) {
-    conditions.push(
-      inArray(
-        events.id,
-        db.select({ id: eventTeachers.eventId }).from(eventTeachers).where(eq(eventTeachers.teacherId, teacherId)),
-      ),
-    )
-  }
-  if (roomId) {
-    conditions.push(
-      inArray(
-        events.id,
-        db.select({ id: eventLocations.eventId }).from(eventLocations).where(eq(eventLocations.locationId, roomId)),
-      ),
-    )
-  }
-  if (groupId) {
-    conditions.push(
-      inArray(
-        events.id,
-        db.select({ id: eventStudentGroups.eventId }).from(eventStudentGroups).where(eq(eventStudentGroups.studentGroupId, groupId)),
-      ),
-    )
-  }
-  const rows = await db.query.events.findMany({
-    where: and(...conditions),
-    with: withRelations,
-    orderBy: asc(events.startDate),
+  .get('/', zValidator('query', FilteredEventsSchema), async (c) => {
+    const { from, to, teacherId, roomId, groupId, dateFormat } = c.req.valid('query')
+    const conditions = [gte(events.startDate, from), lt(events.startDate, to)]
+    if (teacherId) {
+      conditions.push(
+        inArray(
+          events.id,
+          db.select({ id: eventTeachers.eventId }).from(eventTeachers).where(eq(eventTeachers.teacherId, teacherId)),
+        ),
+      )
+    }
+    if (roomId) {
+      conditions.push(
+        inArray(
+          events.id,
+          db.select({ id: eventLocations.eventId }).from(eventLocations).where(eq(eventLocations.locationId, roomId)),
+        ),
+      )
+    }
+    if (groupId) {
+      conditions.push(
+        inArray(
+          events.id,
+          db.select({ id: eventStudentGroups.eventId }).from(eventStudentGroups).where(eq(eventStudentGroups.studentGroupId, groupId)),
+        ),
+      )
+    }
+    const rows = await db.query.events.findMany({
+      where: and(...conditions),
+      with: withRelations,
+      orderBy: asc(events.startDate),
+    })
+    return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
   })
-  return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
-})
-
-app.get('/:id', zValidator('query', z.object({ dateFormat: z.enum(['iso', 'unix', 'unix-ms']).default('iso') })), async (c) => {
-  const id = c.req.param('id')
-  const { dateFormat } = c.req.valid('query')
-  const row = await db.query.events.findFirst({
-    where: eq(events.id, id),
-    with: withRelations,
+  .get('/:id', zValidator('query', z.object({ dateFormat: DateFormatSchema })), async (c) => {
+    const id = c.req.param('id')
+    const { dateFormat } = c.req.valid('query')
+    const row = await db.query.events.findFirst({
+      where: eq(events.id, id),
+      with: withRelations,
+    })
+    if (!row) return c.json({ error: { code: 'NOT_FOUND', message: 'Event not found' } }, 404)
+    return c.json(eventToDto(row, dateFormat))
   })
-  if (!row) return c.json({ error: { code: 'NOT_FOUND', message: 'Event not found' } }, 404)
-  return c.json(eventToDto(row, dateFormat))
-})
-
-export default app
