@@ -14,11 +14,11 @@ const drawerOpen = ref(false)
 const pickerOpen = ref(false)
 
 const isDark = ref(localStorage.getItem('study_suite_theme') === 'dark')
-theme.global.name.value = isDark.value ? 'dark' : 'light'
+theme.change(isDark.value ? 'dark' : 'light')
 
 function toggleTheme() {
   isDark.value = !isDark.value
-  theme.global.name.value = isDark.value ? 'dark' : 'light'
+  theme.change(isDark.value ? 'dark' : 'light')
   localStorage.setItem('study_suite_theme', isDark.value ? 'dark' : 'light')
 }
 
