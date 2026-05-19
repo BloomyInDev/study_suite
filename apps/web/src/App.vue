@@ -36,6 +36,10 @@ const navItems = [
   { title: 'Enseignants', icon: 'mdi-account-tie', to: '/teachers' },
   { title: 'Salles', icon: 'mdi-door', to: '/rooms' },
 ]
+
+const adminItems = [
+  { title: 'Groupes', icon: 'mdi-sitemap', to: '/admin/groups' },
+]
 </script>
 
 <template>
@@ -55,7 +59,17 @@ const navItems = [
       </v-list>
       <template #append>
         <v-divider />
-        <v-list nav>
+        <v-list nav density="compact">
+          <v-list-subheader>Admin</v-list-subheader>
+          <v-list-item
+            v-for="item in adminItems"
+            :key="item.to"
+            :prepend-icon="item.icon"
+            :title="item.title"
+            :to="item.to"
+            @click="drawerOpen = false"
+          />
+          <v-divider class="my-1" />
           <v-list-item
             prepend-icon="mdi-account-group"
             title="Mes groupes"
@@ -81,6 +95,17 @@ const navItems = [
         >
           {{ item.title }}
         </v-btn>
+        <v-divider vertical class="mx-2" />
+        <v-tooltip
+          v-for="item in adminItems"
+          :key="item.to"
+          :text="item.title"
+          location="bottom"
+        >
+          <template #activator="{ props }">
+            <v-btn v-bind="props" :icon="item.icon" variant="text" :to="item.to" />
+          </template>
+        </v-tooltip>
         <v-divider vertical class="mx-2" />
         <v-tooltip text="Mes groupes" location="bottom">
           <template #activator="{ props }">
