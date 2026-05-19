@@ -11,7 +11,7 @@ const notifs = useNotificationsStore()
 const search = ref('')
 const dialogOpen = ref(false)
 const dialogGroup = ref<Group | null>(null)
-const addParentId = ref<string | null>(null)
+const addParentIds = ref<string[]>([])
 const saving = ref(false)
 
 const filtered = computed(() => {
@@ -31,27 +31,25 @@ const addableParents = computed(() => {
 
 function openDialog(group: Group) {
   dialogGroup.value = { ...group, parents: [...(group.parents ?? [])], children: [...(group.children ?? [])] }
-  addParentId.value = null
+  addParentIds.value = []
   dialogOpen.value = true
 }
 
 async function addParent() {
-  if (!dialogGroup.value || !addParentId.value) return
+  if (!dialogGroup.value || addParentIds.value.length === 0) return
   saving.value = true
   try {
-    const res = await backend.api.groups[':id'].parents.$post({
-      param: { id: dialogGroup.value.id },
-      json: { parentId: addParentId.value },
-    })
-    if (!res.ok) {
-      const json = await res.json() as any
-      notifs.error(json?.error?.message ?? 'Erreur')
-      return
-    }
+    await Promise.all(
+      addParentIds.value.map(parentId =>
+        backend.api.groups[':id'].parents.$post({
+          param: { id: dialogGroup.value!.id },
+          json: { parentId },
+        }),
+      ),
+    )
     await groupsStore.fetchAll()
-    // refresh dialog data from updated store
     dialogGroup.value = groupsStore.allGroups.find(g => g.id === dialogGroup.value!.id) ?? null
-    addParentId.value = null
+    addParentIds.value = []
   } finally {
     saving.value = false
   }
@@ -157,21 +155,24 @@ async function removeParent(parent: GroupRef) {
           <p class="text-body-2 font-weight-medium mb-2">Ajouter un parent</p>
           <div class="d-flex ga-2 align-center">
             <v-autocomplete
-              v-model="addParentId"
+              v-model="addParentIds"
               :items="addableParents"
               item-title="internalName"
               item-value="id"
-              label="Groupe parent"
+              label="Groupes parents"
               variant="outlined"
               density="compact"
               hide-details
               clearable
+              multiple
+              chips
+              closable-chips
               class="flex-grow-1"
             />
             <v-btn
               color="primary"
               variant="flat"
-              :disabled="!addParentId || saving"
+              :disabled="addParentIds.length === 0 || saving"
               :loading="saving"
               @click="addParent"
             >
