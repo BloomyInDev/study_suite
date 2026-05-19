@@ -12,6 +12,13 @@ export interface Room {
 export interface Group {
   id: string
   internalName: string
+  parents?: GroupRef[]
+  children?: GroupRef[]
+}
+
+export interface GroupRef {
+  id: string
+  internalName: string
 }
 
 export interface ApiEvent {

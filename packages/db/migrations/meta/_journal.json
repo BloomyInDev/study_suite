@@ -8,6 +8,13 @@
       "when": 1779052421158,
       "tag": "0000_simple_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779218961503,
+      "tag": "0001_cold_phalanx",
+      "breakpoints": true
     }
   ]
 }
