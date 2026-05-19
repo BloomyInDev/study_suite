@@ -1,0 +1,10 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+/* Global styles - Vuetify handles most styling */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
