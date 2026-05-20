@@ -5,6 +5,8 @@ import { locations } from './locations.js'
 import { studentGroupMemberships } from './student_group_memberships.js'
 import { studentGroups } from './student_groups.js'
 import { teachers } from './teachers.js'
+import { users } from './users.js'
+import { discordRoleMappings } from './discord_role_mappings.js'
 
 export const eventsRelations = relations(events, ({ many }) => ({
   eventLocations: many(eventLocations),
@@ -33,6 +35,8 @@ export const eventStudentGroupsRelations = relations(eventStudentGroups, ({ one 
 export const studentGroupsRelations = relations(studentGroups, ({ many }) => ({
   parentMemberships: many(studentGroupMemberships, { relationName: 'children' }),
   childMemberships: many(studentGroupMemberships, { relationName: 'parents' }),
+  users: many(users),
+  discordRoleMappings: many(discordRoleMappings),
 }))
 
 export const studentGroupMembershipsRelations = relations(studentGroupMemberships, ({ one }) => ({
@@ -45,5 +49,23 @@ export const studentGroupMembershipsRelations = relations(studentGroupMembership
     fields: [studentGroupMemberships.childId],
     references: [studentGroups.id],
     relationName: 'parents',
+  }),
+}))
+
+export const usersRelations = relations(users, ({ one }) => ({
+  studentGroup: one(studentGroups, {
+    fields: [users.studentGroupId],
+    references: [studentGroups.id],
+  }),
+  teacher: one(teachers, {
+    fields: [users.teacherId],
+    references: [teachers.id],
+  }),
+}))
+
+export const discordRoleMappingsRelations = relations(discordRoleMappings, ({ one }) => ({
+  studentGroup: one(studentGroups, {
+    fields: [discordRoleMappings.studentGroupId],
+    references: [studentGroups.id],
   }),
 }))
