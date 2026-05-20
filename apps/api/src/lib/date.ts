@@ -18,3 +18,9 @@ export function dayEndUTC(date: Date): Date {
   d.setUTCDate(d.getUTCDate() + 1)
   return d
 }
+
+export function dateToUTC(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds()),
+  )
+}

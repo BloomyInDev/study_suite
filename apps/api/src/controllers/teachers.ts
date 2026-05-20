@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import { db } from '../db.js'
 import { eventToDto } from '../lib/serialize.js'
 import { DateFormatSchema, OptionalDateRangeSchema, SearchSchema } from '../schemas/query.js'
+import { dateToUTC } from '../lib/date.js'
 
 const withRelations = {
   eventLocations: { with: { location: true as const } },
@@ -18,7 +19,7 @@ async function busyTeacherIds(at: Date): Promise<Set<string>> {
     .from(eventTeachers)
     .innerJoin(events, eq(eventTeachers.eventId, events.id))
     .where(and(lte(events.startDate, at), gte(events.endDate, at)))
-  return new Set(rows.map(r => r.teacherId))
+  return new Set(rows.map((r) => r.teacherId))
 }
 
 export default new Hono()
@@ -32,24 +33,27 @@ export default new Hono()
     return c.json({ data: rows })
   })
   .get('/', async (c) => {
-    const now = new Date()
+    const now = dateToUTC(new Date())
     const [rows, busy] = await Promise.all([
       db.select().from(teachers).orderBy(asc(teachers.lastName), asc(teachers.firstName)),
       busyTeacherIds(now),
     ])
-    return c.json({ data: rows.map(t => ({ ...t, available: !busy.has(t.id) })) })
+    return c.json({ data: rows.map((t) => ({ ...t, available: !busy.has(t.id) })) })
   })
   .get('/:id', async (c) => {
     const id = c.req.param('id')
     const dateFormat = DateFormatSchema.parse(c.req.query('dateFormat'))
     const [row] = await db.select().from(teachers).where(eq(teachers.id, id))
     if (!row) return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
-    const now = new Date()
+    const now = dateToUTC(new Date())
     const currentEvents = await db.query.events.findMany({
       where: and(
         inArray(
           events.id,
-          db.select({ id: eventTeachers.eventId }).from(eventTeachers).where(eq(eventTeachers.teacherId, id)),
+          db
+            .select({ id: eventTeachers.eventId })
+            .from(eventTeachers)
+            .where(eq(eventTeachers.teacherId, id)),
         ),
         lte(events.startDate, now),
         gte(events.endDate, now),
@@ -67,7 +71,10 @@ export default new Hono()
     const conditions = [
       inArray(
         events.id,
-        db.select({ id: eventTeachers.eventId }).from(eventTeachers).where(eq(eventTeachers.teacherId, id)),
+        db
+          .select({ id: eventTeachers.eventId })
+          .from(eventTeachers)
+          .where(eq(eventTeachers.teacherId, id)),
       ),
     ]
     if (from) conditions.push(gte(events.startDate, from))
@@ -77,5 +84,5 @@ export default new Hono()
       with: withRelations,
       orderBy: asc(events.startDate),
     })
-    return c.json({ data: rows.map(r => eventToDto(r, dateFormat)) })
+    return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) })
   })
