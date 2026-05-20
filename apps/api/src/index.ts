@@ -7,7 +7,7 @@ import groupsController from './controllers/groups.js'
 import roomsController from './controllers/rooms.js'
 import teachersController from './controllers/teachers.js'
 import adminUsersController from './controllers/admin/users.js'
-import adminDiscordMappingsController from './controllers/admin/discord_mappings.js'
+import adminGuildsController from './controllers/admin/guilds.js'
 
 const api = new Hono()
   .route('/events', eventsController)
@@ -17,7 +17,7 @@ const api = new Hono()
 
 const adminApi = new Hono()
   .route('/users', adminUsersController)
-  .route('/discord-mappings', adminDiscordMappingsController)
+  .route('/guilds', adminGuildsController)
 
 const app = new Hono()
   .use('*', cors({ origin: config.server.corsOrigin }))
