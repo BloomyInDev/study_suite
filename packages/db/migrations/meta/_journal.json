@@ -15,6 +15,13 @@
       "when": 1779218961503,
       "tag": "0001_cold_phalanx",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779313306258,
+      "tag": "0002_furry_hex",
+      "breakpoints": true
     }
   ]
 }
