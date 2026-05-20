@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { sign } from 'hono/jwt'
 import { eq, inArray } from 'drizzle-orm'
 import { db } from '../db.js'
-import { users, discordRoleMappings } from '@studysuite/db'
+import { users, discordGuilds, discordRoleMappings } from '@studysuite/db'
 import { config } from '../config.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 
@@ -80,22 +80,33 @@ export default new Hono<AuthEnv>()
     }
     const discordUser = await userRes.json() as DiscordUser
 
-    // Fetch guild member roles
-    const memberRes = await fetch(`${DISCORD_API}/users/@me/guilds/${config.discord.guildId}/member`, {
-      headers: { Authorization: `Bearer ${access_token}` },
-    })
-    const memberRoles: string[] = memberRes.ok
-      ? ((await memberRes.json()) as DiscordMember).roles ?? []
-      : []
+    // Fetch member roles from all configured guilds (in parallel)
+    const guilds = await db.select().from(discordGuilds)
+    const memberRoleResults = await Promise.all(
+      guilds.map(async (guild) => {
+        const res = await fetch(`${DISCORD_API}/users/@me/guilds/${guild.discordGuildId}/member`, {
+          headers: { Authorization: `Bearer ${access_token}` },
+        })
+        if (!res.ok) return { guildDbId: guild.id, roles: [] as string[] }
+        const member = await res.json() as DiscordMember
+        return { guildDbId: guild.id, roles: member.roles ?? [] }
+      }),
+    )
 
-    // Find matching role → class mappings
-    const mappings = memberRoles.length > 0
+    // Find matching role → class mappings across all guilds
+    const allRoleIds = memberRoleResults.flatMap(r => r.roles)
+    const mappings = allRoleIds.length > 0
       ? await db.select().from(discordRoleMappings)
-          .where(inArray(discordRoleMappings.discordRoleId, memberRoles))
+          .where(inArray(discordRoleMappings.discordRoleId, allRoleIds))
       : []
 
-    const autoApproved = mappings.length > 0
-    const mappedGroupId = autoApproved ? mappings[0].studentGroupId : null
+    // Filter: mapping must belong to a guild where the user actually has that role
+    const validMappings = mappings.filter(m =>
+      memberRoleResults.some(r => r.guildDbId === m.guildId && r.roles.includes(m.discordRoleId)),
+    )
+
+    const autoApproved = validMappings.length > 0
+    const mappedGroupId = autoApproved ? validMappings[0].studentGroupId : null
 
     // Upsert user
     const existing = await db.select().from(users)
@@ -140,7 +151,6 @@ export default new Hono<AuthEnv>()
     if (!user) {
       return c.json({ error: { code: 'NOT_FOUND', message: 'User not found' } }, 404)
     }
-    // Re-issue token to keep it fresh
     const token = await issueToken(user)
     return c.json({ data: userToDto(user), token })
   })
