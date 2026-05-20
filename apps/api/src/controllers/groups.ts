@@ -20,15 +20,19 @@ const withHierarchy = {
   childMemberships: { with: { parent: true as const } },
 }
 
-const groupToDto = (row: Awaited<ReturnType<typeof db.query.studentGroups.findFirst>> & object) => ({
+type GroupRef = { id: string; internalName: string }
+type GroupWithHierarchy = {
+  id: string
+  internalName: string
+  parentMemberships: { child: GroupRef }[]
+  childMemberships: { parent: GroupRef }[]
+}
+
+const groupToDto = (row: GroupWithHierarchy) => ({
   id: row.id,
   internalName: row.internalName,
-  children: 'parentMemberships' in row
-    ? (row as any).parentMemberships.map((m: any) => ({ id: m.child.id, internalName: m.child.internalName }))
-    : [],
-  parents: 'childMemberships' in row
-    ? (row as any).childMemberships.map((m: any) => ({ id: m.parent.id, internalName: m.parent.internalName }))
-    : [],
+  children: row.parentMemberships.map(m => ({ id: m.child.id, internalName: m.child.internalName })),
+  parents: row.childMemberships.map(m => ({ id: m.parent.id, internalName: m.parent.internalName })),
 })
 
 export default new Hono()
