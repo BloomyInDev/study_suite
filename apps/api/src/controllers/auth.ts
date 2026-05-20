@@ -8,7 +8,7 @@ import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 
 const DISCORD_API = 'https://discord.com/api/v10'
 
-type DiscordTokenResponse = { access_token: string; token_type: string }
+type DiscordTokenResponse = { access_token: string; token_type: string; expires_in: number }
 type DiscordUser = { id: string; username: string; avatar: string | null; global_name: string | null }
 type DiscordMember = { roles: string[] }
 
@@ -68,7 +68,7 @@ export default new Hono<AuthEnv>()
       client_id: config.discord.clientId,
       redirect_uri: config.discord.redirectUri,
       response_type: 'code',
-      scope: 'identify guilds.members.read',
+      scope: 'identify guilds guilds.members.read',
       state: stateParam,
     })
     return c.redirect(`https://discord.com/api/oauth2/authorize?${params}`)
@@ -102,7 +102,8 @@ export default new Hono<AuthEnv>()
       }),
     })
     if (!tokenRes.ok) return errorResponse('discord_auth_failed', 'Discord token exchange failed')
-    const { access_token } = await tokenRes.json() as DiscordTokenResponse
+    const { access_token, expires_in } = await tokenRes.json() as DiscordTokenResponse
+    const tokenExpiresAt = new Date(Date.now() + expires_in * 1000)
 
     // Fetch Discord user info
     const userRes = await fetch(`${DISCORD_API}/users/@me`, {
@@ -149,6 +150,8 @@ export default new Hono<AuthEnv>()
         .set({
           discordUsername: discordUser.global_name ?? discordUser.username,
           discordAvatar: discordUser.avatar,
+          discordAccessToken: access_token,
+          discordTokenExpiresAt: tokenExpiresAt,
           ...(autoApproved && existing[0].status !== 'approved' ? {
             status: 'approved' as const,
             role: 'student' as const,
@@ -164,6 +167,8 @@ export default new Hono<AuthEnv>()
         discordId: discordUser.id,
         discordUsername: discordUser.global_name ?? discordUser.username,
         discordAvatar: discordUser.avatar,
+        discordAccessToken: access_token,
+        discordTokenExpiresAt: tokenExpiresAt,
         status: autoApproved ? 'approved' : 'pending',
         role: autoApproved ? 'student' : null,
         studentGroupId: mappedGroupId,
@@ -179,6 +184,41 @@ export default new Hono<AuthEnv>()
       return c.redirect(url.toString())
     }
     return c.json({ data: userToDto(user), token })
+  })
+
+  .get('/discord/my-guilds', requireAuth, async (c) => {
+    const payload = c.get('user')
+    const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1)
+    if (!user?.discordAccessToken) {
+      return c.json({ error: { code: 'NO_TOKEN', message: 'No Discord token stored. Please re-login.' } }, 400)
+    }
+    if (user.discordTokenExpiresAt && user.discordTokenExpiresAt < new Date()) {
+      return c.json({ error: { code: 'TOKEN_EXPIRED', message: 'Discord token expired. Please re-login.' } }, 401)
+    }
+    const token = user.discordAccessToken
+
+    type DiscordGuild = { id: string; name: string; icon: string | null }
+    const guildsRes = await fetch(`${DISCORD_API}/users/@me/guilds`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!guildsRes.ok) {
+      return c.json({ error: { code: 'DISCORD_ERROR', message: 'Failed to fetch Discord guilds' } }, 502)
+    }
+    const guilds = await guildsRes.json() as DiscordGuild[]
+
+    const guildData = await Promise.all(
+      guilds.map(async (guild) => {
+        const memberRes = await fetch(`${DISCORD_API}/users/@me/guilds/${guild.id}/member`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const roles: string[] = memberRes.ok
+          ? ((await memberRes.json()) as { roles: string[] }).roles ?? []
+          : []
+        return { id: guild.id, name: guild.name, icon: guild.icon, myRoles: roles }
+      }),
+    )
+
+    return c.json({ data: guildData })
   })
 
   .get('/me', requireAuth, async (c) => {
