@@ -6,6 +6,7 @@ export * from './student_group_memberships.js'
 export * from './event_relations.js'
 export * from './event_changes.js'
 export * from './users.js'
+export * from './discord_guilds.js'
 export * from './discord_role_mappings.js'
 export * from './drizzle_relations.js'
 

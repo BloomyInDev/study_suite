@@ -6,6 +6,7 @@ import { studentGroupMemberships } from './student_group_memberships.js'
 import { studentGroups } from './student_groups.js'
 import { teachers } from './teachers.js'
 import { users } from './users.js'
+import { discordGuilds } from './discord_guilds.js'
 import { discordRoleMappings } from './discord_role_mappings.js'
 
 export const eventsRelations = relations(events, ({ many }) => ({
@@ -63,7 +64,15 @@ export const usersRelations = relations(users, ({ one }) => ({
   }),
 }))
 
+export const discordGuildsRelations = relations(discordGuilds, ({ many }) => ({
+  roleMappings: many(discordRoleMappings),
+}))
+
 export const discordRoleMappingsRelations = relations(discordRoleMappings, ({ one }) => ({
+  guild: one(discordGuilds, {
+    fields: [discordRoleMappings.guildId],
+    references: [discordGuilds.id],
+  }),
   studentGroup: one(studentGroups, {
     fields: [discordRoleMappings.studentGroupId],
     references: [studentGroups.id],
