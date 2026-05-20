@@ -56,12 +56,12 @@ export const useEventsStore = defineStore('events', {
         if (duration === Duration.WEEK) {
           const monday = mondayOfWeek(date)
           const res = await backend.api.events.week.$get({ query: { date: toIsoDateString(monday) } })
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          all = ((await res.json()) as any).data.map(enhanceEvent)
+          const weekBody = await res.json()
+          all = (weekBody.data ?? []).map(enhanceEvent)
         } else {
           const res = await backend.api.events.day.$get({ query: { date: toIsoDateString(date) } })
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          all = ((await res.json()) as any).data.map(enhanceEvent)
+          const dayBody = await res.json()
+          all = (dayBody.data ?? []).map(enhanceEvent)
         }
 
         const filtered = groupIds.length > 0
@@ -85,8 +85,8 @@ export const useEventsStore = defineStore('events', {
 
     async fetchUpcoming(groupIds: string[], limit = 5): Promise<Event[]> {
       const res = await backend.api.events.upcoming.$get({ query: { limit } })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const all: Event[] = ((await res.json()) as any).data.map(enhanceEvent)
+      const body = await res.json()
+      const all: Event[] = (body.data ?? []).map(enhanceEvent)
       return groupIds.length > 0
         ? all.filter(e => e.groups.some(g => groupIds.includes(g.id)))
         : all

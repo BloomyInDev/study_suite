@@ -45,8 +45,8 @@ async function toggleAvailableFilter() {
       const res = await backend.api.rooms.available.$get({
         query: { from: now.toISOString(), to: to.toISOString() },
       })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const ids: string[] = ((await res.json()) as any).data.map((r: Room) => r.id)
+      const body = await res.json()
+      const ids: string[] = (body.data ?? []).map((r) => r.id)
       availableNow.value = new Set(ids)
     } finally {
       loadingAvailable.value = false
@@ -68,8 +68,9 @@ async function openRoom(room: Room) {
       param: { id: room.id },
       query: { from: dayStart, to: dayEnd },
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const todayEvents: Event[] = ((await res.json()) as any).data.map(enhanceEvent)
+    const roomBody = await res.json()
+    if (!('data' in roomBody)) throw new Error('Room not found')
+    const todayEvents: Event[] = (roomBody.data ?? []).map(enhanceEvent)
     const available = !todayEvents.some(e => now >= e.start && now <= e.end)
     selectedRoom.value = { ...room, available, todayEvents }
   } finally {

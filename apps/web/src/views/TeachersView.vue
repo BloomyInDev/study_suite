@@ -46,8 +46,9 @@ async function openTeacher(teacher: Teacher) {
       param: { id: teacher.id },
       query: { from: dayStart.getTime(), to: dayEnd.getTime() },
     })
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const todayEvents: Event[] = ((await res.json()) as any).data.map(enhanceEvent)
+    const teacherBody = await res.json()
+    if (!('data' in teacherBody)) throw new Error('Teacher not found')
+    const todayEvents: Event[] = (teacherBody.data ?? []).map(enhanceEvent)
     const currentEvent = todayEvents.find(e => now >= e.start && now <= e.end) ?? null
     selectedTeacher.value = {
       ...teacher,
