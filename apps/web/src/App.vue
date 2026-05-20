@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useDisplay, useTheme } from 'vuetify'
+import { useRouter } from 'vue-router'
 import { useGroupsStore } from './stores/groups.js'
 import { useNotificationsStore } from './stores/notifications.js'
+import { useAuthStore } from './stores/auth.js'
 import GroupPickerDialog from './components/GroupPickerDialog.vue'
 
 const { mobile } = useDisplay()
 const theme = useTheme()
+const router = useRouter()
 const groupsStore = useGroupsStore()
 const notifs = useNotificationsStore()
+const auth = useAuthStore()
 
 const drawerOpen = ref(false)
 const pickerOpen = ref(false)
@@ -84,9 +88,17 @@ const navItems = [
           <v-tooltip activator="parent" location="bottom">{{ item.title }}</v-tooltip>
         </v-btn>
         <v-divider vertical class="mx-2" />
-        <v-btn icon to="/admin">
+        <v-btn v-if="auth.isAdmin" icon to="/admin">
           <v-icon>mdi-shield-crown</v-icon>
           <v-tooltip activator="parent" location="bottom">Admin</v-tooltip>
+        </v-btn>
+        <v-btn v-if="auth.isAuthenticated" icon @click="auth.logout(); router.push('/login')">
+          <v-icon>mdi-logout</v-icon>
+          <v-tooltip activator="parent" location="bottom">Se déconnecter</v-tooltip>
+        </v-btn>
+        <v-btn v-else icon to="/login">
+          <v-icon>mdi-login</v-icon>
+          <v-tooltip activator="parent" location="bottom">Se connecter</v-tooltip>
         </v-btn>
         <v-btn icon @click="toggleTheme">
           <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
