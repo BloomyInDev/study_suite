@@ -5,6 +5,17 @@
 
 server:
   port: 3000
+  # corsOrigin: http://localhost:5173
+  # frontendUrl: http://localhost:5173
 
 database:
   # url: postgres://user:pass@localhost:5432/study_suite
+
+discord:
+  # clientId: "your_discord_app_client_id"
+  # clientSecret: "your_discord_app_client_secret"
+  # guildId: "your_discord_server_id"
+  # redirectUri: http://localhost:3000/auth/discord/callback
+
+jwt:
+  # secret: "a_random_secret_at_least_32_characters_long"
