@@ -44,7 +44,7 @@ async function openTeacher(teacher: Teacher) {
     dayEnd.setUTCHours(23, 59, 59, 999)
     const res = await backend.api.teachers[':id'].events.$get({
       param: { id: teacher.id },
-      query: { from: dayStart, to: dayEnd },
+      query: { from: dayStart.getTime(), to: dayEnd.getTime() },
     })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const todayEvents: Event[] = ((await res.json()) as any).data.map(enhanceEvent)
