@@ -29,16 +29,14 @@ onMounted(async () => {
   }
 })
 
+const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH
+
 const navItems = [
   { title: 'Accueil', icon: 'mdi-home', to: '/' },
   { title: 'Planning', icon: 'mdi-calendar', to: '/planning' },
-  { title: 'Comparer', icon: 'mdi-compare', to: '/planning/compare' },
   { title: 'Enseignants', icon: 'mdi-account-tie', to: '/teachers' },
   { title: 'Salles', icon: 'mdi-door', to: '/rooms' },
-]
-
-const adminItems = [
-  { title: 'Groupes', icon: 'mdi-sitemap', to: '/admin/groups' },
+  { title: 'Profil', icon: 'mdi-account', to: '/profile' },
 ]
 </script>
 
@@ -60,76 +58,44 @@ const adminItems = [
       <template #append>
         <v-divider />
         <v-list nav density="compact">
-          <v-list-subheader>Admin</v-list-subheader>
           <v-list-item
-            v-for="item in adminItems"
-            :key="item.to"
-            :prepend-icon="item.icon"
-            :title="item.title"
-            :to="item.to"
+            prepend-icon="mdi-shield-crown"
+            title="Admin"
+            to="/admin"
             @click="drawerOpen = false"
-          />
-          <v-divider class="my-1" />
-          <v-list-item
-            prepend-icon="mdi-account-group"
-            title="Mes groupes"
-            @click="pickerOpen = true; drawerOpen = false"
           />
         </v-list>
       </template>
     </v-navigation-drawer>
 
-    <v-app-bar elevation="1">
-      <v-app-bar-nav-icon v-if="mobile" @click="drawerOpen = !drawerOpen" />
-      <v-app-bar-title>
-        <span class="font-weight-bold">Study Suite</span>
-      </v-app-bar-title>
+    <v-app-bar color="primary" title="Study Suite">
+      <template #prepend v-if="mobile">
+        <v-app-bar-nav-icon @click="drawerOpen = !drawerOpen" />
+      </template>
 
       <template v-if="!mobile" #append>
         <v-btn
           v-for="item in navItems"
           :key="item.to"
-          :prepend-icon="item.icon"
-          variant="text"
           :to="item.to"
+          icon
         >
-          {{ item.title }}
+          <v-icon>{{ item.icon }}</v-icon>
+          <v-tooltip activator="parent" location="bottom">{{ item.title }}</v-tooltip>
         </v-btn>
         <v-divider vertical class="mx-2" />
-        <v-tooltip
-          v-for="item in adminItems"
-          :key="item.to"
-          :text="item.title"
-          location="bottom"
-        >
-          <template #activator="{ props }">
-            <v-btn v-bind="props" :icon="item.icon" variant="text" :to="item.to" />
-          </template>
-        </v-tooltip>
-        <v-divider vertical class="mx-2" />
-        <v-tooltip text="Mes groupes" location="bottom">
-          <template #activator="{ props }">
-            <v-btn v-bind="props" icon="mdi-account-group" variant="text" @click="pickerOpen = true" />
-          </template>
-        </v-tooltip>
-        <v-tooltip :text="isDark ? 'Mode clair' : 'Mode sombre'" location="bottom">
-          <template #activator="{ props }">
-            <v-btn
-              v-bind="props"
-              :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
-              variant="text"
-              @click="toggleTheme"
-            />
-          </template>
-        </v-tooltip>
+        <v-btn icon to="/admin">
+          <v-icon>mdi-shield-crown</v-icon>
+          <v-tooltip activator="parent" location="bottom">Admin</v-tooltip>
+        </v-btn>
+        <v-btn icon @click="toggleTheme">
+          <v-icon>{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
+          <v-tooltip activator="parent" location="bottom">{{ isDark ? 'Mode clair' : 'Mode sombre' }}</v-tooltip>
+        </v-btn>
       </template>
 
       <template v-else #append>
-        <v-btn
-          :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'"
-          variant="text"
-          @click="toggleTheme"
-        />
+        <v-btn :icon="isDark ? 'mdi-weather-sunny' : 'mdi-weather-night'" @click="toggleTheme" />
       </template>
     </v-app-bar>
 
@@ -137,8 +103,19 @@ const adminItems = [
       <router-view />
     </v-main>
 
-    <v-footer app border="t" class="text-caption text-medium-emphasis justify-center">
-      Study Suite
+    <v-footer class="d-flex flex-column text-center">
+      <div class="mb-1">
+        Fait avec ❤️ par
+        <a href="https://bloomyindev.me" class="text-primary text-decoration-none font-weight-bold">Bloomy</a>
+      </div>
+      <div class="text-caption text-medium-emphasis">
+        Commit Hash:
+        <a
+          :href="`https://forge.red.bloomyindev.me/bastien/study_suite/commit/${commitHash}`"
+          class="text-medium-emphasis text-decoration-underline commit-hash"
+          target="_blank"
+        >{{ commitHash }}</a>
+      </div>
     </v-footer>
 
     <template v-for="notif in notifs.notifications" :key="notif.id">
@@ -154,3 +131,10 @@ const adminItems = [
     </template>
   </v-app>
 </template>
+
+<style scoped>
+.commit-hash::after {
+  content: " ↗";
+  font-size: 0.75em;
+}
+</style>
