@@ -1,10 +1,13 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
+import authController from './controllers/auth.js'
 import eventsController from './controllers/events.js'
 import groupsController from './controllers/groups.js'
 import roomsController from './controllers/rooms.js'
 import teachersController from './controllers/teachers.js'
+import adminUsersController from './controllers/admin/users.js'
+import adminDiscordMappingsController from './controllers/admin/discord_mappings.js'
 
 const api = new Hono()
   .route('/events', eventsController)
@@ -12,10 +15,16 @@ const api = new Hono()
   .route('/rooms', roomsController)
   .route('/groups', groupsController)
 
+const adminApi = new Hono()
+  .route('/users', adminUsersController)
+  .route('/discord-mappings', adminDiscordMappingsController)
+
 const app = new Hono()
   .use('*', cors({ origin: config.server.corsOrigin }))
   .get('/health', (c) => c.json({ status: 'ok' }))
+  .route('/auth', authController)
   .route('/api', api)
+  .route('/api/admin', adminApi)
 
 export type AppType = typeof app
 
