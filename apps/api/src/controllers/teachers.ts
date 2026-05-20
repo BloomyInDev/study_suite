@@ -66,6 +66,8 @@ export default new Hono()
   .get('/:id/events', zValidator('query', OptionalDateRangeSchema), async (c) => {
     const id = c.req.param('id')
     const { from, to, dateFormat } = c.req.valid('query')
+    const fromDate = from ? new Date(from) : undefined
+    const toDate = to ? new Date(to) : undefined
     const [teacher] = await db.select().from(teachers).where(eq(teachers.id, id))
     if (!teacher) return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
     const conditions = [
@@ -77,8 +79,8 @@ export default new Hono()
           .where(eq(eventTeachers.teacherId, id)),
       ),
     ]
-    if (from) conditions.push(gte(events.startDate, from))
-    if (to) conditions.push(lt(events.startDate, to))
+    if (fromDate) conditions.push(gte(events.startDate, fromDate))
+    if (toDate) conditions.push(lt(events.startDate, toDate))
     const rows = await db.query.events.findMany({
       where: and(...conditions),
       with: withRelations,

@@ -51,6 +51,8 @@ export default new Hono()
   .get('/:id/events', zValidator('query', OptionalDateRangeSchema), async (c) => {
     const id = c.req.param('id')
     const { from, to, dateFormat } = c.req.valid('query')
+    const fromDate = from ? new Date(from) : undefined
+    const toDate = to ? new Date(to) : undefined
     const [group] = await db.select().from(studentGroups).where(eq(studentGroups.id, id))
     if (!group) return c.json({ error: { code: 'NOT_FOUND', message: 'Group not found' } }, 404)
     const rows = await db.query.events.findMany({
@@ -62,8 +64,8 @@ export default new Hono()
             .from(eventStudentGroups)
             .where(eq(eventStudentGroups.studentGroupId, id)),
         ),
-        from ? gt(events.startDate, from) : undefined,
-        to ? lt(events.startDate, to) : undefined,
+        fromDate ? gt(events.startDate, fromDate) : undefined,
+        toDate ? lt(events.startDate, toDate) : undefined,
       ),
       with: withRelations,
       orderBy: asc(events.startDate),

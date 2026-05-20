@@ -28,9 +28,12 @@ export const LimitSchema = z.object({
   dateFormat: DateFormatSchema,
 })
 
+// Accepts ISO date strings, unix timestamps in milliseconds
+const TimestampSchema = z.coerce.date().or(z.number().int().positive()).or(z.string().regex(/^\d+$/).transform(Number))
+
 export const OptionalDateRangeSchema = z.object({
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
+  from: TimestampSchema.optional(),
+  to: TimestampSchema.optional(),
   dateFormat: DateFormatSchema,
 })
 

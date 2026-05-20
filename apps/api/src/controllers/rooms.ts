@@ -41,6 +41,8 @@ export default new Hono()
   .get('/:id/events', zValidator('query', OptionalDateRangeSchema), async (c) => {
     const id = c.req.param('id')
     const { from, to, dateFormat } = c.req.valid('query')
+    const fromDate = from ? new Date(from) : undefined
+    const toDate = to ? new Date(to) : undefined
     const [room] = await db.select().from(locations).where(eq(locations.id, id))
     if (!room) return c.json({ error: { code: 'NOT_FOUND', message: 'Room not found' } }, 404)
     const rows = await db.query.events.findMany({
@@ -49,8 +51,8 @@ export default new Hono()
           events.id,
           db.select({ id: eventLocations.eventId }).from(eventLocations).where(eq(eventLocations.locationId, id)),
         ),
-        from ? gt(events.startDate, from) : undefined,
-        to ? lt(events.startDate, to) : undefined,
+        fromDate ? gt(events.startDate, fromDate) : undefined,
+        toDate ? lt(events.startDate, toDate) : undefined,
       ),
       with: withRelations,
       orderBy: asc(events.startDate),
