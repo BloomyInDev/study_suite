@@ -39,7 +39,7 @@ router.beforeEach((to) => {
 
   if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login'
 
-  if (auth.isAuthenticated && auth.isPending && to.path !== '/pending') return '/pending'
+  if (auth.isAuthenticated && auth.isPending && !auth.isAdmin && to.path !== '/pending') return '/pending'
 
   if (to.meta.requiresAdmin && !auth.isAdmin) return '/'
 
