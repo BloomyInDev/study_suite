@@ -15,7 +15,6 @@ const schema = z.object({
   discord: z.object({
     clientId: z.string().min(1),
     clientSecret: z.string().min(1),
-    guildId: z.string().min(1),
     redirectUri: z.string().default('http://localhost:3000/auth/discord/callback'),
   }),
   jwt: z.object({
@@ -33,7 +32,6 @@ export const config = loadConfig({
     FRONTEND_URL: 'server.frontendUrl',
     DISCORD_CLIENT_ID: 'discord.clientId',
     DISCORD_CLIENT_SECRET: 'discord.clientSecret',
-    DISCORD_GUILD_ID: 'discord.guildId',
     DISCORD_REDIRECT_URI: 'discord.redirectUri',
     JWT_SECRET: 'jwt.secret',
   },
