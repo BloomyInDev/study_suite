@@ -12,6 +12,27 @@ type DiscordTokenResponse = { access_token: string; token_type: string }
 type DiscordUser = { id: string; username: string; avatar: string | null; global_name: string | null }
 type DiscordMember = { roles: string[] }
 
+type OAuthState = { clientRedirectUri?: string }
+
+function parseState(raw: string | undefined): OAuthState {
+  if (!raw) return {}
+  try {
+    return JSON.parse(Buffer.from(raw, 'base64url').toString('utf-8')) as OAuthState
+  } catch {
+    return {}
+  }
+}
+
+function safeRedirectUri(uri: string | undefined): string | undefined {
+  if (!uri) return undefined
+  try {
+    const url = new URL(uri)
+    return ['http:', 'https:'].includes(url.protocol) ? uri : undefined
+  } catch {
+    return undefined
+  }
+}
+
 function userToDto(user: typeof users.$inferSelect) {
   return {
     id: user.id,
@@ -39,20 +60,34 @@ async function issueToken(user: typeof users.$inferSelect): Promise<string> {
 
 export default new Hono<AuthEnv>()
   .get('/discord', (c) => {
+    const clientRedirectUri = safeRedirectUri(c.req.query('redirect_uri'))
+    const state: OAuthState = clientRedirectUri ? { clientRedirectUri } : {}
+    const stateParam = Buffer.from(JSON.stringify(state)).toString('base64url')
+
     const params = new URLSearchParams({
       client_id: config.discord.clientId,
       redirect_uri: config.discord.redirectUri,
       response_type: 'code',
       scope: 'identify guilds.members.read',
+      state: stateParam,
     })
     return c.redirect(`https://discord.com/api/oauth2/authorize?${params}`)
   })
 
   .get('/discord/callback', async (c) => {
-    const code = c.req.query('code')
-    if (!code) {
-      return c.redirect(`${config.server.frontendUrl}/login?error=missing_code`)
+    const { clientRedirectUri } = parseState(c.req.query('state'))
+
+    const errorResponse = (code: string, message: string) => {
+      if (clientRedirectUri) {
+        const url = new URL(clientRedirectUri)
+        url.searchParams.set('error', code)
+        return c.redirect(url.toString())
+      }
+      return c.json({ error: { code, message } }, 400)
     }
+
+    const code = c.req.query('code')
+    if (!code) return errorResponse('missing_code', 'Missing authorization code')
 
     // Exchange code for Discord access token
     const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
@@ -66,18 +101,14 @@ export default new Hono<AuthEnv>()
         redirect_uri: config.discord.redirectUri,
       }),
     })
-    if (!tokenRes.ok) {
-      return c.redirect(`${config.server.frontendUrl}/login?error=discord_auth_failed`)
-    }
+    if (!tokenRes.ok) return errorResponse('discord_auth_failed', 'Discord token exchange failed')
     const { access_token } = await tokenRes.json() as DiscordTokenResponse
 
     // Fetch Discord user info
     const userRes = await fetch(`${DISCORD_API}/users/@me`, {
       headers: { Authorization: `Bearer ${access_token}` },
     })
-    if (!userRes.ok) {
-      return c.redirect(`${config.server.frontendUrl}/login?error=discord_user_failed`)
-    }
+    if (!userRes.ok) return errorResponse('discord_user_failed', 'Failed to fetch Discord user')
     const discordUser = await userRes.json() as DiscordUser
 
     // Fetch member roles from all configured guilds (in parallel)
@@ -93,14 +124,13 @@ export default new Hono<AuthEnv>()
       }),
     )
 
-    // Find matching role → class mappings across all guilds
+    // Find valid role → class mappings across all guilds
     const allRoleIds = memberRoleResults.flatMap(r => r.roles)
     const mappings = allRoleIds.length > 0
       ? await db.select().from(discordRoleMappings)
           .where(inArray(discordRoleMappings.discordRoleId, allRoleIds))
       : []
 
-    // Filter: mapping must belong to a guild where the user actually has that role
     const validMappings = mappings.filter(m =>
       memberRoleResults.some(r => r.guildDbId === m.guildId && r.roles.includes(m.discordRoleId)),
     )
@@ -142,7 +172,13 @@ export default new Hono<AuthEnv>()
     }
 
     const token = await issueToken(user)
-    return c.redirect(`${config.server.frontendUrl}/auth/callback?token=${token}`)
+
+    if (clientRedirectUri) {
+      const url = new URL(clientRedirectUri)
+      url.searchParams.set('token', token)
+      return c.redirect(url.toString())
+    }
+    return c.json({ data: userToDto(user), token })
   })
 
   .get('/me', requireAuth, async (c) => {

@@ -6,7 +6,6 @@
 server:
   port: 3000
   # corsOrigin: http://localhost:5173
-  # frontendUrl: http://localhost:5173
 
 database:
   # url: postgres://user:pass@localhost:5432/study_suite

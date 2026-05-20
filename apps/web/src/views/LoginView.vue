@@ -11,6 +11,8 @@ const errorMessages: Record<string, string> = {
 }
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const callbackUri = encodeURIComponent(window.location.origin + '/auth/callback')
+const discordLoginUrl = `${API_URL}/auth/discord?redirect_uri=${callbackUri}`
 </script>
 
 <template>
@@ -27,7 +29,7 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
           {{ errorMessages[error] ?? 'Une erreur est survenue.' }}
         </v-alert>
         <v-btn
-          :href="`${API_URL}/auth/discord`"
+          :href="discordLoginUrl"
           color="indigo"
           size="large"
           block
