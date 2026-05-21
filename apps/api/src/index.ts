@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
 import authController from './controllers/auth.js'
+import assignmentsController from './controllers/assignments.js'
 import eventsController from './controllers/events.js'
 import groupsController from './controllers/groups.js'
 import roomsController from './controllers/rooms.js'
@@ -14,6 +15,7 @@ const api = new Hono()
     .route('/teachers', teachersController)
     .route('/rooms', roomsController)
     .route('/groups', groupsController)
+    .route('/assignments', assignmentsController)
 
 const adminApi = new Hono()
     .route('/users', adminUsersController)
