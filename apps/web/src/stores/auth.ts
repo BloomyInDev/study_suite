@@ -29,6 +29,17 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('auth_user', JSON.stringify(newUser))
     }
 
+    async function refresh(): Promise<void> {
+        if (!token.value) return
+        const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+        const res = await fetch(`${API_URL}/auth/me`, {
+            headers: { Authorization: `Bearer ${token.value}` },
+        })
+        if (!res.ok) return
+        const { data, token: newToken } = await res.json()
+        setAuth(newToken, data)
+    }
+
     function logout() {
         token.value = null
         user.value = null
@@ -36,5 +47,5 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem('auth_user')
     }
 
-    return { token, user, isAuthenticated, isAdmin, isPending, isApproved, setAuth, logout }
+    return { token, user, isAuthenticated, isAdmin, isPending, isApproved, setAuth, refresh, logout }
 })

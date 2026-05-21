@@ -1,7 +1,21 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 
 const auth = useAuthStore()
+const router = useRouter()
+const refreshing = ref(false)
+
+async function checkApproval() {
+    refreshing.value = true
+    try {
+        await auth.refresh()
+        if (auth.isApproved) router.push('/')
+    } finally {
+        refreshing.value = false
+    }
+}
 </script>
 
 <template>
@@ -18,17 +32,27 @@ const auth = useAuthStore()
                     Connecté en tant que
                     <strong>{{ auth.user?.discordUsername }}</strong>
                 </div>
-                <v-btn
-                    variant="text"
-                    color="error"
-                    prepend-icon="mdi-logout"
-                    @click="
-                        auth.logout()
-                        $router.push('/login')
-                    "
-                >
-                    Se déconnecter
-                </v-btn>
+                <div class="d-flex flex-column gap-2">
+                    <v-btn
+                        color="primary"
+                        prepend-icon="mdi-refresh"
+                        :loading="refreshing"
+                        @click="checkApproval"
+                    >
+                        Vérifier mon statut
+                    </v-btn>
+                    <v-btn
+                        variant="text"
+                        color="error"
+                        prepend-icon="mdi-logout"
+                        @click="
+                            auth.logout()
+                            $router.push('/login')
+                        "
+                    >
+                        Se déconnecter
+                    </v-btn>
+                </div>
             </v-card-text>
         </v-card>
     </v-container>
