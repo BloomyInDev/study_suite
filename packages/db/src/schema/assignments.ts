@@ -14,6 +14,7 @@ export const assignments = pgTable('assignments', {
         .references(() => studentGroups.id, { onDelete: 'cascade' }),
     eventId: uuid('event_id').references(() => events.id, { onDelete: 'set null' }),
     createdById: uuid('created_by_id').references(() => users.id, { onDelete: 'set null' }),
+    updatedById: uuid('updated_by_id').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

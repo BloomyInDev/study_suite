@@ -58,7 +58,7 @@ export const studentGroupMembershipsRelations = relations(studentGroupMembership
     }),
 }))
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
     studentProfile: one(userStudents, {
         fields: [users.id],
         references: [userStudents.userId],
@@ -67,6 +67,8 @@ export const usersRelations = relations(users, ({ one }) => ({
         fields: [users.id],
         references: [userTeachers.userId],
     }),
+    createdAssignments: many(assignments, { relationName: 'assignment_creator' }),
+    updatedAssignments: many(assignments, { relationName: 'assignment_updater' }),
 }))
 
 export const userStudentsRelations = relations(userStudents, ({ one }) => ({
@@ -109,6 +111,12 @@ export const assignmentsRelations = relations(assignments, ({ one, many }) => ({
     createdBy: one(users, {
         fields: [assignments.createdById],
         references: [users.id],
+        relationName: 'assignment_creator',
+    }),
+    updatedBy: one(users, {
+        fields: [assignments.updatedById],
+        references: [users.id],
+        relationName: 'assignment_updater',
     }),
     completions: many(assignmentCompletions),
 }))

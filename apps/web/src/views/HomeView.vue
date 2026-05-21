@@ -8,7 +8,7 @@ import NoGroupsCard from '../components/NoGroupsCard.vue'
 import NextEventCard from '../components/NextEventCard.vue'
 import NoEventsCard from '../components/NoEventsCard.vue'
 import AssignmentCard from '../components/AssignmentCard.vue'
-import AssignmentFormDialog from '../components/AssignmentFormDialog.vue'
+import AssignmentDetailDialog from '../components/AssignmentDetailDialog.vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 
 const groupStore = useGroupsStore()
@@ -22,7 +22,8 @@ const assignments = ref<Assignment[]>([])
 const loading = ref(true)
 const now = ref(new Date())
 const pickerOpen = ref(false)
-const assignmentFormOpen = ref(false)
+const detailOpen = ref(false)
+const viewingAssignment = ref<Assignment | null>(null)
 let intervalId: ReturnType<typeof setInterval> | null = null
 
 onMounted(async () => {
@@ -77,10 +78,9 @@ const upcomingAssignments = computed(() =>
     assignments.value.filter((a) => new Date(a.dueDate) >= now.value),
 )
 
-function onAssignmentSaved(a: Assignment) {
-    const idx = assignments.value.findIndex((x) => x.id === a.id)
-    if (idx >= 0) assignments.value[idx] = a
-    else assignments.value = [a, ...assignments.value].slice(0, 5)
+function openDetail(a: Assignment) {
+    viewingAssignment.value = a
+    detailOpen.value = true
 }
 
 async function toggleDone(a: Assignment, done: boolean) {
@@ -93,7 +93,9 @@ async function toggleDone(a: Assignment, done: boolean) {
     const body = (await res.json()) as { data: { completedByMe: boolean; completionCount: number } }
     const idx = assignments.value.findIndex((x) => x.id === a.id)
     if (idx >= 0) {
-        assignments.value[idx] = { ...assignments.value[idx], ...body.data }
+        const updated = { ...assignments.value[idx], ...body.data }
+        assignments.value[idx] = updated
+        if (viewingAssignment.value?.id === updated.id) viewingAssignment.value = updated
     }
 }
 </script>
@@ -142,7 +144,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                             :key="a.id"
                             :assignment="a"
                             compact
-                            @click="assignmentFormOpen = true"
+                            @click="openDetail(a)"
                             @toggle="toggleDone(a, $event)"
                         />
                     </v-list>
@@ -160,10 +162,10 @@ async function toggleDone(a: Assignment, done: boolean) {
             </v-col>
         </v-row>
 
-        <AssignmentFormDialog
-            v-model="assignmentFormOpen"
-            @saved="onAssignmentSaved"
-            @deleted="(id) => (assignments = assignments.filter((a) => a.id !== id))"
+        <AssignmentDetailDialog
+            v-model="detailOpen"
+            :assignment="viewingAssignment"
+            @toggle="viewingAssignment && toggleDone(viewingAssignment, $event)"
         />
     </v-container>
 </template>

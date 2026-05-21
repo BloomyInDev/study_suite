@@ -62,6 +62,7 @@ export interface Assignment {
     studentGroup: { id: string; internalName: string }
     event: { id: string; title: string } | null
     createdBy: { id: string; discordUsername: string } | null
+    updatedBy: { id: string; discordUsername: string } | null
     completedByMe: boolean
     completionCount: number
     createdAt: string

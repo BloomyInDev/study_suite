@@ -45,6 +45,7 @@ const withRelations = {
     studentGroup: true as const,
     event: true as const,
     createdBy: true as const,
+    updatedBy: true as const,
     completions: true as const,
 }
 
@@ -68,6 +69,9 @@ function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: string) {
         event: row.event ? { id: row.event.id, title: row.event.title } : null,
         createdBy: row.createdBy
             ? { id: row.createdBy.id, discordUsername: row.createdBy.discordUsername }
+            : null,
+        updatedBy: row.updatedBy
+            ? { id: row.updatedBy.id, discordUsername: row.updatedBy.discordUsername }
             : null,
         completedByMe: row.completions.some((c) => c.userId === myUserId),
         completionCount: row.completions.length,
@@ -224,7 +228,7 @@ export default new Hono<AuthEnv>()
 
         await db
             .update(assignments)
-            .set({ ...body, updatedAt: new Date() })
+            .set({ ...body, updatedById: payload.sub, updatedAt: new Date() })
             .where(eq(assignments.id, id))
 
         const row = await fetchAssignment(id)

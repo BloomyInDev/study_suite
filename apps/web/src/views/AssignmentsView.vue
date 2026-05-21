@@ -5,6 +5,7 @@ import { useNotificationsStore } from '../stores/notifications.js'
 import type { Assignment } from '../lib/types.js'
 import AssignmentCard from '../components/AssignmentCard.vue'
 import AssignmentFormDialog from '../components/AssignmentFormDialog.vue'
+import AssignmentDetailDialog from '../components/AssignmentDetailDialog.vue'
 
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
@@ -14,6 +15,8 @@ const assignments = ref<Assignment[]>([])
 const loading = ref(false)
 const formOpen = ref(false)
 const editingAssignment = ref<Assignment | null>(null)
+const detailOpen = ref(false)
+const viewingAssignment = ref<Assignment | null>(null)
 
 function authHeader() {
     return { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
@@ -50,7 +53,9 @@ const today = computed(() =>
     }),
 )
 const past = computed(() =>
-    assignments.value.filter((a) => new Date(a.dueDate).getTime() < todayStart),
+    assignments.value.filter(
+        (a) => new Date(a.dueDate).getTime() < todayStart && !a.completedByMe,
+    ),
 )
 
 function openCreate() {
@@ -58,8 +63,14 @@ function openCreate() {
     formOpen.value = true
 }
 
+function openDetail(a: Assignment) {
+    viewingAssignment.value = a
+    detailOpen.value = true
+}
+
 function openEdit(a: Assignment) {
     editingAssignment.value = a
+    detailOpen.value = false
     formOpen.value = true
 }
 
@@ -69,6 +80,7 @@ function onSaved(a: Assignment) {
     else assignments.value = [...assignments.value, a].sort(
         (x, y) => new Date(x.dueDate).getTime() - new Date(y.dueDate).getTime(),
     )
+    if (viewingAssignment.value?.id === a.id) viewingAssignment.value = a
 }
 
 function onDeleted(id: string) {
@@ -86,11 +98,13 @@ async function toggleDone(a: Assignment, done: boolean) {
         const body = (await res.json()) as { data: { completedByMe: boolean; completionCount: number } }
         const idx = assignments.value.findIndex((x) => x.id === a.id)
         if (idx >= 0) {
-            assignments.value[idx] = {
+            const updated = {
                 ...assignments.value[idx],
                 completedByMe: body.data.completedByMe,
                 completionCount: body.data.completionCount,
             }
+            assignments.value[idx] = updated
+            if (viewingAssignment.value?.id === updated.id) viewingAssignment.value = updated
         }
     } catch {
         notifs.error('Erreur lors de la mise à jour')
@@ -134,7 +148,7 @@ onMounted(fetchAssignments)
                             v-for="a in past"
                             :key="a.id"
                             :assignment="a"
-                            @click="openEdit(a)"
+                            @click="openDetail(a)"
                             @toggle="toggleDone(a, $event)"
                         />
                     </v-list>
@@ -150,7 +164,7 @@ onMounted(fetchAssignments)
                             v-for="a in today"
                             :key="a.id"
                             :assignment="a"
-                            @click="openEdit(a)"
+                            @click="openDetail(a)"
                             @toggle="toggleDone(a, $event)"
                         />
                     </v-list>
@@ -166,7 +180,7 @@ onMounted(fetchAssignments)
                             v-for="a in upcoming"
                             :key="a.id"
                             :assignment="a"
-                            @click="openEdit(a)"
+                            @click="openDetail(a)"
                             @toggle="toggleDone(a, $event)"
                         />
                     </v-list>
@@ -174,6 +188,12 @@ onMounted(fetchAssignments)
             </template>
         </template>
 
+        <AssignmentDetailDialog
+            v-model="detailOpen"
+            :assignment="viewingAssignment"
+            @edit="openEdit(viewingAssignment!)"
+            @toggle="viewingAssignment && toggleDone(viewingAssignment, $event)"
+        />
         <AssignmentFormDialog
             v-model="formOpen"
             :editing="editingAssignment"
