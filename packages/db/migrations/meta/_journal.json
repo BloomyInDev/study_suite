@@ -50,6 +50,13 @@
       "when": 1779365535985,
       "tag": "0006_hesitant_zemo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779367797414,
+      "tag": "0007_bent_kid_colt",
+      "breakpoints": true
     }
   ]
 }
