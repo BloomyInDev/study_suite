@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { sign } from 'hono/jwt'
-import { eq, inArray } from 'drizzle-orm'
+import { eq, inArray, type SQL } from 'drizzle-orm'
 import { db } from '../db.js'
 import { users, userStudents, userTeachers, discordGuilds, discordRoleMappings } from '@studysuite/db'
 import { config } from '../config.js'
@@ -25,7 +25,7 @@ export type EnrichedUser = typeof users.$inferSelect & {
     teacherId: string | null
 }
 
-async function fetchEnrichedUser(where: Parameters<typeof eq>[1] extends infer _ ? any : never): Promise<EnrichedUser | null> {
+async function fetchEnrichedUser(where: SQL | undefined): Promise<EnrichedUser | null> {
     const rows = await db
         .select({
             id: users.id,
