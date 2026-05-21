@@ -57,6 +57,14 @@ export default new Hono<AuthEnv>()
     .patch('/:id', zValidator('json', patchSchema), async (c) => {
         const id = c.req.param('id')
         const body = c.req.valid('json')
+        const payload = c.get('user')
+
+        if (body.isAdmin === false && id === payload.sub) {
+            return c.json(
+                { error: { code: 'SELF_DEMOTE', message: 'Cannot remove your own admin status' } },
+                403,
+            )
+        }
 
         const [existing] = await db.select().from(users).where(eq(users.id, id)).limit(1)
         if (!existing) {

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, reactive } from 'vue'
 import type { AuthUser } from '../../stores/auth.js'
+import { useAuthStore } from '../../stores/auth.js'
 import { useGroupsStore } from '../../stores/groups.js'
 import { useNotificationsStore } from '../../stores/notifications.js'
 
+const auth = useAuthStore()
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 
@@ -12,6 +14,15 @@ const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const users = ref<AuthUser[]>([])
 const loading = ref(false)
 const saving = ref<string | null>(null)
+
+const editDialog = ref(false)
+const editingUser = ref<AuthUser | null>(null)
+const editForm = reactive({
+    status: 'approved' as 'pending' | 'approved' | 'rejected',
+    role: null as 'student' | 'teacher' | null,
+    studentGroupId: null as string | null,
+    isAdmin: false,
+})
 
 async function fetchUsers() {
     loading.value = true
@@ -40,7 +51,15 @@ async function updateUser(id: string, patch: Partial<AuthUser>) {
             },
             body: JSON.stringify(patch),
         })
-        if (!res.ok) throw new Error('update failed')
+        if (!res.ok) {
+            const body = await res.json().catch(() => null)
+            const code = body?.error?.code
+            if (code === 'SELF_DEMOTE') {
+                notifs.error("Impossible de vous retirer vos propres droits admin")
+                return
+            }
+            throw new Error('update failed')
+        }
         const body = (await res.json()) as { data: AuthUser }
         const idx = users.value.findIndex((u) => u.id === id)
         if (idx >= 0) users.value[idx] = body.data
@@ -58,6 +77,31 @@ async function approve(user: AuthUser, role: 'student' | 'teacher') {
 
 async function reject(user: AuthUser) {
     await updateUser(user.id, { status: 'rejected' })
+}
+
+function openEdit(user: AuthUser) {
+    editingUser.value = user
+    editForm.status = user.status
+    editForm.role = user.role
+    editForm.studentGroupId = user.studentGroupId
+    editForm.isAdmin = user.isAdmin
+    editDialog.value = true
+}
+
+async function saveEdit() {
+    const user = editingUser.value
+    if (!user) return
+
+    const patch: Record<string, unknown> = {
+        status: editForm.status,
+        isAdmin: editForm.isAdmin,
+        role: editForm.role,
+    }
+    if (editForm.role === 'student') patch.studentGroupId = editForm.studentGroupId
+    if (editForm.role === 'teacher') patch.teacherId = null
+
+    await updateUser(user.id, patch as Partial<AuthUser>)
+    editDialog.value = false
 }
 
 const statusColor: Record<string, string> = {
@@ -177,24 +221,82 @@ onMounted(fetchUsers)
                         <v-checkbox-btn
                             :model-value="user.isAdmin"
                             density="compact"
+                            :disabled="user.id === auth.user?.id"
                             :loading="saving === user.id"
                             @update:model-value="updateUser(user.id, { isAdmin: $event })"
                         />
                     </td>
                     <td>
                         <v-btn
-                            v-if="user.status === 'rejected'"
+                            icon="mdi-pencil"
                             size="x-small"
                             variant="text"
-                            color="success"
                             :loading="saving === user.id"
-                            @click="approve(user, user.role ?? 'student')"
-                        >
-                            Réactiver
-                        </v-btn>
+                            @click="openEdit(user)"
+                        />
                     </td>
                 </tr>
             </tbody>
         </v-table>
+
+        <v-dialog v-model="editDialog" max-width="480">
+            <v-card v-if="editingUser">
+                <v-card-title class="pt-4 px-4">
+                    Modifier — {{ editingUser.discordUsername }}
+                </v-card-title>
+                <v-card-text class="d-flex flex-column ga-3 px-4">
+                    <v-select
+                        v-model="editForm.status"
+                        label="Statut"
+                        density="compact"
+                        variant="outlined"
+                        :items="[
+                            { title: 'Approuvé', value: 'approved' },
+                            { title: 'En attente', value: 'pending' },
+                            { title: 'Refusé', value: 'rejected' },
+                        ]"
+                    />
+                    <v-select
+                        v-model="editForm.role"
+                        label="Rôle"
+                        density="compact"
+                        variant="outlined"
+                        :items="[
+                            { title: '—', value: null },
+                            { title: 'Élève', value: 'student' },
+                            { title: 'Enseignant', value: 'teacher' },
+                        ]"
+                    />
+                    <v-select
+                        v-if="editForm.role === 'student'"
+                        v-model="editForm.studentGroupId"
+                        label="Groupe"
+                        density="compact"
+                        variant="outlined"
+                        clearable
+                        :items="groups.allGroups.map((g) => ({ title: g.internalName, value: g.id }))"
+                    />
+                    <v-checkbox
+                        v-model="editForm.isAdmin"
+                        label="Administrateur"
+                        density="compact"
+                        hide-details
+                        :disabled="editingUser.id === auth.user?.id"
+                    />
+                </v-card-text>
+                <v-card-actions class="px-4 pb-4">
+                    <v-spacer />
+                    <v-btn variant="text" @click="editDialog = false">Annuler</v-btn>
+                    <v-btn
+                        color="primary"
+                        variant="tonal"
+                        :loading="saving === editingUser.id"
+                        @click="saveEdit"
+                    >
+                        Enregistrer
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
