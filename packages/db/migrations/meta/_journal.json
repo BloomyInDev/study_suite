@@ -22,6 +22,20 @@
       "when": 1779313306258,
       "tag": "0002_furry_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779314458604,
+      "tag": "0003_steady_vindicator",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779363000857,
+      "tag": "0004_graceful_viper",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 import { jsonb, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 
-export const changeTypeEnum = pgEnum('change_type', ['added', 'removed', 'updated'])
+export const changeTypeEnum = pgEnum('change_type', ['added', 'removed', 'updated', 'moved'])
 
 export const eventChanges = pgTable('event_changes', {
   id: uuid('id').primaryKey().defaultRandom(),

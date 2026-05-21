@@ -27,7 +27,7 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
       const result = await scrapeAllWeeks(config, db, knownGroupNames)
       console.log(
         `[scraper] Done — ${result.weeks} weeks, added: ${result.added}, removed: ${result.removed}, ` +
-          `updated: ${result.updated}, duration: ${result.durationMs}ms`,
+          `updated: ${result.updated}, moved: ${result.moved}, duration: ${result.durationMs}ms`,
       )
     } catch (err) {
       console.error('[scraper] Error during scrape:', err)

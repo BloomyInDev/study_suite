@@ -14,6 +14,29 @@ import {
 
 type Db = ReturnType<typeof createDb>
 
+export interface EventSlot {
+  title: string
+  startDate: Date
+  endDate: Date
+  relKey: string
+}
+
+export interface UpdatedEventChange {
+  title: string
+  startDate: Date
+  endDate: Date
+  diff: {
+    before: { rooms: string[]; teachers: { firstName: string; lastName: string }[]; groups: string[] }
+    after: { rooms: string[]; teachers: { firstName: string; lastName: string }[]; groups: string[] }
+  }
+}
+
+export interface WeekDiff {
+  added: EventSlot[]
+  removed: EventSlot[]
+  updated: UpdatedEventChange[]
+}
+
 function eventKey(title: string, start: Date, end: Date): string {
   return `${title}|${start.toISOString()}|${end.toISOString()}`
 }
@@ -23,6 +46,18 @@ function relationsKey(ev: ParsedEvent): string {
   const tchrs = ev.teachers.map(t => `${t.lastName}:${t.firstName}`).sort().join(',')
   const groups = ev.groups.map(g => g.internalName).sort().join(',')
   return `${rooms}|${tchrs}|${groups}`
+}
+
+function existingRelationsKey(existing: {
+  eventLocations: Array<{ location: { name: string } }>
+  eventTeachers: Array<{ teacher: { firstName: string; lastName: string } }>
+  eventStudentGroups: Array<{ studentGroup: { internalName: string } }>
+}): string {
+  return [
+    existing.eventLocations.map(el => el.location.name).sort().join(','),
+    existing.eventTeachers.map(et => `${et.teacher.lastName}:${et.teacher.firstName}`).sort().join(','),
+    existing.eventStudentGroups.map(eg => eg.studentGroup.internalName).sort().join(','),
+  ].join('|')
 }
 
 async function getOrCreateLocation(
@@ -84,15 +119,18 @@ async function insertEventWithRelations(
   }
 }
 
-export async function reconcileWeek(
+/**
+ * Applies event mutations for one week (delete removed, insert added/updated).
+ * Does NOT write eventChanges — call insertAllChanges after all weeks are processed.
+ */
+export async function applyWeekEvents(
   db: Db,
   weekMonday: Date,
   scraped: ParsedEvent[],
-): Promise<{ added: number; removed: number; updated: number }> {
+): Promise<WeekDiff> {
   const weekEnd = new Date(weekMonday.getTime() + 7 * 24 * 60 * 60 * 1000)
 
   return db.transaction(async tx => {
-    // Load existing events for this week with their relations
     const existingEvents = await tx.query.events.findMany({
       where: and(gte(events.startDate, weekMonday), lt(events.startDate, weekEnd)),
       with: {
@@ -116,64 +154,49 @@ export async function reconcileWeek(
     const toAdd: ParsedEvent[] = []
     const toUpdate: ParsedEvent[] = []
 
+    const diff: WeekDiff = { added: [], removed: [], updated: [] }
+
     for (const [key, existing] of existingByKey) {
       const scrapedEv = scrapedByKey.get(key)
+      const relKey = existingRelationsKey(existing)
+
       if (!scrapedEv) {
         toRemove.push(existing.id)
-        await tx.insert(eventChanges).values({
-          changeType: 'removed',
-          eventTitle: existing.title,
+        diff.removed.push({ title: existing.title, startDate: existing.startDate, endDate: existing.endDate, relKey })
+      } else if (relKey !== relationsKey(scrapedEv)) {
+        toRemove.push(existing.id)
+        toUpdate.push(scrapedEv)
+        diff.updated.push({
+          title: existing.title,
           startDate: existing.startDate,
           endDate: existing.endDate,
-          diff: null,
-        })
-      } else {
-        const existingRelKey = [
-          existing.eventLocations.map(el => el.location.name).sort().join(','),
-          existing.eventTeachers
-            .map(et => `${et.teacher.lastName}:${et.teacher.firstName}`)
-            .sort()
-            .join(','),
-          existing.eventStudentGroups.map(eg => eg.studentGroup.internalName).sort().join(','),
-        ].join('|')
-
-        if (existingRelKey !== relationsKey(scrapedEv)) {
-          toRemove.push(existing.id)
-          toUpdate.push(scrapedEv)
-          await tx.insert(eventChanges).values({
-            changeType: 'updated',
-            eventTitle: existing.title,
-            startDate: existing.startDate,
-            endDate: existing.endDate,
-            diff: {
-              before: {
-                rooms: existing.eventLocations.map(el => el.location.name),
-                teachers: existing.eventTeachers.map(et => ({
-                  firstName: et.teacher.firstName,
-                  lastName: et.teacher.lastName,
-                })),
-                groups: existing.eventStudentGroups.map(eg => eg.studentGroup.internalName),
-              },
-              after: {
-                rooms: scrapedEv.rooms.map(r => r.name),
-                teachers: scrapedEv.teachers,
-                groups: scrapedEv.groups.map(g => g.internalName),
-              },
+          diff: {
+            before: {
+              rooms: existing.eventLocations.map(el => el.location.name),
+              teachers: existing.eventTeachers.map(et => ({
+                firstName: et.teacher.firstName,
+                lastName: et.teacher.lastName,
+              })),
+              groups: existing.eventStudentGroups.map(eg => eg.studentGroup.internalName),
             },
-          })
-        }
+            after: {
+              rooms: scrapedEv.rooms.map(r => r.name),
+              teachers: scrapedEv.teachers,
+              groups: scrapedEv.groups.map(g => g.internalName),
+            },
+          },
+        })
       }
     }
 
     for (const [key, scrapedEv] of scrapedByKey) {
       if (!existingByKey.has(key)) {
         toAdd.push(scrapedEv)
-        await tx.insert(eventChanges).values({
-          changeType: 'added',
-          eventTitle: scrapedEv.title,
+        diff.added.push({
+          title: scrapedEv.title,
           startDate: scrapedEv.startDate,
           endDate: scrapedEv.endDate,
-          diff: null,
+          relKey: relationsKey(scrapedEv),
         })
       }
     }
@@ -186,6 +209,87 @@ export async function reconcileWeek(
       await insertEventWithRelations(tx, ev)
     }
 
-    return { added: toAdd.length, removed: toRemove.length - toUpdate.length, updated: toUpdate.length }
+    return diff
   })
+}
+
+/**
+ * Matches added/removed slots across all week diffs, detects moves (including cross-week),
+ * then inserts all eventChanges in one batch.
+ */
+export async function insertAllChanges(
+  db: Db,
+  diffs: WeekDiff[],
+): Promise<{ added: number; removed: number; updated: number; moved: number }> {
+  const allAdded = diffs.flatMap(d => d.added)
+  const allRemoved = diffs.flatMap(d => d.removed)
+  const allUpdated = diffs.flatMap(d => d.updated)
+
+  const addedByMoveKey = new Map<string, EventSlot>()
+  for (const slot of allAdded) {
+    addedByMoveKey.set(`${slot.title}|${slot.relKey}`, slot)
+  }
+
+  const matchedKeys = new Set<string>()
+  const pendingChanges: (typeof eventChanges.$inferInsert)[] = []
+
+  for (const change of allUpdated) {
+    pendingChanges.push({
+      changeType: 'updated',
+      eventTitle: change.title,
+      startDate: change.startDate,
+      endDate: change.endDate,
+      diff: change.diff,
+    })
+  }
+
+  for (const removed of allRemoved) {
+    const moveKey = `${removed.title}|${removed.relKey}`
+    const addedSlot = addedByMoveKey.get(moveKey)
+    if (addedSlot && !matchedKeys.has(moveKey)) {
+      matchedKeys.add(moveKey)
+      pendingChanges.push({
+        changeType: 'moved',
+        eventTitle: removed.title,
+        startDate: removed.startDate,
+        endDate: removed.endDate,
+        diff: {
+          newStart: addedSlot.startDate.toISOString(),
+          newEnd: addedSlot.endDate.toISOString(),
+        },
+      })
+    } else {
+      pendingChanges.push({
+        changeType: 'removed',
+        eventTitle: removed.title,
+        startDate: removed.startDate,
+        endDate: removed.endDate,
+        diff: null,
+      })
+    }
+  }
+
+  for (const added of allAdded) {
+    if (!matchedKeys.has(`${added.title}|${added.relKey}`)) {
+      pendingChanges.push({
+        changeType: 'added',
+        eventTitle: added.title,
+        startDate: added.startDate,
+        endDate: added.endDate,
+        diff: null,
+      })
+    }
+  }
+
+  if (pendingChanges.length > 0) {
+    await db.insert(eventChanges).values(pendingChanges)
+  }
+
+  const moved = matchedKeys.size
+  return {
+    added: allAdded.length - moved,
+    removed: allRemoved.length - moved,
+    updated: allUpdated.length,
+    moved,
+  }
 }

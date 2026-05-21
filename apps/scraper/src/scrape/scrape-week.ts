@@ -1,5 +1,6 @@
 import type { Page } from 'playwright'
-import { createDb, reconcileWeek } from '@studysuite/db'
+import { applyWeekEvents, createDb, insertAllChanges } from '@studysuite/db'
+import type { WeekDiff } from '@studysuite/db'
 import type { ParsedEvent } from '@studysuite/shared'
 import { launchBrowser } from '../browser/launch.js'
 import { getAllWeekIds, gotoPlanning, gotoWeek } from '../browser/navigation.js'
@@ -11,19 +12,13 @@ import { parseEventText } from '../parser/event-text.js'
 
 type Db = ReturnType<typeof createDb>
 
-interface WeekStats {
-  added: number
-  removed: number
-  updated: number
-}
-
 function parseWeekMonday(weekDates: string[]): Date {
   const first = weekDates[0] ?? '01/01/2000'
   const [day, month, year] = first.split('/')
   return new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)))
 }
 
-async function scrapeWeek(page: Page, weekId: number, db: Db, knownGroupNames: Set<string>): Promise<WeekStats> {
+async function scrapeWeek(page: Page, weekId: number, db: Db, knownGroupNames: Set<string>): Promise<WeekDiff> {
   await gotoWeek(page, weekId)
 
   const weekDates = await readWeekDates(page)
@@ -38,18 +33,18 @@ async function scrapeWeek(page: Page, weekId: number, db: Db, knownGroupNames: S
   }
 
   const weekMonday = parseWeekMonday(weekDates)
-  const stats = await reconcileWeek(db, weekMonday, parsed)
+  const diff = await applyWeekEvents(db, weekMonday, parsed)
   console.log(
-    `[scraper]   Week ${weekDates[0] ?? '?'} — added: ${stats.added}, removed: ${stats.removed}, updated: ${stats.updated}`,
+    `[scraper]   Week ${weekDates[0] ?? '?'} — +${diff.added.length} -${diff.removed.length} ~${diff.updated.length}`,
   )
-  return stats
+  return diff
 }
 
 export async function scrapeAllWeeks(
   config: Config,
   db: Db,
   knownGroupNames: Set<string>,
-): Promise<{ added: number; removed: number; updated: number; weeks: number; durationMs: number }> {
+): Promise<{ added: number; removed: number; updated: number; moved: number; weeks: number; durationMs: number }> {
   const t0 = Date.now()
   const { browser, page } = await launchBrowser(config.scrape.headless)
 
@@ -58,18 +53,17 @@ export async function scrapeAllWeeks(
     const weekIds = await getAllWeekIds(page)
     console.log(`[scraper] Found ${weekIds.length} weeks to scrape`)
 
-    let added = 0
-    let removed = 0
-    let updated = 0
-
+    const diffs: WeekDiff[] = []
     for (const weekId of weekIds) {
-      const stats = await scrapeWeek(page, weekId, db, knownGroupNames)
-      added += stats.added
-      removed += stats.removed
-      updated += stats.updated
+      diffs.push(await scrapeWeek(page, weekId, db, knownGroupNames))
     }
 
-    return { added, removed, updated, weeks: weekIds.length, durationMs: Date.now() - t0 }
+    const stats = await insertAllChanges(db, diffs)
+    console.log(
+      `[scraper] Changes — added: ${stats.added}, removed: ${stats.removed}, updated: ${stats.updated}, moved: ${stats.moved}`,
+    )
+
+    return { ...stats, weeks: weekIds.length, durationMs: Date.now() - t0 }
   } finally {
     await browser.close()
   }
