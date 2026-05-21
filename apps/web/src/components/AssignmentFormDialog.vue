@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import type { Assignment } from '../lib/types.js'
@@ -26,6 +26,15 @@ const show = computed({
 const saving = ref(false)
 const deleting = ref(false)
 const confirmDelete = ref(false)
+const subjectOptions = ref<string[]>([])
+
+onMounted(async () => {
+    const res = await fetch(`${API_URL}/api/events/titles`)
+    if (res.ok) {
+        const body = (await res.json()) as { data: string[] }
+        subjectOptions.value = body.data
+    }
+})
 
 const form = ref({
     title: '',
@@ -155,13 +164,14 @@ async function deleteAssignment() {
                     </v-col>
 
                     <v-col cols="12" sm="6">
-                        <v-text-field
+                        <v-autocomplete
                             v-model="form.subject"
                             label="Matière"
                             variant="outlined"
                             density="compact"
                             hide-details
-                            placeholder="ex. Mathématiques"
+                            clearable
+                            :items="subjectOptions"
                         />
                     </v-col>
 
