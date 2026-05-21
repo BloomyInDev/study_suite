@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { sign } from 'hono/jwt'
 import { eq, inArray } from 'drizzle-orm'
 import { db } from '../db.js'
-import { users, discordGuilds, discordRoleMappings } from '@studysuite/db'
+import { users, userStudents, userTeachers, discordGuilds, discordRoleMappings } from '@studysuite/db'
 import { config } from '../config.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 
@@ -18,6 +18,48 @@ type DiscordUser = {
 type DiscordMember = { roles: string[] }
 
 type OAuthState = { clientRedirectUri?: string }
+
+export type EnrichedUser = typeof users.$inferSelect & {
+    role: 'student' | 'teacher' | null
+    studentGroupId: string | null
+    teacherId: string | null
+}
+
+async function fetchEnrichedUser(where: Parameters<typeof eq>[1] extends infer _ ? any : never): Promise<EnrichedUser | null> {
+    const rows = await db
+        .select({
+            id: users.id,
+            discordId: users.discordId,
+            discordUsername: users.discordUsername,
+            discordAvatar: users.discordAvatar,
+            isAdmin: users.isAdmin,
+            status: users.status,
+            discordAccessToken: users.discordAccessToken,
+            discordTokenExpiresAt: users.discordTokenExpiresAt,
+            createdAt: users.createdAt,
+            updatedAt: users.updatedAt,
+            _studentUserId: userStudents.userId,
+            _teacherUserId: userTeachers.userId,
+            studentGroupId: userStudents.studentGroupId,
+            teacherId: userTeachers.teacherId,
+        })
+        .from(users)
+        .leftJoin(userStudents, eq(userStudents.userId, users.id))
+        .leftJoin(userTeachers, eq(userTeachers.userId, users.id))
+        .where(where)
+        .limit(1)
+
+    const row = rows[0]
+    if (!row) return null
+
+    const { _studentUserId, _teacherUserId, ...rest } = row
+    return {
+        ...rest,
+        role: _studentUserId ? 'student' : _teacherUserId ? 'teacher' : null,
+        studentGroupId: rest.studentGroupId ?? null,
+        teacherId: rest.teacherId ?? null,
+    }
+}
 
 function parseState(raw: string | undefined): OAuthState {
     if (!raw) return {}
@@ -38,7 +80,7 @@ function safeRedirectUri(uri: string | undefined): string | undefined {
     }
 }
 
-function userToDto(user: typeof users.$inferSelect) {
+function userToDto(user: EnrichedUser) {
     return {
         id: user.id,
         discordId: user.discordId,
@@ -52,7 +94,7 @@ function userToDto(user: typeof users.$inferSelect) {
     }
 }
 
-async function issueToken(user: typeof users.$inferSelect): Promise<string> {
+async function issueToken(user: EnrichedUser): Promise<string> {
     return sign(
         {
             sub: user.id,
@@ -65,6 +107,24 @@ async function issueToken(user: typeof users.$inferSelect): Promise<string> {
         config.jwt.secret,
         'HS256',
     )
+}
+
+async function upsertProfile(
+    userId: string,
+    role: 'student' | 'teacher',
+    groupId: string | null,
+): Promise<void> {
+    if (role === 'student') {
+        await db
+            .insert(userStudents)
+            .values({ userId, studentGroupId: groupId })
+            .onConflictDoUpdate({
+                target: userStudents.userId,
+                set: { studentGroupId: groupId },
+            })
+    } else {
+        await db.insert(userTeachers).values({ userId }).onConflictDoNothing()
+    }
 }
 
 export default new Hono<AuthEnv>()
@@ -128,9 +188,7 @@ export default new Hono<AuthEnv>()
             guilds.map(async (guild) => {
                 const res = await fetch(
                     `${DISCORD_API}/users/@me/guilds/${guild.discordGuildId}/member`,
-                    {
-                        headers: { Authorization: `Bearer ${access_token}` },
-                    },
+                    { headers: { Authorization: `Bearer ${access_token}` } },
                 )
                 if (!res.ok) return { guildDbId: guild.id, roles: [] as string[] }
                 const member = (await res.json()) as DiscordMember
@@ -155,36 +213,35 @@ export default new Hono<AuthEnv>()
         )
 
         const autoApproved = validMappings.length > 0
-        const mappedGroupId = autoApproved ? validMappings[0].studentGroupId : null
+        const firstMapping = validMappings[0]
+        const mappedRole = autoApproved ? (firstMapping.userRole as 'student' | 'teacher') : null
+        const mappedGroupId = mappedRole === 'student' ? (firstMapping.studentGroupId ?? null) : null
 
-        // Upsert user
+        // Upsert user in users table
         const existing = await db
             .select()
             .from(users)
             .where(eq(users.discordId, discordUser.id))
             .limit(1)
 
-        let user: typeof users.$inferSelect
+        let userId: string
+        const wasAlreadyApproved = existing.length > 0 && existing[0].status === 'approved'
+
         if (existing.length > 0) {
-            const [updated] = await db
+            await db
                 .update(users)
                 .set({
                     discordUsername: discordUser.global_name ?? discordUser.username,
                     discordAvatar: discordUser.avatar,
                     discordAccessToken: access_token,
                     discordTokenExpiresAt: tokenExpiresAt,
-                    ...(autoApproved && existing[0].status !== 'approved'
-                        ? {
-                              status: 'approved' as const,
-                              role: 'student' as const,
-                              studentGroupId: mappedGroupId,
-                          }
+                    ...(autoApproved && !wasAlreadyApproved
+                        ? { status: 'approved' as const }
                         : {}),
                     updatedAt: new Date(),
                 })
                 .where(eq(users.discordId, discordUser.id))
-                .returning()
-            user = updated
+            userId = existing[0].id
         } else {
             const [created] = await db
                 .insert(users)
@@ -195,21 +252,25 @@ export default new Hono<AuthEnv>()
                     discordAccessToken: access_token,
                     discordTokenExpiresAt: tokenExpiresAt,
                     status: autoApproved ? 'approved' : 'pending',
-                    role: autoApproved ? 'student' : null,
-                    studentGroupId: mappedGroupId,
                 })
-                .returning()
-            user = created
+                .returning({ id: users.id })
+            userId = created.id
         }
 
-        const token = await issueToken(user)
+        // Create profile on first approval
+        if (autoApproved && !wasAlreadyApproved && mappedRole) {
+            await upsertProfile(userId, mappedRole, mappedGroupId)
+        }
+
+        const enriched = await fetchEnrichedUser(eq(users.id, userId))
+        const token = await issueToken(enriched!)
 
         if (clientRedirectUri) {
             const url = new URL(clientRedirectUri)
             url.searchParams.set('token', token)
             return c.redirect(url.toString())
         }
-        return c.json({ data: userToDto(user), token })
+        return c.json({ data: userToDto(enriched!), token })
     })
 
     .get('/discord/my-guilds', requireAuth, async (c) => {
@@ -217,23 +278,13 @@ export default new Hono<AuthEnv>()
         const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1)
         if (!user?.discordAccessToken) {
             return c.json(
-                {
-                    error: {
-                        code: 'NO_TOKEN',
-                        message: 'No Discord token stored. Please re-login.',
-                    },
-                },
+                { error: { code: 'NO_TOKEN', message: 'No Discord token stored. Please re-login.' } },
                 400,
             )
         }
         if (user.discordTokenExpiresAt && user.discordTokenExpiresAt < new Date()) {
             return c.json(
-                {
-                    error: {
-                        code: 'TOKEN_EXPIRED',
-                        message: 'Discord token expired. Please re-login.',
-                    },
-                },
+                { error: { code: 'TOKEN_EXPIRED', message: 'Discord token expired. Please re-login.' } },
                 401,
             )
         }
@@ -249,15 +300,13 @@ export default new Hono<AuthEnv>()
                 502,
             )
         }
-        const guilds = (await guildsRes.json()) as DiscordGuild[]
+        const guildList = (await guildsRes.json()) as DiscordGuild[]
 
         const guildData = await Promise.all(
-            guilds.map(async (guild) => {
+            guildList.map(async (guild) => {
                 const memberRes = await fetch(
                     `${DISCORD_API}/users/@me/guilds/${guild.id}/member`,
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                    },
+                    { headers: { Authorization: `Bearer ${token}` } },
                 )
                 const roles: string[] = memberRes.ok
                     ? (((await memberRes.json()) as { roles: string[] }).roles ?? [])
@@ -271,10 +320,10 @@ export default new Hono<AuthEnv>()
 
     .get('/me', requireAuth, async (c) => {
         const payload = c.get('user')
-        const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1)
-        if (!user) {
+        const enriched = await fetchEnrichedUser(eq(users.id, payload.sub))
+        if (!enriched) {
             return c.json({ error: { code: 'NOT_FOUND', message: 'User not found' } }, 404)
         }
-        const token = await issueToken(user)
-        return c.json({ data: userToDto(user), token })
+        const token = await issueToken(enriched)
+        return c.json({ data: userToDto(enriched), token })
     })

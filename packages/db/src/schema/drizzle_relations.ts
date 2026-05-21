@@ -6,6 +6,8 @@ import { studentGroupMemberships } from './student_group_memberships.js'
 import { studentGroups } from './student_groups.js'
 import { teachers } from './teachers.js'
 import { users } from './users.js'
+import { userStudents } from './user_students.js'
+import { userTeachers } from './user_teachers.js'
 import { discordGuilds } from './discord_guilds.js'
 import { discordRoleMappings } from './discord_role_mappings.js'
 
@@ -36,8 +38,8 @@ export const eventStudentGroupsRelations = relations(eventStudentGroups, ({ one 
 export const studentGroupsRelations = relations(studentGroups, ({ many }) => ({
     parentMemberships: many(studentGroupMemberships, { relationName: 'children' }),
     childMemberships: many(studentGroupMemberships, { relationName: 'parents' }),
-    users: many(users),
     discordRoleMappings: many(discordRoleMappings),
+    userStudents: many(userStudents),
 }))
 
 export const studentGroupMembershipsRelations = relations(studentGroupMemberships, ({ one }) => ({
@@ -54,14 +56,27 @@ export const studentGroupMembershipsRelations = relations(studentGroupMembership
 }))
 
 export const usersRelations = relations(users, ({ one }) => ({
+    studentProfile: one(userStudents, {
+        fields: [users.id],
+        references: [userStudents.userId],
+    }),
+    teacherProfile: one(userTeachers, {
+        fields: [users.id],
+        references: [userTeachers.userId],
+    }),
+}))
+
+export const userStudentsRelations = relations(userStudents, ({ one }) => ({
+    user: one(users, { fields: [userStudents.userId], references: [users.id] }),
     studentGroup: one(studentGroups, {
-        fields: [users.studentGroupId],
+        fields: [userStudents.studentGroupId],
         references: [studentGroups.id],
     }),
-    teacher: one(teachers, {
-        fields: [users.teacherId],
-        references: [teachers.id],
-    }),
+}))
+
+export const userTeachersRelations = relations(userTeachers, ({ one }) => ({
+    user: one(users, { fields: [userTeachers.userId], references: [users.id] }),
+    teacher: one(teachers, { fields: [userTeachers.teacherId], references: [teachers.id] }),
 }))
 
 export const discordGuildsRelations = relations(discordGuilds, ({ many }) => ({

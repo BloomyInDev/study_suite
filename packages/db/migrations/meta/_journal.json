@@ -43,6 +43,13 @@
       "when": 1779365017938,
       "tag": "0005_chilly_sentinel",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779365535985,
+      "tag": "0006_hesitant_zemo",
+      "breakpoints": true
     }
   ]
 }
