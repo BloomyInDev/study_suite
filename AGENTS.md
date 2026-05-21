@@ -51,9 +51,9 @@ npm scope is `@studysuite`. When an app declares `"@studysuite/shared": "workspa
 
 ### Runtimes per app
 
-| App     | Runtime | Dev tool    | tsconfig variant               |
-|---------|---------|-------------|--------------------------------|
-| api     | Bun     | `bun --hot` | `@studysuite/tsconfig/bun.json` |
+| App     | Runtime | Dev tool    | tsconfig variant                 |
+| ------- | ------- | ----------- | -------------------------------- |
+| api     | Bun     | `bun --hot` | `@studysuite/tsconfig/bun.json`  |
 | scraper | Node    | `tsx watch` | `@studysuite/tsconfig/node.json` |
 | web     | Node    | `vite`      | `@studysuite/tsconfig/base.json` |
 
@@ -62,6 +62,7 @@ npm scope is `@studysuite`. When an app declares `"@studysuite/shared": "workspa
 ## packages/shared
 
 Two entry points:
+
 - `@studysuite/shared` — Zod schemas and TypeScript types for events (`ParsedEvent`, `Location`, `Teacher`, `StudentGroup`)
 - `@studysuite/shared/config` — config loader utilities: `loadConfig`, `zBool`, `zInt`
 
@@ -73,20 +74,20 @@ Two entry points:
 
 `createDb(connectionString)` returns a Drizzle client. Schema tables:
 
-| Table | Purpose |
-|---|---|
-| `events` | Scraped course events (title, startDate, endDate) |
-| `locations` | Room names |
-| `teachers` | Teacher first/last name |
-| `student_groups` | Group internal names (e.g. `BUT3-A`) |
-| `student_group_memberships` | Parent/child hierarchy between groups |
-| `event_locations` | event ↔ location junction |
-| `event_teachers` | event ↔ teacher junction |
-| `event_student_groups` | event ↔ studentGroup junction |
-| `event_changes` | Audit log of scraper diffs |
-| `users` | Discord-authenticated users |
-| `discord_guilds` | Configured Discord servers |
-| `discord_role_mappings` | Discord role → student group mapping |
+| Table                       | Purpose                                           |
+| --------------------------- | ------------------------------------------------- |
+| `events`                    | Scraped course events (title, startDate, endDate) |
+| `locations`                 | Room names                                        |
+| `teachers`                  | Teacher first/last name                           |
+| `student_groups`            | Group internal names (e.g. `BUT3-A`)              |
+| `student_group_memberships` | Parent/child hierarchy between groups             |
+| `event_locations`           | event ↔ location junction                         |
+| `event_teachers`            | event ↔ teacher junction                          |
+| `event_student_groups`      | event ↔ studentGroup junction                     |
+| `event_changes`             | Audit log of scraper diffs                        |
+| `users`                     | Discord-authenticated users                       |
+| `discord_guilds`            | Configured Discord servers                        |
+| `discord_role_mappings`     | Discord role → student group mapping              |
 
 `event_changes.change_type` enum: `added`, `removed`, `updated`, `moved`.
 For `moved`, `diff` JSON contains `{ newStart: ISO, newEnd: ISO }`.
@@ -118,6 +119,7 @@ Scrapes a **Prose Consult** planning page via Playwright.
 Run modes: watch loop (default) or `node index.js --once`.
 
 **DOM structure** of the Prose Consult page:
+
 - `#Planning > div` — event wrappers; `.style.left` gives pixel X position used to infer day column
 - `div.labelLegend[style*="top: 20px"]` — day header cells; `.textContent` ends with `dd/mm/yyyy`; `.style.left` values used to compute column width
 - `#x-auto-26` — week navigation container; children have IDs `x-auto-N`
@@ -125,14 +127,17 @@ Run modes: watch loop (default) or `node index.js --once`.
 - `.gwt-PopupPanel` — loading spinner; navigation waits for it to detach
 
 **Event text parsing** (`apps/scraper/src/parser/`):
+
 ```
 Line 0:         title
 Lines 1..N-2:   rooms / teachers / groups (middle lines)
 Line N-1:       hours  (format: "8h30 - 10h30")
 ```
+
 Middle lines are categorized:
+
 - **Teacher**: matches `UPPERCASE_LAST   TitleCase_First` (3-space separator after NBSP normalization). Regex: `/^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ' \-]*   [A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ' \-]*$/`
-- **Path line**: contains ` / ` — building hierarchy, discarded
+- **Path line**: contains `/` — building hierarchy, discarded
 - **Room**: lines before the first teacher that are not path lines
 - **Group**: lines after the last teacher that are not path lines
 
@@ -146,36 +151,37 @@ Hono server on Bun, port 3000.
 
 ### Route table
 
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/health` | — | Health check |
-| GET | `/auth/discord` | — | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
-| GET | `/auth/discord/callback` | — | Exchange code, upsert user, issue JWT |
-| GET | `/auth/discord/my-guilds` | user | User's guilds + roles from stored Discord token |
-| GET | `/auth/me` | user | Refresh JWT and return user DTO |
-| GET | `/api/events/week` | — | Events for a week (`?date=`) |
-| GET | `/api/events/day` | — | Events for a day (`?date=`) |
-| GET | `/api/events/upcoming` | — | Next N events (`?limit=`) |
-| GET | `/api/events` | — | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`) |
-| GET | `/api/events/:id` | — | Single event |
-| GET | `/api/teachers` | — | All teachers |
-| GET | `/api/rooms` | — | All rooms |
-| GET | `/api/groups` | — | All groups with parent/child hierarchy |
-| GET | `/api/groups/:id` | — | Single group with hierarchy |
-| GET | `/api/groups/:id/events` | — | Events for a group |
-| POST | `/api/groups/:id/parents` | — | Add parent relation |
-| DELETE | `/api/groups/:id/parents/:parentId` | — | Remove parent relation |
-| GET | `/api/admin/users` | admin | List all users |
-| PATCH | `/api/admin/users/:id` | admin | Update user (status, role, group, isAdmin) |
-| GET | `/api/admin/guilds` | admin | List guilds with nested role mappings |
-| POST | `/api/admin/guilds` | admin | Create guild |
-| DELETE | `/api/admin/guilds/:id` | admin | Delete guild |
-| POST | `/api/admin/guilds/:id/mappings` | admin | Add role→group mapping |
-| DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping |
+| Method | Path                                        | Auth  | Description                                                        |
+| ------ | ------------------------------------------- | ----- | ------------------------------------------------------------------ |
+| GET    | `/health`                                   | —     | Health check                                                       |
+| GET    | `/auth/discord`                             | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
+| GET    | `/auth/discord/callback`                    | —     | Exchange code, upsert user, issue JWT                              |
+| GET    | `/auth/discord/my-guilds`                   | user  | User's guilds + roles from stored Discord token                    |
+| GET    | `/auth/me`                                  | user  | Refresh JWT and return user DTO                                    |
+| GET    | `/api/events/week`                          | —     | Events for a week (`?date=`)                                       |
+| GET    | `/api/events/day`                           | —     | Events for a day (`?date=`)                                        |
+| GET    | `/api/events/upcoming`                      | —     | Next N events (`?limit=`)                                          |
+| GET    | `/api/events`                               | —     | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)         |
+| GET    | `/api/events/:id`                           | —     | Single event                                                       |
+| GET    | `/api/teachers`                             | —     | All teachers                                                       |
+| GET    | `/api/rooms`                                | —     | All rooms                                                          |
+| GET    | `/api/groups`                               | —     | All groups with parent/child hierarchy                             |
+| GET    | `/api/groups/:id`                           | —     | Single group with hierarchy                                        |
+| GET    | `/api/groups/:id/events`                    | —     | Events for a group                                                 |
+| POST   | `/api/groups/:id/parents`                   | —     | Add parent relation                                                |
+| DELETE | `/api/groups/:id/parents/:parentId`         | —     | Remove parent relation                                             |
+| GET    | `/api/admin/users`                          | admin | List all users                                                     |
+| PATCH  | `/api/admin/users/:id`                      | admin | Update user (status, role, group, isAdmin)                         |
+| GET    | `/api/admin/guilds`                         | admin | List guilds with nested role mappings                              |
+| POST   | `/api/admin/guilds`                         | admin | Create guild                                                       |
+| DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                       |
+| POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                             |
+| DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                     |
 
 **JWT**: HS256, 7-day expiry. Claims: `sub` (user UUID), `discordId`, `isAdmin`, `status`, `role`.
 
 **Discord OAuth flow**:
+
 1. `/auth/discord` → encodes optional `clientRedirectUri` in base64url `state` param
 2. `/auth/discord/callback` → exchanges code, fetches `@me` + member roles across all configured guilds in parallel
 3. If any guild role matches a `discord_role_mappings` entry → auto-approve user, assign `studentGroupId`
@@ -204,6 +210,7 @@ Vue 3 + Vuetify 3 + Pinia SPA.
 | `/admin/*` | admin | AdminLayout → groups / users / discord-mappings |
 
 **Route guard logic**:
+
 - Authenticated + approved → skip `/login`
 - Pending (non-admin) → redirect to `/pending` on any non-exempt route
 - `requiresAdmin` → redirect to `/` if not admin

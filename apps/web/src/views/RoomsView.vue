@@ -18,121 +18,117 @@ const dialogOpen = ref(false)
 const loadingDetails = ref(false)
 
 const filtered = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  let list = rooms.value
-  if (filterAvailable.value) list = list.filter(r => availableNow.value.has(r.id))
-  if (q) list = list.filter(r => r.name.toLowerCase().includes(q))
-  return list
+    const q = search.value.trim().toLowerCase()
+    let list = rooms.value
+    if (filterAvailable.value) list = list.filter((r) => availableNow.value.has(r.id))
+    if (q) list = list.filter((r) => r.name.toLowerCase().includes(q))
+    return list
 })
 
 onMounted(async () => {
-  try {
-    const res = await backend.api.rooms.$get()
-    const { data } = await res.json()
-    rooms.value = data
-  } finally {
-    loading.value = false
-  }
+    try {
+        const res = await backend.api.rooms.$get()
+        const { data } = await res.json()
+        rooms.value = data
+    } finally {
+        loading.value = false
+    }
 })
 
 async function toggleAvailableFilter() {
-  filterAvailable.value = !filterAvailable.value
-  if (filterAvailable.value && availableNow.value.size === 0) {
-    loadingAvailable.value = true
-    try {
-      const now = new Date()
-      const to = new Date(now.getTime() + 3_600_000)
-      const res = await backend.api.rooms.available.$get({
-        query: { from: now.toISOString(), to: to.toISOString() },
-      })
-      const body = await res.json()
-      const ids: string[] = (body.data ?? []).map((r) => r.id)
-      availableNow.value = new Set(ids)
-    } finally {
-      loadingAvailable.value = false
+    filterAvailable.value = !filterAvailable.value
+    if (filterAvailable.value && availableNow.value.size === 0) {
+        loadingAvailable.value = true
+        try {
+            const now = new Date()
+            const to = new Date(now.getTime() + 3_600_000)
+            const res = await backend.api.rooms.available.$get({
+                query: { from: now.toISOString(), to: to.toISOString() },
+            })
+            const body = await res.json()
+            const ids: string[] = (body.data ?? []).map((r) => r.id)
+            availableNow.value = new Set(ids)
+        } finally {
+            loadingAvailable.value = false
+        }
     }
-  }
 }
 
 async function openRoom(room: Room) {
-  dialogOpen.value = true
-  loadingDetails.value = true
-  selectedRoom.value = null
-  try {
-    const now = new Date()
-    const dayStart = new Date(now)
-    dayStart.setUTCHours(0, 0, 0, 0)
-    const dayEnd = new Date(now)
-    dayEnd.setUTCHours(23, 59, 59, 999)
-    const res = await backend.api.rooms[':id'].events.$get({
-      param: { id: room.id },
-      query: { from: dayStart, to: dayEnd },
-    })
-    const roomBody = await res.json()
-    if (!('data' in roomBody)) throw new Error('Room not found')
-    const todayEvents: Event[] = (roomBody.data ?? []).map(enhanceEvent)
-    const available = !todayEvents.some(e => now >= e.start && now <= e.end)
-    selectedRoom.value = { ...room, available, todayEvents }
-  } finally {
-    loadingDetails.value = false
-  }
+    dialogOpen.value = true
+    loadingDetails.value = true
+    selectedRoom.value = null
+    try {
+        const now = new Date()
+        const dayStart = new Date(now)
+        dayStart.setUTCHours(0, 0, 0, 0)
+        const dayEnd = new Date(now)
+        dayEnd.setUTCHours(23, 59, 59, 999)
+        const res = await backend.api.rooms[':id'].events.$get({
+            param: { id: room.id },
+            query: { from: dayStart, to: dayEnd },
+        })
+        const roomBody = await res.json()
+        if (!('data' in roomBody)) throw new Error('Room not found')
+        const todayEvents: Event[] = (roomBody.data ?? []).map(enhanceEvent)
+        const available = !todayEvents.some((e) => now >= e.start && now <= e.end)
+        selectedRoom.value = { ...room, available, todayEvents }
+    } finally {
+        loadingDetails.value = false
+    }
 }
 </script>
 
 <template>
-  <v-container fluid class="pa-4">
-    <v-row class="mb-4" align="center">
-      <v-col cols="12" md="6" class="d-flex ga-2 align-center flex-wrap">
-        <v-text-field
-          v-model="search"
-          prepend-inner-icon="mdi-magnify"
-          label="Rechercher une salle"
-          variant="outlined"
-          density="compact"
-          hide-details
-          clearable
-          style="max-width: 280px"
-        />
-        <v-btn
-          :color="filterAvailable ? 'success' : undefined"
-          :variant="filterAvailable ? 'flat' : 'tonal'"
-          :loading="loadingAvailable"
-          prepend-icon="mdi-door-open"
-          @click="toggleAvailableFilter"
-        >
-          Disponibles maintenant
-        </v-btn>
-      </v-col>
-    </v-row>
+    <v-container fluid class="pa-4">
+        <v-row class="mb-4" align="center">
+            <v-col cols="12" md="6" class="d-flex ga-2 align-center flex-wrap">
+                <v-text-field
+                    v-model="search"
+                    prepend-inner-icon="mdi-magnify"
+                    label="Rechercher une salle"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                    clearable
+                    style="max-width: 280px"
+                />
+                <v-btn
+                    :color="filterAvailable ? 'success' : undefined"
+                    :variant="filterAvailable ? 'flat' : 'tonal'"
+                    :loading="loadingAvailable"
+                    prepend-icon="mdi-door-open"
+                    @click="toggleAvailableFilter"
+                >
+                    Disponibles maintenant
+                </v-btn>
+            </v-col>
+        </v-row>
 
-    <div v-if="loading" class="d-flex justify-center pa-8">
-      <v-progress-circular indeterminate color="primary" size="48" />
-    </div>
+        <div v-if="loading" class="d-flex justify-center pa-8">
+            <v-progress-circular indeterminate color="primary" size="48" />
+        </div>
 
-    <v-row v-else>
-      <v-col
-        v-for="room in filtered"
-        :key="room.id"
-        cols="12"
-        sm="6"
-        md="4"
-        lg="3"
-        @click="openRoom(room)"
-      >
-        <RoomCard
-          :room="room"
-          :available="filterAvailable ? availableNow.has(room.id) : undefined"
-        />
-      </v-col>
-      <v-col v-if="filtered.length === 0" cols="12">
-        <v-alert type="info" variant="tonal">Aucune salle trouvée.</v-alert>
-      </v-col>
-    </v-row>
+        <v-row v-else>
+            <v-col
+                v-for="room in filtered"
+                :key="room.id"
+                cols="12"
+                sm="6"
+                md="4"
+                lg="3"
+                @click="openRoom(room)"
+            >
+                <RoomCard
+                    :room="room"
+                    :available="filterAvailable ? availableNow.has(room.id) : undefined"
+                />
+            </v-col>
+            <v-col v-if="filtered.length === 0" cols="12">
+                <v-alert type="info" variant="tonal">Aucune salle trouvée.</v-alert>
+            </v-col>
+        </v-row>
 
-    <RoomDetailsDialog
-      v-model="dialogOpen"
-      :room="selectedRoom"
-      :loading="loadingDetails"
-    />
-  </v-container>
+        <RoomDetailsDialog v-model="dialogOpen" :room="selectedRoom" :loading="loadingDetails" />
+    </v-container>
 </template>

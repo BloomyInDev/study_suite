@@ -4,9 +4,9 @@
 # All values can be set here. Env vars take precedence when defined.
 
 database:
-  # url: postgres://user:pass@localhost:5432/study_suite
+    # url: postgres://user:pass@localhost:5432/study_suite
 
 scrape:
-  # url: https://...
-  headless: true
-  intervalMs: 1800000
+    # url: https://...
+    headless: true
+    intervalMs: 1800000

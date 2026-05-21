@@ -1,41 +1,41 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1779052421158,
-      "tag": "0000_simple_mercury",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1779218961503,
-      "tag": "0001_cold_phalanx",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1779313306258,
-      "tag": "0002_furry_hex",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1779314458604,
-      "tag": "0003_steady_vindicator",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1779363000857,
-      "tag": "0004_graceful_viper",
-      "breakpoints": true
-    }
-  ]
+    "version": "7",
+    "dialect": "postgresql",
+    "entries": [
+        {
+            "idx": 0,
+            "version": "7",
+            "when": 1779052421158,
+            "tag": "0000_simple_mercury",
+            "breakpoints": true
+        },
+        {
+            "idx": 1,
+            "version": "7",
+            "when": 1779218961503,
+            "tag": "0001_cold_phalanx",
+            "breakpoints": true
+        },
+        {
+            "idx": 2,
+            "version": "7",
+            "when": 1779313306258,
+            "tag": "0002_furry_hex",
+            "breakpoints": true
+        },
+        {
+            "idx": 3,
+            "version": "7",
+            "when": 1779314458604,
+            "tag": "0003_steady_vindicator",
+            "breakpoints": true
+        },
+        {
+            "idx": 4,
+            "version": "7",
+            "when": 1779363000857,
+            "tag": "0004_graceful_viper",
+            "breakpoints": true
+        }
+    ]
 }

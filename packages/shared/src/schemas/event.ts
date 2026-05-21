@@ -1,25 +1,25 @@
 import { z } from 'zod'
 
 export const LocationSchema = z.object({
-  name: z.string(),
+    name: z.string(),
 })
 
 export const TeacherSchema = z.object({
-  firstName: z.string(),
-  lastName: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
 })
 
 export const StudentGroupSchema = z.object({
-  internalName: z.string(),
+    internalName: z.string(),
 })
 
 export const ParsedEventSchema = z.object({
-  title: z.string(),
-  startDate: z.date(),
-  endDate: z.date(),
-  rooms: z.array(LocationSchema),
-  teachers: z.array(TeacherSchema),
-  groups: z.array(StudentGroupSchema),
+    title: z.string(),
+    startDate: z.date(),
+    endDate: z.date(),
+    rooms: z.array(LocationSchema),
+    teachers: z.array(TeacherSchema),
+    groups: z.array(StudentGroupSchema),
 })
 
 export type Location = z.infer<typeof LocationSchema>

@@ -1,25 +1,25 @@
 {
-  "name": "@studysuite/scraper",
-  "version": "0.0.1",
-  "type": "module",
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "dump": "tsx --env-file .env src/dump.ts",
-    "validate": "tsx src/validate.ts",
-    "scrape": "tsx src/index.ts --once",
-    "build": "tsc",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@studysuite/db": "workspace:*",
-    "@studysuite/shared": "workspace:*",
-    "playwright": "^1.52.0",
-    "zod": "^3.24.4"
-  },
-  "devDependencies": {
-    "@studysuite/tsconfig": "workspace:*",
-    "@types/node": "^22.15.18",
-    "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
-  }
+    "name": "@studysuite/scraper",
+    "version": "0.0.1",
+    "type": "module",
+    "scripts": {
+        "dev": "tsx watch src/index.ts",
+        "dump": "tsx --env-file .env src/dump.ts",
+        "validate": "tsx src/validate.ts",
+        "scrape": "tsx src/index.ts --once",
+        "build": "tsc",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@studysuite/db": "workspace:*",
+        "@studysuite/shared": "workspace:*",
+        "playwright": "^1.52.0",
+        "zod": "^3.24.4"
+    },
+    "devDependencies": {
+        "@studysuite/tsconfig": "workspace:*",
+        "@types/node": "^22.15.18",
+        "tsx": "^4.19.4",
+        "typescript": "^5.8.3"
+    }
 }
