@@ -92,7 +92,7 @@ onMounted(fetchUsers)
         En attente ({{ pending.length }})
       </div>
       <v-card v-for="user in pending" :key="user.id" variant="outlined" class="mb-2">
-        <v-card-text class="d-flex align-center gap-3 flex-wrap pa-3">
+        <v-card-text class="d-flex align-center ga-3 flex-wrap pa-3">
           <v-avatar size="36" :image="user.discordAvatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.discordAvatar}.png` : undefined">
             <v-icon v-if="!user.discordAvatar">mdi-account</v-icon>
           </v-avatar>
@@ -145,7 +145,7 @@ onMounted(fetchUsers)
       <tbody>
         <tr v-for="user in others" :key="user.id">
           <td>
-            <div class="d-flex align-center gap-2 py-1">
+            <div class="d-flex align-center ga-2 py-1">
               <v-avatar size="28" :image="user.discordAvatar ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.discordAvatar}.png` : undefined">
                 <v-icon v-if="!user.discordAvatar" size="16">mdi-account</v-icon>
               </v-avatar>

@@ -33,7 +33,7 @@ const discordLoginUrl = `${API_URL}/auth/discord?redirect_uri=${callbackUri}`
           color="indigo"
           size="large"
           block
-          prepend-icon="mdi-discord"
+          prepend-icon="fa:fab fa-discord"
         >
           Connexion avec Discord
         </v-btn>

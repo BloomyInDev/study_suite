@@ -211,8 +211,8 @@ onMounted(fetchGuilds)
   <v-container>
     <div class="d-flex align-center justify-space-between mb-2">
       <div class="text-h6">Serveurs Discord</div>
-      <div class="d-flex gap-2">
-        <v-btn variant="tonal" prepend-icon="mdi-discord" size="small" @click="openDiscordPanel">
+      <div class="d-flex ga-2">
+        <v-btn variant="tonal" prepend-icon="fa:fab fa-discord" size="small" @click="openDiscordPanel">
           Mes serveurs
         </v-btn>
         <v-btn color="primary" prepend-icon="mdi-plus" size="small" @click="guildDialog = true">
@@ -230,23 +230,23 @@ onMounted(fetchGuilds)
       Aucun serveur configuré — cliquez sur « Mes serveurs » pour importer depuis Discord.
     </div>
 
-    <v-card v-for="guild in guilds" :key="guild.id" class="mb-4" variant="outlined">
-      <v-card-title class="d-flex align-center justify-space-between pa-4">
-        <div class="d-flex align-center gap-2">
-          <v-icon color="indigo">mdi-discord</v-icon>
-          <span>{{ guild.name }}</span>
-          <v-chip size="x-small" label class="ml-1 text-caption text-medium-emphasis">
-            {{ guild.discordGuildId }}
-          </v-chip>
-        </div>
-        <div class="d-flex gap-2">
-          <v-btn size="small" variant="tonal" prepend-icon="mdi-link-plus" @click="openMappingDialog(guild)">
-            Ajouter liaison
-          </v-btn>
-          <v-btn icon="mdi-delete" size="small" variant="text" color="error"
-            :loading="deletingGuild === guild.id" @click="deleteGuild(guild)" />
-        </div>
-      </v-card-title>
+    <v-card v-for="guild in guilds" :key="guild.id" class="mb-4">
+      <v-card-item>
+        <template #prepend>
+          <v-icon color="indigo" icon="fa:fab fa-discord" />
+        </template>
+        <v-card-title>{{ guild.name }}</v-card-title>
+        <v-card-subtitle>{{ guild.discordGuildId }}</v-card-subtitle>
+        <template #append>
+          <div class="d-flex align-center ga-2">
+            <v-btn size="small" variant="tonal" prepend-icon="mdi-link-plus" @click="openMappingDialog(guild)">
+              Ajouter liaison
+            </v-btn>
+            <v-btn icon="mdi-delete" size="small" variant="text" color="error"
+              :loading="deletingGuild === guild.id" @click="deleteGuild(guild)" />
+          </div>
+        </template>
+      </v-card-item>
 
       <v-divider v-if="guild.mappings.length > 0" />
 
@@ -274,8 +274,8 @@ onMounted(fetchGuilds)
     <!-- My Discord guilds panel -->
     <v-dialog v-model="discordPanelOpen" max-width="560">
       <v-card>
-        <v-card-title class="pt-4 px-4 d-flex align-center gap-2">
-          <v-icon color="indigo">mdi-discord</v-icon>
+        <v-card-title class="pt-4 px-4 d-flex align-center ga-2">
+          <v-icon color="indigo" icon="fa:fab fa-discord" />
           Mes serveurs Discord
         </v-card-title>
         <v-card-subtitle class="px-4 pb-2">
@@ -292,7 +292,7 @@ onMounted(fetchGuilds)
           </div>
 
           <div v-for="dGuild in myDiscordGuilds" :key="dGuild.id" class="mb-4">
-            <div class="d-flex align-center gap-2 mb-2">
+            <div class="d-flex align-center ga-2 mb-2">
               <v-avatar size="28" :image="guildIconUrl(dGuild) ?? undefined">
                 <v-icon v-if="!guildIconUrl(dGuild)" size="16">mdi-discord</v-icon>
               </v-avatar>
@@ -314,7 +314,7 @@ onMounted(fetchGuilds)
 
             <div v-if="dGuild.myRoles.length > 0" class="pl-9">
               <div class="text-caption text-medium-emphasis mb-1">Vos rôles :</div>
-              <div class="d-flex flex-wrap gap-1">
+              <div class="d-flex flex-wrap ga-1">
                 <v-chip
                   v-for="roleId in dGuild.myRoles"
                   :key="roleId"
@@ -375,7 +375,7 @@ onMounted(fetchGuilds)
         <v-card-text class="pa-4">
           <div v-if="suggestedRoles.length > 0" class="mb-3">
             <div class="text-caption text-medium-emphasis mb-1">Vos rôles dans ce serveur :</div>
-            <div class="d-flex flex-wrap gap-1">
+            <div class="d-flex flex-wrap ga-1">
               <v-chip
                 v-for="roleId in suggestedRoles"
                 :key="roleId"

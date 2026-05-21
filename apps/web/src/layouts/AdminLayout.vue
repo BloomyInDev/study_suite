@@ -8,7 +8,7 @@ const drawerOpen = ref(false)
 const adminNav = [
   { title: 'Groupes', icon: 'mdi-sitemap', to: '/admin/groups' },
   { title: 'Utilisateurs', icon: 'mdi-account-multiple', to: '/admin/users' },
-  { title: 'Liaisons Discord', icon: 'mdi-discord', to: '/admin/discord-mappings' },
+  { title: 'Liaisons Discord', icon: 'fa:fab fa-discord', to: '/admin/discord-mappings' },
 ]
 </script>
 

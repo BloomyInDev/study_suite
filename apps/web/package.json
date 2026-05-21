@@ -9,6 +9,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^7.2.0",
     "@mdi/font": "^7.4.47",
     "@studysuite/shared": "workspace:*",
     "hono": "^4.12.21",
