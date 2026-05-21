@@ -124,6 +124,22 @@ onMounted(fetchAssignments)
             </template>
 
             <template v-else>
+                <template v-if="past.length > 0">
+                    <div class="text-subtitle-2 text-medium-emphasis mb-1">
+                        <v-icon size="16">mdi-history</v-icon>
+                        Passés ({{ past.length }})
+                    </div>
+                    <v-list density="compact" class="mb-3">
+                        <AssignmentCard
+                            v-for="a in past"
+                            :key="a.id"
+                            :assignment="a"
+                            @click="openEdit(a)"
+                            @toggle="toggleDone(a, $event)"
+                        />
+                    </v-list>
+                </template>
+
                 <template v-if="today.length > 0">
                     <div class="text-subtitle-2 text-warning mb-1">
                         <v-icon size="16" color="warning">mdi-clock-alert</v-icon>
@@ -145,25 +161,9 @@ onMounted(fetchAssignments)
                         <v-icon size="16">mdi-calendar-arrow-right</v-icon>
                         À venir ({{ upcoming.length }})
                     </div>
-                    <v-list density="compact" class="mb-3">
-                        <AssignmentCard
-                            v-for="a in upcoming"
-                            :key="a.id"
-                            :assignment="a"
-                            @click="openEdit(a)"
-                            @toggle="toggleDone(a, $event)"
-                        />
-                    </v-list>
-                </template>
-
-                <template v-if="past.length > 0">
-                    <div class="text-subtitle-2 text-medium-emphasis mb-1">
-                        <v-icon size="16">mdi-history</v-icon>
-                        Passés ({{ past.length }})
-                    </div>
                     <v-list density="compact">
                         <AssignmentCard
-                            v-for="a in past"
+                            v-for="a in upcoming"
                             :key="a.id"
                             :assignment="a"
                             @click="openEdit(a)"
