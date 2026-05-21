@@ -1,6 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import { eventLocations, eventStudentGroups, eventTeachers, events } from '@studysuite/db'
-import { and, asc, eq, gte, inArray, lt, sql } from 'drizzle-orm'
+import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db } from '../db.js'
@@ -24,7 +24,7 @@ export default new Hono()
         const rows = await db
             .selectDistinct({ title: events.title })
             .from(events)
-            .orderBy(sql`lower(${events.title})`)
+            .orderBy(asc(events.title))
         return c.json({ data: rows.map((r) => r.title) })
     })
 
