@@ -10,9 +10,12 @@ export const discordRoleMappings = pgTable(
             .notNull()
             .references(() => discordGuilds.id, { onDelete: 'cascade' }),
         discordRoleId: text('discord_role_id').notNull(),
-        studentGroupId: uuid('student_group_id')
+        userRole: text('user_role', { enum: ['student', 'teacher'] })
             .notNull()
-            .references(() => studentGroups.id, { onDelete: 'cascade' }),
+            .default('student'),
+        studentGroupId: uuid('student_group_id').references(() => studentGroups.id, {
+            onDelete: 'cascade',
+        }),
         createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     },
     (t) => [unique('discord_role_mappings_guild_role_uniq').on(t.guildId, t.discordRoleId)],

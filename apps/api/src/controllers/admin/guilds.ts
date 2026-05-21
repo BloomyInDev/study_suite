@@ -21,6 +21,7 @@ export default new Hono<AuthEnv>()
                 id: discordRoleMappings.id,
                 guildId: discordRoleMappings.guildId,
                 discordRoleId: discordRoleMappings.discordRoleId,
+                userRole: discordRoleMappings.userRole,
                 studentGroupId: discordRoleMappings.studentGroupId,
                 studentGroupName: studentGroups.internalName,
                 createdAt: discordRoleMappings.createdAt,
@@ -54,10 +55,18 @@ export default new Hono<AuthEnv>()
         '/:id/mappings',
         zValidator(
             'json',
-            z.object({
-                discordRoleId: z.string().min(1),
-                studentGroupId: z.string().uuid(),
-            }),
+            z.discriminatedUnion('userRole', [
+                z.object({
+                    discordRoleId: z.string().min(1),
+                    userRole: z.literal('student'),
+                    studentGroupId: z.string().uuid(),
+                }),
+                z.object({
+                    discordRoleId: z.string().min(1),
+                    userRole: z.literal('teacher'),
+                    studentGroupId: z.string().uuid().optional(),
+                }),
+            ]),
         ),
         async (c) => {
             const guildId = c.req.param('id')
