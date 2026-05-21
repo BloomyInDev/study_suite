@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Assignment } from '../lib/types.js'
+import { formatDueRelative } from '../lib/date.js'
 
 defineProps<{
     assignment: Assignment
@@ -11,15 +12,15 @@ defineEmits<{
     toggle: [done: boolean]
 }>()
 
-function formatDue(iso: string) {
-    return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
-}
-
 function dueColor(iso: string) {
     const diff = new Date(iso).getTime() - Date.now()
     if (diff < 0) return 'error'
     if (diff < 24 * 60 * 60 * 1000) return 'warning'
     return undefined
+}
+
+function formatAbsolute(iso: string) {
+    return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })
 }
 </script>
 
@@ -61,7 +62,10 @@ function dueColor(iso: string) {
                 variant="tonal"
                 prepend-icon="mdi-clock-outline"
             >
-                {{ formatDue(assignment.dueDate) }}
+                {{ formatDueRelative(assignment.dueDate) }}
+                <v-tooltip activator="parent" location="top">
+                    {{ formatAbsolute(assignment.dueDate) }}
+                </v-tooltip>
             </v-chip>
             <v-chip size="x-small" variant="tonal" prepend-icon="mdi-account-group">
                 {{ assignment.studentGroup.internalName }}

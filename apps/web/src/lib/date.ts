@@ -57,6 +57,27 @@ export const formatTimeUntil = (
         .replace(',', ' à')
 }
 
+export const formatDueRelative = (iso: string, from: Date = new Date()): string => {
+    const target = new Date(iso)
+    const diffMs = target.getTime() - from.getTime()
+    const diffMins = Math.round(diffMs / 60000)
+
+    if (diffMins < -60 * 24) {
+        const days = Math.round(-diffMins / (60 * 24))
+        return `il y a ${days} jour${days > 1 ? 's' : ''}`
+    }
+    if (diffMins < 0) return 'passé'
+    if (diffMins < 60) return `dans ${diffMins} min`
+    if (diffMins < 60 * 24) {
+        const h = Math.floor(diffMins / 60)
+        const m = diffMins % 60
+        return `dans ${h}h${m > 0 ? m.toString().padStart(2, '0') : ''}`
+    }
+    const days = Math.floor(diffMins / (60 * 24))
+    if (days === 1) return 'demain'
+    return `dans ${days} jours`
+}
+
 export const toCalendarLocalDate = (date: Date): Date => {
     const d = new Date(date)
     d.setMinutes(d.getMinutes() + d.getTimezoneOffset())

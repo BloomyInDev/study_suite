@@ -129,31 +129,34 @@ async function toggleDone(a: Assignment, done: boolean) {
                 md="8"
                 lg="6"
             >
-                <div class="d-flex align-center mb-2">
-                    <div class="text-subtitle-1 font-weight-medium">
-                        <v-icon size="18" class="mr-1">mdi-book-edit</v-icon>
-                        Devoirs à venir
-                    </div>
-                    <v-spacer />
-                    <v-btn
-                        variant="text"
-                        size="small"
-                        to="/devoirs"
-                        append-icon="mdi-arrow-right"
-                    >
-                        Tout voir
-                    </v-btn>
-                </div>
-                <v-list density="compact">
-                    <AssignmentCard
-                        v-for="a in upcomingAssignments"
-                        :key="a.id"
-                        :assignment="a"
-                        compact
-                        @click="assignmentFormOpen = true"
-                        @toggle="toggleDone(a, $event)"
-                    />
-                </v-list>
+                <v-card>
+                    <v-card-item>
+                        <template #prepend>
+                            <v-icon color="primary" size="32">mdi-book-edit</v-icon>
+                        </template>
+                        <v-card-title>Devoirs à venir</v-card-title>
+                    </v-card-item>
+                    <v-list density="compact">
+                        <AssignmentCard
+                            v-for="a in upcomingAssignments"
+                            :key="a.id"
+                            :assignment="a"
+                            compact
+                            @click="assignmentFormOpen = true"
+                            @toggle="toggleDone(a, $event)"
+                        />
+                    </v-list>
+                    <v-card-actions>
+                        <v-btn
+                            variant="flat"
+                            color="primary"
+                            to="/devoirs"
+                            append-icon="mdi-arrow-right"
+                        >
+                            Tous les devoirs
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
             </v-col>
         </v-row>
 
