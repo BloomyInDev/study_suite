@@ -16,6 +16,11 @@ export const router = createRouter({
         { path: '/teachers', component: () => import('./views/TeachersView.vue') },
         { path: '/rooms', component: () => import('./views/RoomsView.vue') },
         {
+            path: '/devoirs',
+            component: () => import('./views/AssignmentsView.vue'),
+            meta: { requiresAuth: true },
+        },
+        {
             path: '/profile',
             component: () => import('./views/ProfileView.vue'),
             meta: { requiresAuth: true },

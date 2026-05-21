@@ -53,6 +53,20 @@ export function enhanceEvent(e: ApiEvent): Event {
     return { ...e, start: new Date(e.startDate), end: new Date(e.endDate) }
 }
 
+export interface Assignment {
+    id: string
+    title: string
+    description: string | null
+    dueDate: string
+    studentGroup: { id: string; internalName: string }
+    event: { id: string; title: string } | null
+    createdBy: { id: string; discordUsername: string } | null
+    completedByMe: boolean
+    completionCount: number
+    createdAt: string
+    updatedAt: string
+}
+
 export enum Duration {
     DAY = 'day',
     WEEK = 'week',
