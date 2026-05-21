@@ -20,6 +20,11 @@ const pickerOpen = ref(false)
 const isDark = ref(localStorage.getItem('study_suite_theme') === 'dark')
 theme.change(isDark.value ? 'dark' : 'light')
 
+function logout() {
+    auth.logout()
+    router.push('/login')
+}
+
 function toggleTheme() {
     isDark.value = !isDark.value
     theme.change(isDark.value ? 'dark' : 'light')
@@ -90,10 +95,7 @@ const navItems = [
                 <v-btn
                     v-if="auth.isAuthenticated"
                     icon
-                    @click="
-                        auth.logout()
-                        router.push('/login')
-                    "
+                    @click="logout"
                 >
                     <v-icon>mdi-logout</v-icon>
                     <v-tooltip activator="parent" location="bottom">Se déconnecter</v-tooltip>
