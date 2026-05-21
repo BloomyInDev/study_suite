@@ -125,11 +125,11 @@ onMounted(fetchAssignments)
 
             <template v-else>
                 <template v-if="today.length > 0">
-                    <div class="text-subtitle-2 text-warning mb-2">
+                    <div class="text-subtitle-2 text-warning mb-1">
                         <v-icon size="16" color="warning">mdi-clock-alert</v-icon>
                         Aujourd'hui ({{ today.length }})
                     </div>
-                    <div class="d-flex flex-column ga-2 mb-4">
+                    <v-list density="compact" class="mb-3">
                         <AssignmentCard
                             v-for="a in today"
                             :key="a.id"
@@ -137,15 +137,15 @@ onMounted(fetchAssignments)
                             @click="openEdit(a)"
                             @toggle="toggleDone(a, $event)"
                         />
-                    </div>
+                    </v-list>
                 </template>
 
                 <template v-if="upcoming.length > 0">
-                    <div class="text-subtitle-2 mb-2">
+                    <div class="text-subtitle-2 mb-1">
                         <v-icon size="16">mdi-calendar-arrow-right</v-icon>
                         À venir ({{ upcoming.length }})
                     </div>
-                    <div class="d-flex flex-column ga-2 mb-4">
+                    <v-list density="compact" class="mb-3">
                         <AssignmentCard
                             v-for="a in upcoming"
                             :key="a.id"
@@ -153,15 +153,15 @@ onMounted(fetchAssignments)
                             @click="openEdit(a)"
                             @toggle="toggleDone(a, $event)"
                         />
-                    </div>
+                    </v-list>
                 </template>
 
                 <template v-if="past.length > 0">
-                    <div class="text-subtitle-2 text-medium-emphasis mb-2">
+                    <div class="text-subtitle-2 text-medium-emphasis mb-1">
                         <v-icon size="16">mdi-history</v-icon>
                         Passés ({{ past.length }})
                     </div>
-                    <div class="d-flex flex-column ga-2">
+                    <v-list density="compact">
                         <AssignmentCard
                             v-for="a in past"
                             :key="a.id"
@@ -169,7 +169,7 @@ onMounted(fetchAssignments)
                             @click="openEdit(a)"
                             @toggle="toggleDone(a, $event)"
                         />
-                    </div>
+                    </v-list>
                 </template>
             </template>
         </template>

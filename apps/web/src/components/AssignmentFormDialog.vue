@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import type { Assignment } from '../lib/types.js'
-import { renderMarkdown } from '../lib/markdown.js'
 
 const props = defineProps<{
     modelValue: boolean
@@ -30,18 +29,15 @@ const confirmDelete = ref(false)
 
 const form = ref({
     title: '',
+    subject: '',
     description: '',
     dueDate: '',
     studentGroupId: '',
     eventId: null as string | null,
 })
 
-const descriptionPreview = computed(() =>
-    form.value.description ? renderMarkdown(form.value.description) : '<em class="text-medium-emphasis">Aperçu…</em>',
-)
-
 const isEditing = computed(() => !!props.editing)
-const title = computed(() => (isEditing.value ? 'Modifier le devoir' : 'Nouveau devoir'))
+const dialogTitle = computed(() => (isEditing.value ? 'Modifier le devoir' : 'Nouveau devoir'))
 
 watch(
     () => props.modelValue,
@@ -52,6 +48,7 @@ watch(
             const d = new Date(props.editing.dueDate)
             form.value = {
                 title: props.editing.title,
+                subject: props.editing.subject ?? '',
                 description: props.editing.description ?? '',
                 dueDate: toDatetimeLocal(d),
                 studentGroupId: props.editing.studentGroup.id,
@@ -64,6 +61,7 @@ watch(
             tomorrow.setHours(23, 59, 0, 0)
             form.value = {
                 title: '',
+                subject: '',
                 description: '',
                 dueDate: toDatetimeLocal(tomorrow),
                 studentGroupId: defaultGroup,
@@ -88,6 +86,7 @@ async function save() {
     try {
         const payload = {
             title: form.value.title.trim(),
+            subject: form.value.subject.trim() || undefined,
             description: form.value.description || undefined,
             dueDate: new Date(form.value.dueDate).toISOString(),
             studentGroupId: form.value.studentGroupId,
@@ -135,10 +134,10 @@ async function deleteAssignment() {
 </script>
 
 <template>
-    <v-dialog v-model="show" max-width="860" scrollable>
+    <v-dialog v-model="show" max-width="560" scrollable>
         <v-card>
             <v-card-title class="pt-4 px-4 d-flex align-center">
-                {{ title }}
+                {{ dialogTitle }}
                 <v-spacer />
                 <v-btn icon="mdi-close" variant="text" size="small" @click="show = false" />
             </v-card-title>
@@ -157,12 +156,12 @@ async function deleteAssignment() {
 
                     <v-col cols="12" sm="6">
                         <v-text-field
-                            v-model="form.dueDate"
-                            label="Date limite *"
-                            type="datetime-local"
+                            v-model="form.subject"
+                            label="Matière"
                             variant="outlined"
                             density="compact"
                             hide-details
+                            placeholder="ex. Mathématiques"
                         />
                     </v-col>
 
@@ -177,28 +176,28 @@ async function deleteAssignment() {
                         />
                     </v-col>
 
+                    <v-col cols="12" sm="6">
+                        <v-text-field
+                            v-model="form.dueDate"
+                            label="Date limite *"
+                            type="datetime-local"
+                            variant="outlined"
+                            density="compact"
+                            hide-details
+                        />
+                    </v-col>
+
                     <v-col cols="12">
-                        <div class="text-caption text-medium-emphasis mb-1">Description (Markdown)</div>
-                        <v-row no-gutters class="markdown-editor">
-                            <v-col cols="6" class="pr-1">
-                                <v-textarea
-                                    v-model="form.description"
-                                    placeholder="Rédigez la description…"
-                                    variant="outlined"
-                                    density="compact"
-                                    rows="8"
-                                    hide-details
-                                    no-resize
-                                    class="h-100"
-                                />
-                            </v-col>
-                            <v-col cols="6" class="pl-1">
-                                <div
-                                    class="markdown-preview rounded border pa-3 h-100"
-                                    v-html="descriptionPreview"
-                                />
-                            </v-col>
-                        </v-row>
+                        <v-textarea
+                            v-model="form.description"
+                            label="Description (Markdown)"
+                            variant="outlined"
+                            density="compact"
+                            rows="5"
+                            hide-details
+                            no-resize
+                            placeholder="Décrivez le devoir…"
+                        />
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -244,28 +243,3 @@ async function deleteAssignment() {
         </v-card>
     </v-dialog>
 </template>
-
-<style scoped>
-.markdown-editor {
-    min-height: 200px;
-}
-.markdown-preview {
-    min-height: 200px;
-    overflow-y: auto;
-    font-size: 0.875rem;
-    line-height: 1.6;
-    border-color: rgba(var(--v-border-color), var(--v-border-opacity)) !important;
-}
-.markdown-preview :deep(p) { margin-bottom: 0.5em; }
-.markdown-preview :deep(code) {
-    background: rgba(var(--v-theme-surface-variant), 0.5);
-    padding: 0.1em 0.3em;
-    border-radius: 3px;
-}
-.markdown-preview :deep(pre) {
-    background: rgba(var(--v-theme-surface-variant), 0.5);
-    padding: 0.75em;
-    border-radius: 4px;
-    overflow-x: auto;
-}
-</style>

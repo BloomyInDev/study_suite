@@ -16,6 +16,7 @@ import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 
 const createSchema = z.object({
     title: z.string().min(1).max(255),
+    subject: z.string().max(100).optional(),
     description: z.string().optional(),
     dueDate: z.coerce.date(),
     studentGroupId: z.string().uuid(),
@@ -24,6 +25,7 @@ const createSchema = z.object({
 
 const patchSchema = z.object({
     title: z.string().min(1).max(255).optional(),
+    subject: z.string().max(100).nullable().optional(),
     description: z.string().nullable().optional(),
     dueDate: z.coerce.date().optional(),
     studentGroupId: z.string().uuid().optional(),
@@ -59,6 +61,7 @@ function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: string) {
     return {
         id: row.id,
         title: row.title,
+        subject: row.subject,
         description: row.description,
         dueDate: row.dueDate.toISOString(),
         studentGroup: { id: row.studentGroup.id, internalName: row.studentGroup.internalName },
@@ -181,6 +184,7 @@ export default new Hono<AuthEnv>()
             .insert(assignments)
             .values({
                 title: body.title,
+                subject: body.subject,
                 description: body.description,
                 dueDate: body.dueDate,
                 studentGroupId: body.studentGroupId,

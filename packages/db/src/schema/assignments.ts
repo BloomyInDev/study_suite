@@ -6,6 +6,7 @@ import { users } from './users.js'
 export const assignments = pgTable('assignments', {
     id: uuid('id').primaryKey().defaultRandom(),
     title: text('title').notNull(),
+    subject: text('subject'),
     description: text('description'),
     dueDate: timestamp('due_date', { withTimezone: true }).notNull(),
     studentGroupId: uuid('student_group_id')

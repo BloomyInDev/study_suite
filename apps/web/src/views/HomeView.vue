@@ -144,7 +144,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                         Tout voir
                     </v-btn>
                 </div>
-                <div class="d-flex flex-column ga-2">
+                <v-list density="compact">
                     <AssignmentCard
                         v-for="a in upcomingAssignments"
                         :key="a.id"
@@ -153,7 +153,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                         @click="assignmentFormOpen = true"
                         @toggle="toggleDone(a, $event)"
                     />
-                </div>
+                </v-list>
             </v-col>
         </v-row>
 

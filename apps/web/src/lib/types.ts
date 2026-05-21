@@ -56,6 +56,7 @@ export function enhanceEvent(e: ApiEvent): Event {
 export interface Assignment {
     id: string
     title: string
+    subject: string | null
     description: string | null
     dueDate: string
     studentGroup: { id: string; internalName: string }

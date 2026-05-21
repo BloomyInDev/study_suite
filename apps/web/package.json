@@ -12,7 +12,9 @@
         "@fortawesome/fontawesome-free": "^7.2.0",
         "@mdi/font": "^7.4.47",
         "@studysuite/shared": "workspace:*",
+        "dompurify": "^3.4.5",
         "hono": "^4.12.21",
+        "marked": "^18.0.4",
         "pinia": "^3.0.4",
         "vue": "^3.5.34",
         "vue-router": "^5.0.7",
@@ -21,6 +23,7 @@
     "devDependencies": {
         "@studysuite/api": "workspace:*",
         "@studysuite/tsconfig": "workspace:*",
+        "@types/dompurify": "^3.2.0",
         "@types/node": "^22.19.19",
         "@vitejs/plugin-vue": "^5.2.4",
         "typescript": "^5.9.3",
