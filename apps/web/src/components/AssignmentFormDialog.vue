@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
+import { useAuthStore } from '../stores/auth.js'
 import type { Assignment } from '../lib/types.js'
 
 const props = defineProps<{
@@ -16,6 +17,7 @@ const emit = defineEmits<{
 
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
+const auth = useAuthStore()
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const show = computed({
@@ -182,6 +184,7 @@ async function deleteAssignment() {
                             variant="outlined"
                             density="compact"
                             hide-details
+                            :disabled="!auth.isAdmin"
                             :items="groups.allGroups.map((g) => ({ title: g.internalName, value: g.id }))"
                         />
                     </v-col>

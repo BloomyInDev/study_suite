@@ -9,6 +9,8 @@ import AssignmentDetailDialog from '../components/AssignmentDetailDialog.vue'
 
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
+const showCompleted = ref(false)
+const search = ref('')
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const assignments = ref<Assignment[]>([])
@@ -43,18 +45,34 @@ const now = new Date()
 const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
 const todayEnd = todayStart + 86400000
 
+const filtered = computed(() => {
+    const q = search.value.trim().toLowerCase()
+    if (!q) return assignments.value
+    return assignments.value.filter(
+        (a) =>
+            a.title.toLowerCase().includes(q) ||
+            (a.subject ?? '').toLowerCase().includes(q) ||
+            (a.description ?? '').toLowerCase().includes(q),
+    )
+})
+
 const upcoming = computed(() =>
-    assignments.value.filter((a) => new Date(a.dueDate).getTime() >= todayEnd),
+    filtered.value.filter((a) => new Date(a.dueDate).getTime() >= todayEnd),
 )
 const today = computed(() =>
-    assignments.value.filter((a) => {
+    filtered.value.filter((a) => {
         const t = new Date(a.dueDate).getTime()
         return t >= todayStart && t < todayEnd
     }),
 )
 const past = computed(() =>
-    assignments.value.filter(
+    filtered.value.filter(
         (a) => new Date(a.dueDate).getTime() < todayStart && !a.completedByMe,
+    ),
+)
+const completedPast = computed(() =>
+    filtered.value.filter(
+        (a) => new Date(a.dueDate).getTime() < todayStart && a.completedByMe,
     ),
 )
 
@@ -116,7 +134,7 @@ onMounted(fetchAssignments)
 
 <template>
     <v-container fluid class="pa-4">
-        <div class="d-flex align-center mb-4">
+        <div class="d-flex align-center mb-3">
             <div class="text-h6">Devoirs</div>
             <v-spacer />
             <v-btn
@@ -130,6 +148,28 @@ onMounted(fetchAssignments)
             </v-btn>
         </div>
 
+        <div class="d-flex align-center ga-4 mb-4">
+            <v-text-field
+                v-model="search"
+                prepend-inner-icon="mdi-magnify"
+                placeholder="Rechercher…"
+                variant="outlined"
+                density="compact"
+                hide-details
+                clearable
+                class="flex-grow-1"
+            />
+            <v-switch
+                v-model="showCompleted"
+                label="Complétés"
+                color="success"
+                density="compact"
+                hide-details
+                class="flex-shrink-0 mt-0"
+                style="margin-bottom: 0"
+            />
+        </div>
+
         <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
 
         <template v-if="!loading">
@@ -138,6 +178,22 @@ onMounted(fetchAssignments)
             </template>
 
             <template v-else>
+                <template v-if="showCompleted && completedPast.length > 0">
+                    <div class="text-subtitle-2 text-success mb-1">
+                        <v-icon size="16" color="success">mdi-check-circle-outline</v-icon>
+                        Complétés ({{ completedPast.length }})
+                    </div>
+                    <v-list density="compact" class="mb-3">
+                        <AssignmentCard
+                            v-for="a in completedPast"
+                            :key="a.id"
+                            :assignment="a"
+                            @click="openDetail(a)"
+                            @toggle="toggleDone(a, $event)"
+                        />
+                    </v-list>
+                </template>
+
                 <template v-if="past.length > 0">
                     <div class="text-subtitle-2 text-medium-emphasis mb-1">
                         <v-icon size="16">mdi-history</v-icon>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { backend } from '../lib/api.js'
 import type { Room, RoomWithDetails, Event } from '../lib/types.js'
 import { enhanceEvent } from '../lib/types.js'
@@ -35,9 +35,8 @@ onMounted(async () => {
     }
 })
 
-async function toggleAvailableFilter() {
-    filterAvailable.value = !filterAvailable.value
-    if (filterAvailable.value && availableNow.value.size === 0) {
+watch(filterAvailable, async (val) => {
+    if (val && availableNow.value.size === 0) {
         loadingAvailable.value = true
         try {
             const now = new Date()
@@ -52,7 +51,7 @@ async function toggleAvailableFilter() {
             loadingAvailable.value = false
         }
     }
-}
+})
 
 async function openRoom(room: Room) {
     dialogOpen.value = true
@@ -93,15 +92,15 @@ async function openRoom(room: Room) {
                     clearable
                     style="max-width: 280px"
                 />
-                <v-btn
-                    :color="filterAvailable ? 'success' : undefined"
-                    :variant="filterAvailable ? 'flat' : 'tonal'"
+                <v-switch
+                    v-model="filterAvailable"
                     :loading="loadingAvailable"
-                    prepend-icon="mdi-door-open"
-                    @click="toggleAvailableFilter"
-                >
-                    Disponibles maintenant
-                </v-btn>
+                    label="Disponibles maintenant"
+                    color="success"
+                    density="compact"
+                    hide-details
+                    class="flex-shrink-0"
+                />
             </v-col>
         </v-row>
 
