@@ -1,11 +1,17 @@
-import { zValidator } from '@hono/zod-validator'
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eventTeachers, events, teachers } from '@studysuite/db'
 import { and, asc, eq, gte, ilike, inArray, lt, lte, or } from 'drizzle-orm'
-import { Hono } from 'hono'
 import { db } from '../db.js'
+import { dateToUTC } from '../lib/date.js'
 import { eventToDto } from '../lib/serialize.js'
 import { DateFormatSchema, OptionalDateRangeSchema, SearchSchema } from '../schemas/query.js'
-import { dateToUTC } from '../lib/date.js'
+import {
+    ErrorSchema,
+    EventDtoSchema,
+    IdParamSchema,
+    TeacherDetailSchema,
+    TeacherSchema,
+} from '../schemas/responses.js'
 
 const withRelations = {
     eventLocations: { with: { location: true as const } },
@@ -22,32 +28,113 @@ async function busyTeacherIds(at: Date): Promise<Set<string>> {
     return new Set(rows.map((r) => r.teacherId))
 }
 
-export default new Hono()
-    .get('/search', zValidator('query', SearchSchema), async (c) => {
-        const { q } = c.req.valid('query')
-        const rows = await db
-            .select()
-            .from(teachers)
-            .where(or(ilike(teachers.firstName, `%${q}%`), ilike(teachers.lastName, `%${q}%`)))
-            .orderBy(asc(teachers.lastName), asc(teachers.firstName))
-        return c.json({ data: rows })
-    })
-    .get('/', async (c) => {
-        const now = dateToUTC(new Date())
-        const [rows, busy] = await Promise.all([
-            db.select().from(teachers).orderBy(asc(teachers.lastName), asc(teachers.firstName)),
-            busyTeacherIds(now),
-        ])
-        return c.json({ data: rows.map((t) => ({ ...t, available: !busy.has(t.id) })) })
-    })
-    .get('/:id', async (c) => {
-        const id = c.req.param('id')
-        const dateFormat = DateFormatSchema.parse(c.req.query('dateFormat'))
-        const [row] = await db.select().from(teachers).where(eq(teachers.id, id))
-        if (!row) return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
-        const now = dateToUTC(new Date())
-        const currentEvents = await db.query.events.findMany({
-            where: and(
+export default new OpenAPIHono()
+    .openapi(
+        createRoute({
+            method: 'get',
+            path: '/search',
+            tags: ['Teachers'],
+            request: { query: SearchSchema },
+            responses: {
+                200: {
+                    content: { 'application/json': { schema: z.object({ data: z.array(TeacherSchema) }) } },
+                    description: 'Search results',
+                },
+            },
+        }),
+        async (c) => {
+            const { q } = c.req.valid('query')
+            const rows = await db
+                .select()
+                .from(teachers)
+                .where(or(ilike(teachers.firstName, `%${q}%`), ilike(teachers.lastName, `%${q}%`)))
+                .orderBy(asc(teachers.lastName), asc(teachers.firstName))
+            return c.json({ data: rows.map((t) => ({ ...t, available: false })) }, 200)
+        },
+    )
+    .openapi(
+        createRoute({
+            method: 'get',
+            path: '/',
+            tags: ['Teachers'],
+            responses: {
+                200: {
+                    content: { 'application/json': { schema: z.object({ data: z.array(TeacherSchema) }) } },
+                    description: 'All teachers with availability',
+                },
+            },
+        }),
+        async (c) => {
+            const now = dateToUTC(new Date())
+            const [rows, busy] = await Promise.all([
+                db.select().from(teachers).orderBy(asc(teachers.lastName), asc(teachers.firstName)),
+                busyTeacherIds(now),
+            ])
+            return c.json({ data: rows.map((t) => ({ ...t, available: !busy.has(t.id) })) }, 200)
+        },
+    )
+    .openapi(
+        createRoute({
+            method: 'get',
+            path: '/{id}',
+            tags: ['Teachers'],
+            request: { params: IdParamSchema },
+            responses: {
+                200: {
+                    content: { 'application/json': { schema: z.object({ data: TeacherDetailSchema }) } },
+                    description: 'Teacher detail with current event',
+                },
+                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            },
+        }),
+        async (c) => {
+            const { id } = c.req.valid('param')
+            const dateFormat = DateFormatSchema.parse(c.req.query('dateFormat'))
+            const [row] = await db.select().from(teachers).where(eq(teachers.id, id))
+            if (!row)
+                return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
+            const now = dateToUTC(new Date())
+            const currentEvents = await db.query.events.findMany({
+                where: and(
+                    inArray(
+                        events.id,
+                        db
+                            .select({ id: eventTeachers.eventId })
+                            .from(eventTeachers)
+                            .where(eq(eventTeachers.teacherId, id)),
+                    ),
+                    lte(events.startDate, now),
+                    gte(events.endDate, now),
+                ),
+                with: withRelations,
+            })
+            const currentEvent = currentEvents[0] ? eventToDto(currentEvents[0], dateFormat) : null
+            return c.json({ data: { ...row, available: currentEvent === null, currentEvent } }, 200)
+        },
+    )
+    .openapi(
+        createRoute({
+            method: 'get',
+            path: '/{id}/events',
+            tags: ['Teachers'],
+            request: { params: IdParamSchema, query: OptionalDateRangeSchema },
+            responses: {
+                200: {
+                    content: { 'application/json': { schema: z.object({ data: z.array(EventDtoSchema) }) } },
+                    description: 'Events for the teacher',
+                },
+                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            },
+        }),
+        async (c) => {
+            const { id } = c.req.valid('param')
+            const { from, to, dateFormat } = c.req.valid('query')
+            const fromDate = from ? new Date(from) : undefined
+            const toDate = to ? new Date(to) : undefined
+            const [teacher] = await db.select().from(teachers).where(eq(teachers.id, id))
+            if (!teacher)
+                return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
+            const conditions = [
                 inArray(
                     events.id,
                     db
@@ -55,37 +142,14 @@ export default new Hono()
                         .from(eventTeachers)
                         .where(eq(eventTeachers.teacherId, id)),
                 ),
-                lte(events.startDate, now),
-                gte(events.endDate, now),
-            ),
-            with: withRelations,
-        })
-        const currentEvent = currentEvents[0] ? eventToDto(currentEvents[0], dateFormat) : null
-        return c.json({ data: { ...row, available: currentEvent === null, currentEvent } })
-    })
-    .get('/:id/events', zValidator('query', OptionalDateRangeSchema), async (c) => {
-        const id = c.req.param('id')
-        const { from, to, dateFormat } = c.req.valid('query')
-        const fromDate = from ? new Date(from) : undefined
-        const toDate = to ? new Date(to) : undefined
-        const [teacher] = await db.select().from(teachers).where(eq(teachers.id, id))
-        if (!teacher)
-            return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
-        const conditions = [
-            inArray(
-                events.id,
-                db
-                    .select({ id: eventTeachers.eventId })
-                    .from(eventTeachers)
-                    .where(eq(eventTeachers.teacherId, id)),
-            ),
-        ]
-        if (fromDate) conditions.push(gte(events.startDate, fromDate))
-        if (toDate) conditions.push(lt(events.startDate, toDate))
-        const rows = await db.query.events.findMany({
-            where: and(...conditions),
-            with: withRelations,
-            orderBy: asc(events.startDate),
-        })
-        return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) })
-    })
+            ]
+            if (fromDate) conditions.push(gte(events.startDate, fromDate))
+            if (toDate) conditions.push(lt(events.startDate, toDate))
+            const rows = await db.query.events.findMany({
+                where: and(...conditions),
+                with: withRelations,
+                orderBy: asc(events.startDate),
+            })
+            return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) }, 200)
+        },
+    )

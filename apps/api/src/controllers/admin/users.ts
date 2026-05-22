@@ -1,11 +1,10 @@
-import { Hono } from 'hono'
-import { zValidator } from '@hono/zod-validator'
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eq } from 'drizzle-orm'
-import { z } from 'zod'
 import { db } from '../../db.js'
 import { users, userStudents, userTeachers } from '@studysuite/db'
 import { requireAuth, requireAdmin, type AuthEnv } from '../../middleware/auth.js'
 import { type EnrichedUser } from '../auth.js'
+import { ErrorSchema, IdParamSchema, UserDtoSchema } from '../../schemas/responses.js'
 
 const patchSchema = z.object({
     status: z.enum(['approved', 'rejected', 'pending']).optional(),
@@ -46,16 +45,46 @@ async function listEnrichedUsers(): Promise<EnrichedUser[]> {
     }))
 }
 
-export default new Hono<AuthEnv>()
-    .use(requireAuth, requireAdmin)
+const app = new OpenAPIHono<AuthEnv>()
+app.use(requireAuth, requireAdmin)
 
-    .get('/', async (c) => {
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/',
+        tags: ['Admin'],
+        security: [{ Bearer: [] }],
+        responses: {
+            200: {
+                content: { 'application/json': { schema: z.object({ data: z.array(UserDtoSchema) }) } },
+                description: 'All users',
+            },
+        },
+    }),
+    async (c) => {
         const all = await listEnrichedUsers()
-        return c.json({ data: all })
-    })
+        return c.json({ data: all }, 200)
+    },
+)
 
-    .patch('/:id', zValidator('json', patchSchema), async (c) => {
-        const id = c.req.param('id')
+app.openapi(
+    createRoute({
+        method: 'patch',
+        path: '/{id}',
+        tags: ['Admin'],
+        security: [{ Bearer: [] }],
+        request: {
+            params: IdParamSchema,
+            body: { content: { 'application/json': { schema: patchSchema } }, required: true },
+        },
+        responses: {
+            200: { content: { 'application/json': { schema: z.object({ data: UserDtoSchema }) } }, description: 'Updated user' },
+            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+        },
+    }),
+    async (c) => {
+        const { id } = c.req.valid('param')
         const body = c.req.valid('json')
         const payload = c.get('user')
 
@@ -141,5 +170,8 @@ export default new Hono<AuthEnv>()
             teacherId: rest.teacherId ?? null,
         }
 
-        return c.json({ data: enriched })
-    })
+        return c.json({ data: enriched }, 200)
+    },
+)
+
+export default app

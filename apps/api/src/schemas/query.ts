@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z } from '@hono/zod-openapi'
 
 export const DateFormatSchema = z.enum(['iso', 'unix', 'unix-ms']).default('iso')
 export type DateFormat = z.infer<typeof DateFormatSchema>
@@ -9,8 +9,8 @@ export const DateParamSchema = z.object({
 })
 
 export const DateRangeSchema = z.object({
-    from: z.coerce.date(),
-    to: z.coerce.date(),
+    from: z.string(),
+    to: z.string(),
     dateFormat: DateFormatSchema,
 })
 
