@@ -43,7 +43,7 @@ async function openTeacher(teacher: Teacher) {
             Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999),
         )
         const [detailsRes, eventsRes] = await Promise.all([
-            backend.api.teachers[':id'].$get({ param: { id: teacher.id } }),
+            backend.api.teachers[':id'].$get({ param: { id: teacher.id }, query: {} }),
             backend.api.teachers[':id'].events.$get({
                 param: { id: teacher.id },
                 query: { from: dayStart.getTime(), to: dayEnd.getTime() },
