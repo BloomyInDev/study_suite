@@ -29,8 +29,12 @@ export const EventDtoSchema = z
     .object({
         id: z.string().uuid(),
         title: z.string(),
-        startDate: z.union([z.string(), z.number()]),
-        endDate: z.union([z.string(), z.number()]),
+        startDate: z.union([z.string(), z.number()]).openapi({
+            description: 'ISO date string or unix timestamp (seconds/ms) based on the dateFormat param',
+        }),
+        endDate: z.union([z.string(), z.number()]).openapi({
+            description: 'ISO date string or unix timestamp (seconds/ms) based on the dateFormat param',
+        }),
         source: z.string(),
         rooms: z.array(LocationSchema),
         teachers: z.array(TeacherRefSchema),

@@ -5,42 +5,50 @@ import { discordGuilds, discordRoleMappings, studentGroups } from '@studysuite/d
 import { requireAuth, requireAdmin, type AuthEnv } from '../../middleware/auth.js'
 import { ErrorSchema, IdParamSchema } from '../../schemas/responses.js'
 
-const createSchema = z.object({
-    discordGuildId: z.string().min(1),
-    name: z.string().min(1),
-})
+const createGuildSchema = z
+    .object({
+        discordGuildId: z.string().min(1),
+        name: z.string().min(1),
+    })
+    .openapi('CreateGuild')
 
-const MappingBodySchema = z.discriminatedUnion('userRole', [
-    z.object({
-        discordRoleId: z.string().min(1),
-        userRole: z.literal('student'),
-        studentGroupId: z.string().uuid(),
-    }),
-    z.object({
-        discordRoleId: z.string().min(1),
-        userRole: z.literal('teacher'),
-        studentGroupId: z.string().uuid().optional(),
-    }),
-])
+const MappingBodySchema = z
+    .discriminatedUnion('userRole', [
+        z.object({
+            discordRoleId: z.string().min(1),
+            userRole: z.literal('student'),
+            studentGroupId: z.string().uuid(),
+        }),
+        z.object({
+            discordRoleId: z.string().min(1),
+            userRole: z.literal('teacher'),
+            studentGroupId: z.string().uuid().optional(),
+        }),
+    ])
+    .openapi('CreateMapping')
 
-const GuildSchema = z.object({
-    id: z.string().uuid(),
-    discordGuildId: z.string(),
-    name: z.string(),
-    createdAt: z.string(),
-})
+const GuildSchema = z
+    .object({
+        id: z.string().uuid(),
+        discordGuildId: z.string(),
+        name: z.string(),
+        createdAt: z.string(),
+    })
+    .openapi('Guild')
 
-const MappingSchema = z.object({
-    id: z.string().uuid(),
-    guildId: z.string().uuid(),
-    discordRoleId: z.string(),
-    userRole: z.enum(['student', 'teacher']),
-    studentGroupId: z.string().uuid().nullable(),
-    studentGroupName: z.string().nullable(),
-    createdAt: z.string(),
-})
+const MappingSchema = z
+    .object({
+        id: z.string().uuid(),
+        guildId: z.string().uuid(),
+        discordRoleId: z.string(),
+        userRole: z.enum(['student', 'teacher']),
+        studentGroupId: z.string().uuid().nullable(),
+        studentGroupName: z.string().nullable(),
+        createdAt: z.string(),
+    })
+    .openapi('GuildRoleMapping')
 
-const GuildWithMappingsSchema = GuildSchema.extend({ mappings: z.array(MappingSchema) })
+const GuildWithMappingsSchema = GuildSchema.extend({ mappings: z.array(MappingSchema) }).openapi('GuildWithMappings')
 
 const IdMappingIdParamSchema = z.object({
     id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
@@ -54,6 +62,7 @@ app.openapi(
     createRoute({
         method: 'get',
         path: '/',
+        operationId: 'adminListGuilds',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         responses: {
@@ -61,6 +70,7 @@ app.openapi(
                 content: { 'application/json': { schema: z.object({ data: z.array(GuildWithMappingsSchema) }) } },
                 description: 'All Discord guilds with role mappings',
             },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
         },
     }),
     async (c) => {
@@ -90,16 +100,18 @@ app.openapi(
     createRoute({
         method: 'post',
         path: '/',
+        operationId: 'adminCreateGuild',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: {
-            body: { content: { 'application/json': { schema: createSchema } }, required: true },
+            body: { content: { 'application/json': { schema: createGuildSchema } }, required: true },
         },
         responses: {
             201: {
                 content: { 'application/json': { schema: z.object({ data: GuildWithMappingsSchema }) } },
                 description: 'Created guild',
             },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
         },
     }),
     async (c) => {
@@ -113,11 +125,13 @@ app.openapi(
     createRoute({
         method: 'delete',
         path: '/{id}',
+        operationId: 'adminDeleteGuild',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
             200: { content: { 'application/json': { schema: z.object({ data: GuildSchema }) } }, description: 'Deleted guild' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
         },
     }),
@@ -135,6 +149,7 @@ app.openapi(
     createRoute({
         method: 'post',
         path: '/{id}/mappings',
+        operationId: 'adminCreateMapping',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: {
@@ -143,6 +158,7 @@ app.openapi(
         },
         responses: {
             201: { content: { 'application/json': { schema: z.object({ data: MappingSchema }) } }, description: 'Created mapping' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
         },
     }),
     async (c) => {
@@ -160,11 +176,13 @@ app.openapi(
     createRoute({
         method: 'delete',
         path: '/{id}/mappings/{mappingId}',
+        operationId: 'adminDeleteMapping',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: { params: IdMappingIdParamSchema },
         responses: {
             200: { content: { 'application/json': { schema: z.object({ data: MappingSchema }) } }, description: 'Deleted mapping' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
         },
     }),

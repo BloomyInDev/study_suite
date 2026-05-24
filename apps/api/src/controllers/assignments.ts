@@ -13,23 +13,27 @@ import { db } from '../db.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 import { AssignmentDtoSchema, ErrorSchema, IdParamSchema } from '../schemas/responses.js'
 
-const createSchema = z.object({
-    title: z.string().min(1).max(255),
-    subject: z.string().max(100).optional(),
-    description: z.string().optional(),
-    dueDate: z.coerce.date(),
-    studentGroupId: z.string().uuid(),
-    eventId: z.string().uuid().optional(),
-})
+const createSchema = z
+    .object({
+        title: z.string().min(1).max(255),
+        subject: z.string().max(100).optional(),
+        description: z.string().optional(),
+        dueDate: z.coerce.date(),
+        studentGroupId: z.string().uuid(),
+        eventId: z.string().uuid().optional(),
+    })
+    .openapi('CreateAssignment')
 
-const patchSchema = z.object({
-    title: z.string().min(1).max(255).optional(),
-    subject: z.string().max(100).nullable().optional(),
-    description: z.string().nullable().optional(),
-    dueDate: z.coerce.date().optional(),
-    studentGroupId: z.string().uuid().optional(),
-    eventId: z.string().uuid().nullable().optional(),
-})
+const patchSchema = z
+    .object({
+        title: z.string().min(1).max(255).optional(),
+        subject: z.string().max(100).nullable().optional(),
+        description: z.string().nullable().optional(),
+        dueDate: z.coerce.date().optional(),
+        studentGroupId: z.string().uuid().optional(),
+        eventId: z.string().uuid().nullable().optional(),
+    })
+    .openapi('UpdateAssignment')
 
 const listSchema = z.object({
     groupIds: z
@@ -134,6 +138,7 @@ app.openapi(
     createRoute({
         method: 'get',
         path: '/',
+        operationId: 'listAssignments',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { query: listSchema },
@@ -142,6 +147,7 @@ app.openapi(
                 content: { 'application/json': { schema: z.object({ data: z.array(AssignmentDtoSchema) }) } },
                 description: 'Assignments accessible to the current user',
             },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
         },
     }),
     async (c) => {
@@ -179,11 +185,13 @@ app.openapi(
     createRoute({
         method: 'get',
         path: '/{id}',
+        operationId: 'getAssignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
             200: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Assignment detail' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
             404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
         },
@@ -210,6 +218,7 @@ app.openapi(
     createRoute({
         method: 'post',
         path: '/',
+        operationId: 'createAssignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: {
@@ -217,6 +226,7 @@ app.openapi(
         },
         responses: {
             201: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Created' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
         },
     }),
@@ -253,6 +263,7 @@ app.openapi(
     createRoute({
         method: 'patch',
         path: '/{id}',
+        operationId: 'updateAssignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: {
@@ -261,6 +272,7 @@ app.openapi(
         },
         responses: {
             200: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Updated' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
             404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
         },
@@ -304,6 +316,7 @@ app.openapi(
     createRoute({
         method: 'delete',
         path: '/{id}',
+        operationId: 'deleteAssignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
@@ -312,6 +325,7 @@ app.openapi(
                 content: { 'application/json': { schema: z.object({ data: z.object({ id: z.string().uuid() }) }) } },
                 description: 'Deleted',
             },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
             404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
         },
@@ -340,11 +354,13 @@ app.openapi(
     createRoute({
         method: 'post',
         path: '/{id}/complete',
+        operationId: 'completeAssignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
             200: { content: { 'application/json': { schema: CompletionStatusSchema } }, description: 'Marked as complete' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
             404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
         },
@@ -379,12 +395,15 @@ app.openapi(
     createRoute({
         method: 'delete',
         path: '/{id}/complete',
+        operationId: 'uncompleteAssignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
             200: { content: { 'application/json': { schema: CompletionStatusSchema } }, description: 'Marked as incomplete' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
         },
     }),
     async (c) => {
@@ -393,6 +412,11 @@ app.openapi(
             return c.json({ error: { code: 'FORBIDDEN', message: 'Account not approved' } }, 403)
         }
         const { id } = c.req.valid('param')
+
+        const existing = await fetchAssignment(id)
+        if (!existing) {
+            return c.json({ error: { code: 'NOT_FOUND', message: 'Assignment not found' } }, 404)
+        }
 
         await db
             .delete(assignmentCompletions)
