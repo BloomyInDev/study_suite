@@ -2,21 +2,16 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eventLocations, events, locations } from '@studysuite/db'
 import { and, asc, eq, gt, inArray, lt, notInArray } from 'drizzle-orm'
 import { db } from '../db.js'
-import { eventToDto } from '../lib/serialize.js'
+import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { DateRangeSchema, OptionalDateRangeSchema } from '../schemas/query.js'
 import { ErrorSchema, EventDtoSchema, IdParamSchema, LocationSchema } from '../schemas/responses.js'
-
-const withRelations = {
-    eventLocations: { with: { location: true as const } },
-    eventTeachers: { with: { teacher: true as const } },
-    eventStudentGroups: { with: { studentGroup: true as const } },
-}
 
 export default new OpenAPIHono()
     .openapi(
         createRoute({
             method: 'get',
             path: '/available',
+            operationId: 'getAvailableRooms',
             tags: ['Rooms'],
             request: { query: DateRangeSchema },
             responses: {
@@ -48,6 +43,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/',
+            operationId: 'listRooms',
             tags: ['Rooms'],
             responses: {
                 200: {
@@ -65,6 +61,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/{id}',
+            operationId: 'getRoom',
             tags: ['Rooms'],
             request: { params: IdParamSchema },
             responses: {
@@ -84,6 +81,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/{id}/events',
+            operationId: 'listRoomEvents',
             tags: ['Rooms'],
             request: { params: IdParamSchema, query: OptionalDateRangeSchema },
             responses: {
@@ -114,7 +112,7 @@ export default new OpenAPIHono()
                     fromDate ? gt(events.startDate, fromDate) : undefined,
                     toDate ? lt(events.startDate, toDate) : undefined,
                 ),
-                with: withRelations,
+                with: withEventRelations,
                 orderBy: asc(events.startDate),
             })
             return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) }, 200)

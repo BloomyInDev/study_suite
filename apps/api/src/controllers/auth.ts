@@ -1,11 +1,15 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { eq, inArray, type SQL } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import { sign } from 'hono/jwt'
 import { db } from '../db.js'
-import { users, userStudents, userTeachers, discordGuilds, discordRoleMappings } from '@studysuite/db'
+import { users, discordGuilds, discordRoleMappings } from '@studysuite/db'
+import { userStudents, userTeachers } from '@studysuite/db'
 import { config } from '../config.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 import { ErrorSchema, UserDtoSchema } from '../schemas/responses.js'
+import { fetchEnrichedUser, userToDto, type EnrichedUser } from '../lib/users.js'
+
+export type { EnrichedUser }
 
 const DISCORD_API = 'https://discord.com/api/v10'
 
@@ -19,48 +23,6 @@ type DiscordUser = {
 type DiscordMember = { roles: string[] }
 
 type OAuthState = { clientRedirectUri?: string }
-
-export type EnrichedUser = typeof users.$inferSelect & {
-    role: 'student' | 'teacher' | null
-    studentGroupId: string | null
-    teacherId: string | null
-}
-
-async function fetchEnrichedUser(where: SQL | undefined): Promise<EnrichedUser | null> {
-    const rows = await db
-        .select({
-            id: users.id,
-            discordId: users.discordId,
-            discordUsername: users.discordUsername,
-            discordAvatar: users.discordAvatar,
-            isAdmin: users.isAdmin,
-            status: users.status,
-            discordAccessToken: users.discordAccessToken,
-            discordTokenExpiresAt: users.discordTokenExpiresAt,
-            createdAt: users.createdAt,
-            updatedAt: users.updatedAt,
-            _studentUserId: userStudents.userId,
-            _teacherUserId: userTeachers.userId,
-            studentGroupId: userStudents.studentGroupId,
-            teacherId: userTeachers.teacherId,
-        })
-        .from(users)
-        .leftJoin(userStudents, eq(userStudents.userId, users.id))
-        .leftJoin(userTeachers, eq(userTeachers.userId, users.id))
-        .where(where)
-        .limit(1)
-
-    const row = rows[0]
-    if (!row) return null
-
-    const { _studentUserId, _teacherUserId, ...rest } = row
-    return {
-        ...rest,
-        role: _studentUserId ? 'student' : _teacherUserId ? 'teacher' : null,
-        studentGroupId: rest.studentGroupId ?? null,
-        teacherId: rest.teacherId ?? null,
-    }
-}
 
 function parseState(raw: string | undefined): OAuthState {
     if (!raw) return {}
@@ -78,20 +40,6 @@ function safeRedirectUri(uri: string | undefined): string | undefined {
         return ['http:', 'https:'].includes(url.protocol) ? uri : undefined
     } catch {
         return undefined
-    }
-}
-
-function userToDto(user: EnrichedUser) {
-    return {
-        id: user.id,
-        discordId: user.discordId,
-        discordUsername: user.discordUsername,
-        discordAvatar: user.discordAvatar,
-        role: user.role,
-        isAdmin: user.isAdmin,
-        status: user.status,
-        studentGroupId: user.studentGroupId,
-        teacherId: user.teacherId,
     }
 }
 
@@ -128,12 +76,14 @@ async function upsertProfile(
     }
 }
 
-const GuildWithRolesSchema = z.object({
-    id: z.string(),
-    name: z.string(),
-    icon: z.string().nullable(),
-    myRoles: z.array(z.string()),
-})
+const GuildWithRolesSchema = z
+    .object({
+        id: z.string(),
+        name: z.string(),
+        icon: z.string().nullable(),
+        myRoles: z.array(z.string()),
+    })
+    .openapi('GuildWithRoles')
 
 const app = new OpenAPIHono<AuthEnv>()
 
@@ -141,6 +91,7 @@ app.openapi(
     createRoute({
         method: 'get',
         path: '/discord',
+        operationId: 'discordLogin',
         tags: ['Auth'],
         request: { query: z.object({ redirect_uri: z.string().url().optional() }) },
         responses: {
@@ -167,6 +118,7 @@ app.openapi(
     createRoute({
         method: 'get',
         path: '/discord/callback',
+        operationId: 'discordCallback',
         tags: ['Auth'],
         request: { query: z.object({ code: z.string().optional(), state: z.string().optional() }) },
         responses: {
@@ -308,6 +260,7 @@ app.openapi(
     createRoute({
         method: 'get',
         path: '/discord/my-guilds',
+        operationId: 'getMyGuilds',
         tags: ['Auth'],
         security: [{ Bearer: [] }],
         middleware: [requireAuth] as const,
@@ -317,7 +270,7 @@ app.openapi(
                 description: "User's Discord guilds with roles",
             },
             400: { content: { 'application/json': { schema: ErrorSchema } }, description: 'No token stored' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Token expired' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             502: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Discord error' },
         },
     }),
@@ -371,6 +324,7 @@ app.openapi(
     createRoute({
         method: 'get',
         path: '/me',
+        operationId: 'getMe',
         tags: ['Auth'],
         security: [{ Bearer: [] }],
         middleware: [requireAuth] as const,
@@ -381,6 +335,7 @@ app.openapi(
                 },
                 description: 'Current user with refreshed token',
             },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
             404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
         },
     }),

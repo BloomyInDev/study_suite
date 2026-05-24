@@ -3,7 +3,7 @@ import { eventTeachers, events, teachers } from '@studysuite/db'
 import { and, asc, eq, gte, ilike, inArray, lt, lte, or } from 'drizzle-orm'
 import { db } from '../db.js'
 import { dateToUTC } from '../lib/date.js'
-import { eventToDto } from '../lib/serialize.js'
+import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { DateFormatSchema, OptionalDateRangeSchema, SearchSchema } from '../schemas/query.js'
 import {
     ErrorSchema,
@@ -12,12 +12,6 @@ import {
     TeacherDetailSchema,
     TeacherSchema,
 } from '../schemas/responses.js'
-
-const withRelations = {
-    eventLocations: { with: { location: true as const } },
-    eventTeachers: { with: { teacher: true as const } },
-    eventStudentGroups: { with: { studentGroup: true as const } },
-}
 
 async function busyTeacherIds(at: Date): Promise<Set<string>> {
     const rows = await db
@@ -33,6 +27,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/search',
+            operationId: 'searchTeachers',
             tags: ['Teachers'],
             request: { query: SearchSchema },
             responses: {
@@ -56,6 +51,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/',
+            operationId: 'listTeachers',
             tags: ['Teachers'],
             responses: {
                 200: {
@@ -77,8 +73,12 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/{id}',
+            operationId: 'getTeacher',
             tags: ['Teachers'],
-            request: { params: IdParamSchema },
+            request: {
+                params: IdParamSchema,
+                query: z.object({ dateFormat: DateFormatSchema }),
+            },
             responses: {
                 200: {
                     content: { 'application/json': { schema: z.object({ data: TeacherDetailSchema }) } },
@@ -89,7 +89,7 @@ export default new OpenAPIHono()
         }),
         async (c) => {
             const { id } = c.req.valid('param')
-            const dateFormat = DateFormatSchema.parse(c.req.query('dateFormat'))
+            const { dateFormat } = c.req.valid('query')
             const [row] = await db.select().from(teachers).where(eq(teachers.id, id))
             if (!row)
                 return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
@@ -106,7 +106,7 @@ export default new OpenAPIHono()
                     lte(events.startDate, now),
                     gte(events.endDate, now),
                 ),
-                with: withRelations,
+                with: withEventRelations,
             })
             const currentEvent = currentEvents[0] ? eventToDto(currentEvents[0], dateFormat) : null
             return c.json({ data: { ...row, available: currentEvent === null, currentEvent } }, 200)
@@ -116,6 +116,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/{id}/events',
+            operationId: 'listTeacherEvents',
             tags: ['Teachers'],
             request: { params: IdParamSchema, query: OptionalDateRangeSchema },
             responses: {
@@ -147,7 +148,7 @@ export default new OpenAPIHono()
             if (toDate) conditions.push(lt(events.startDate, toDate))
             const rows = await db.query.events.findMany({
                 where: and(...conditions),
-                with: withRelations,
+                with: withEventRelations,
                 orderBy: asc(events.startDate),
             })
             return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) }, 200)

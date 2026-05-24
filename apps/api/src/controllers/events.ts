@@ -1,9 +1,10 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { eventLocations, eventStudentGroups, eventTeachers, events } from '@studysuite/db'
+import { events } from '@studysuite/db'
+import { eventLocations, eventStudentGroups, eventTeachers } from '@studysuite/db'
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm'
 import { db } from '../db.js'
 import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
-import { eventToDto } from '../lib/serialize.js'
+import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import {
     DateFormatSchema,
     DateParamSchema,
@@ -12,12 +13,6 @@ import {
 } from '../schemas/query.js'
 import { ErrorSchema, EventDtoSchema, IdParamSchema } from '../schemas/responses.js'
 
-const withRelations = {
-    eventLocations: { with: { location: true as const } },
-    eventTeachers: { with: { teacher: true as const } },
-    eventStudentGroups: { with: { studentGroup: true as const } },
-}
-
 const EventList = z.object({ data: z.array(EventDtoSchema) })
 
 export default new OpenAPIHono()
@@ -25,6 +20,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/titles',
+            operationId: 'listEventTitles',
             tags: ['Events'],
             responses: {
                 200: {
@@ -45,6 +41,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/week',
+            operationId: 'getWeekEvents',
             tags: ['Events'],
             request: { query: DateParamSchema },
             responses: {
@@ -57,7 +54,7 @@ export default new OpenAPIHono()
             const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000)
             const rows = await db.query.events.findMany({
                 where: and(gte(events.startDate, from), lt(events.startDate, to)),
-                with: withRelations,
+                with: withEventRelations,
                 orderBy: asc(events.startDate),
             })
             return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) }, 200)
@@ -67,6 +64,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/day',
+            operationId: 'getDayEvents',
             tags: ['Events'],
             request: { query: DateParamSchema },
             responses: {
@@ -79,7 +77,7 @@ export default new OpenAPIHono()
             const to = dayEndUTC(new Date(date))
             const rows = await db.query.events.findMany({
                 where: and(gte(events.startDate, from), lt(events.startDate, to)),
-                with: withRelations,
+                with: withEventRelations,
                 orderBy: asc(events.startDate),
             })
             return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) }, 200)
@@ -89,6 +87,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/upcoming',
+            operationId: 'getUpcomingEvents',
             tags: ['Events'],
             request: { query: LimitSchema },
             responses: {
@@ -99,7 +98,7 @@ export default new OpenAPIHono()
             const { limit, dateFormat } = c.req.valid('query')
             const rows = await db.query.events.findMany({
                 where: gte(events.startDate, new Date()),
-                with: withRelations,
+                with: withEventRelations,
                 orderBy: asc(events.startDate),
                 limit,
             })
@@ -110,6 +109,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/',
+            operationId: 'listEvents',
             tags: ['Events'],
             request: { query: FilteredEventsSchema },
             responses: {
@@ -154,7 +154,7 @@ export default new OpenAPIHono()
             }
             const rows = await db.query.events.findMany({
                 where: and(...conditions),
-                with: withRelations,
+                with: withEventRelations,
                 orderBy: asc(events.startDate),
             })
             return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) }, 200)
@@ -164,6 +164,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/{id}',
+            operationId: 'getEvent',
             tags: ['Events'],
             request: {
                 params: IdParamSchema,
@@ -179,7 +180,7 @@ export default new OpenAPIHono()
             const { dateFormat } = c.req.valid('query')
             const row = await db.query.events.findFirst({
                 where: eq(events.id, id),
-                with: withRelations,
+                with: withEventRelations,
             })
             if (!row)
                 return c.json({ error: { code: 'NOT_FOUND', message: 'Event not found' } }, 404)

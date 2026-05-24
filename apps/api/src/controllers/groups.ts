@@ -2,7 +2,7 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eventStudentGroups, events, studentGroupMemberships, studentGroups } from '@studysuite/db'
 import { and, asc, eq, gt, inArray, lt } from 'drizzle-orm'
 import { db } from '../db.js'
-import { eventToDto } from '../lib/serialize.js'
+import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { OptionalDateRangeSchema } from '../schemas/query.js'
 import { ErrorSchema, EventDtoSchema, GroupSchema, IdParamSchema } from '../schemas/responses.js'
 
@@ -12,12 +12,6 @@ const IdParentIdParamSchema = z.object({
     id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
     parentId: z.string().uuid().openapi({ param: { name: 'parentId', in: 'path' } }),
 })
-
-const withRelations = {
-    eventLocations: { with: { location: true as const } },
-    eventTeachers: { with: { teacher: true as const } },
-    eventStudentGroups: { with: { studentGroup: true as const } },
-}
 
 const withHierarchy = {
     parentMemberships: { with: { child: true as const } },
@@ -44,6 +38,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/',
+            operationId: 'listGroups',
             tags: ['Groups'],
             responses: {
                 200: {
@@ -64,6 +59,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/{id}',
+            operationId: 'getGroup',
             tags: ['Groups'],
             request: { params: IdParamSchema },
             responses: {
@@ -86,6 +82,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'get',
             path: '/{id}/events',
+            operationId: 'listGroupEvents',
             tags: ['Groups'],
             request: { params: IdParamSchema, query: OptionalDateRangeSchema },
             responses: {
@@ -116,7 +113,7 @@ export default new OpenAPIHono()
                     fromDate ? gt(events.startDate, fromDate) : undefined,
                     toDate ? lt(events.startDate, toDate) : undefined,
                 ),
-                with: withRelations,
+                with: withEventRelations,
                 orderBy: asc(events.startDate),
             })
             return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) }, 200)
@@ -126,6 +123,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'post',
             path: '/{id}/parents',
+            operationId: 'addGroupParent',
             tags: ['Groups'],
             request: {
                 params: IdParamSchema,
@@ -166,6 +164,7 @@ export default new OpenAPIHono()
         createRoute({
             method: 'delete',
             path: '/{id}/parents/{parentId}',
+            operationId: 'removeGroupParent',
             tags: ['Groups'],
             request: { params: IdParentIdParamSchema },
             responses: {

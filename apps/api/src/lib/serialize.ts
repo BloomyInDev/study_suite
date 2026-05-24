@@ -1,5 +1,11 @@
 import type { DateFormat } from '../schemas/query.js'
 
+export const withEventRelations = {
+    eventLocations: { with: { location: true as const } },
+    eventTeachers: { with: { teacher: true as const } },
+    eventStudentGroups: { with: { studentGroup: true as const } },
+}
+
 export function formatDate(d: Date, fmt: DateFormat): string | number {
     switch (fmt) {
         case 'iso':
