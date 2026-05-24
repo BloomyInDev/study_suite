@@ -45,10 +45,7 @@ async function checkApproval() {
                         variant="text"
                         color="error"
                         prepend-icon="mdi-logout"
-                        @click="
-                            auth.logout()
-                            $router.push('/login')
-                        "
+                        @click="auth.logout(); $router.push('/login');"
                     >
                         Se déconnecter
                     </v-btn>
