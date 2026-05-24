@@ -11,6 +11,8 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
+        "@hono/swagger-ui": "^0.6.1",
+        "@hono/zod-openapi": "^0.18.4",
         "@hono/zod-validator": "^0.8.0",
         "@studysuite/db": "workspace:*",
         "@studysuite/shared": "workspace:*",

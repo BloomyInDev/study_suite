@@ -1,10 +1,15 @@
-import { Hono } from 'hono'
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import { eq, inArray } from 'drizzle-orm'
 import { sign } from 'hono/jwt'
-import { eq, inArray, type SQL } from 'drizzle-orm'
 import { db } from '../db.js'
-import { users, userStudents, userTeachers, discordGuilds, discordRoleMappings } from '@studysuite/db'
+import { users, discordGuilds, discordRoleMappings } from '@studysuite/db'
+import { userStudents, userTeachers } from '@studysuite/db'
 import { config } from '../config.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
+import { ErrorSchema, UserDtoSchema } from '../schemas/responses.js'
+import { fetchEnrichedUser, userToDto, type EnrichedUser } from '../lib/users.js'
+
+export type { EnrichedUser }
 
 const DISCORD_API = 'https://discord.com/api/v10'
 
@@ -18,48 +23,6 @@ type DiscordUser = {
 type DiscordMember = { roles: string[] }
 
 type OAuthState = { clientRedirectUri?: string }
-
-export type EnrichedUser = typeof users.$inferSelect & {
-    role: 'student' | 'teacher' | null
-    studentGroupId: string | null
-    teacherId: string | null
-}
-
-async function fetchEnrichedUser(where: SQL | undefined): Promise<EnrichedUser | null> {
-    const rows = await db
-        .select({
-            id: users.id,
-            discordId: users.discordId,
-            discordUsername: users.discordUsername,
-            discordAvatar: users.discordAvatar,
-            isAdmin: users.isAdmin,
-            status: users.status,
-            discordAccessToken: users.discordAccessToken,
-            discordTokenExpiresAt: users.discordTokenExpiresAt,
-            createdAt: users.createdAt,
-            updatedAt: users.updatedAt,
-            _studentUserId: userStudents.userId,
-            _teacherUserId: userTeachers.userId,
-            studentGroupId: userStudents.studentGroupId,
-            teacherId: userTeachers.teacherId,
-        })
-        .from(users)
-        .leftJoin(userStudents, eq(userStudents.userId, users.id))
-        .leftJoin(userTeachers, eq(userTeachers.userId, users.id))
-        .where(where)
-        .limit(1)
-
-    const row = rows[0]
-    if (!row) return null
-
-    const { _studentUserId, _teacherUserId, ...rest } = row
-    return {
-        ...rest,
-        role: _studentUserId ? 'student' : _teacherUserId ? 'teacher' : null,
-        studentGroupId: rest.studentGroupId ?? null,
-        teacherId: rest.teacherId ?? null,
-    }
-}
 
 function parseState(raw: string | undefined): OAuthState {
     if (!raw) return {}
@@ -77,20 +40,6 @@ function safeRedirectUri(uri: string | undefined): string | undefined {
         return ['http:', 'https:'].includes(url.protocol) ? uri : undefined
     } catch {
         return undefined
-    }
-}
-
-function userToDto(user: EnrichedUser) {
-    return {
-        id: user.id,
-        discordId: user.discordId,
-        discordUsername: user.discordUsername,
-        discordAvatar: user.discordAvatar,
-        role: user.role,
-        isAdmin: user.isAdmin,
-        status: user.status,
-        studentGroupId: user.studentGroupId,
-        teacherId: user.teacherId,
     }
 }
 
@@ -127,8 +76,29 @@ async function upsertProfile(
     }
 }
 
-export default new Hono<AuthEnv>()
-    .get('/discord', (c) => {
+const GuildWithRolesSchema = z
+    .object({
+        id: z.string(),
+        name: z.string(),
+        icon: z.string().nullable(),
+        myRoles: z.array(z.string()),
+    })
+    .openapi('GuildWithRoles')
+
+const app = new OpenAPIHono<AuthEnv>()
+
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/discord',
+        operationId: 'discordLogin',
+        tags: ['Auth'],
+        request: { query: z.object({ redirect_uri: z.string().url().optional() }) },
+        responses: {
+            302: { description: 'Redirect to Discord OAuth authorization' },
+        },
+    }),
+    (c) => {
         const clientRedirectUri = safeRedirectUri(c.req.query('redirect_uri'))
         const state: OAuthState = clientRedirectUri ? { clientRedirectUri } : {}
         const stateParam = Buffer.from(JSON.stringify(state)).toString('base64url')
@@ -141,9 +111,30 @@ export default new Hono<AuthEnv>()
             state: stateParam,
         })
         return c.redirect(`https://discord.com/api/oauth2/authorize?${params}`)
-    })
+    },
+)
 
-    .get('/discord/callback', async (c) => {
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/discord/callback',
+        operationId: 'discordCallback',
+        tags: ['Auth'],
+        request: { query: z.object({ code: z.string().optional(), state: z.string().optional() }) },
+        responses: {
+            302: { description: 'Redirect back to client with token' },
+            200: {
+                content: {
+                    'application/json': {
+                        schema: z.object({ data: UserDtoSchema, token: z.string() }),
+                    },
+                },
+                description: 'Auth result (when no clientRedirectUri)',
+            },
+            400: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Auth error' },
+        },
+    }),
+    async (c) => {
         const { clientRedirectUri } = parseState(c.req.query('state'))
 
         const errorResponse = (code: string, message: string) => {
@@ -158,7 +149,6 @@ export default new Hono<AuthEnv>()
         const code = c.req.query('code')
         if (!code) return errorResponse('missing_code', 'Missing authorization code')
 
-        // Exchange code for Discord access token
         const tokenRes = await fetch(`${DISCORD_API}/oauth2/token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -170,19 +160,16 @@ export default new Hono<AuthEnv>()
                 redirect_uri: config.discord.redirectUri,
             }),
         })
-        if (!tokenRes.ok)
-            return errorResponse('discord_auth_failed', 'Discord token exchange failed')
+        if (!tokenRes.ok) return errorResponse('discord_auth_failed', 'Discord token exchange failed')
         const { access_token, expires_in } = (await tokenRes.json()) as DiscordTokenResponse
         const tokenExpiresAt = new Date(Date.now() + expires_in * 1000)
 
-        // Fetch Discord user info
         const userRes = await fetch(`${DISCORD_API}/users/@me`, {
             headers: { Authorization: `Bearer ${access_token}` },
         })
         if (!userRes.ok) return errorResponse('discord_user_failed', 'Failed to fetch Discord user')
         const discordUser = (await userRes.json()) as DiscordUser
 
-        // Fetch member roles from all configured guilds (in parallel)
         const guilds = await db.select().from(discordGuilds)
         const memberRoleResults = await Promise.all(
             guilds.map(async (guild) => {
@@ -196,7 +183,6 @@ export default new Hono<AuthEnv>()
             }),
         )
 
-        // Find valid role → class mappings across all guilds
         const allRoleIds = memberRoleResults.flatMap((r) => r.roles)
         const mappings =
             allRoleIds.length > 0
@@ -217,7 +203,6 @@ export default new Hono<AuthEnv>()
         const mappedRole = autoApproved ? (firstMapping.userRole as 'student' | 'teacher') : null
         const mappedGroupId = mappedRole === 'student' ? (firstMapping.studentGroupId ?? null) : null
 
-        // Upsert user in users table
         const existing = await db
             .select()
             .from(users)
@@ -235,9 +220,7 @@ export default new Hono<AuthEnv>()
                     discordAvatar: discordUser.avatar,
                     discordAccessToken: access_token,
                     discordTokenExpiresAt: tokenExpiresAt,
-                    ...(autoApproved && !wasAlreadyApproved
-                        ? { status: 'approved' as const }
-                        : {}),
+                    ...(autoApproved && !wasAlreadyApproved ? { status: 'approved' as const } : {}),
                     updatedAt: new Date(),
                 })
                 .where(eq(users.discordId, discordUser.id))
@@ -257,7 +240,6 @@ export default new Hono<AuthEnv>()
             userId = created.id
         }
 
-        // Create profile on first approval
         if (autoApproved && !wasAlreadyApproved && mappedRole) {
             await upsertProfile(userId, mappedRole, mappedGroupId)
         }
@@ -270,10 +252,29 @@ export default new Hono<AuthEnv>()
             url.searchParams.set('token', token)
             return c.redirect(url.toString())
         }
-        return c.json({ data: userToDto(enriched!), token })
-    })
+        return c.json({ data: userToDto(enriched!), token }, 200)
+    },
+)
 
-    .get('/discord/my-guilds', requireAuth, async (c) => {
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/discord/my-guilds',
+        operationId: 'getMyGuilds',
+        tags: ['Auth'],
+        security: [{ Bearer: [] }],
+        middleware: [requireAuth] as const,
+        responses: {
+            200: {
+                content: { 'application/json': { schema: z.object({ data: z.array(GuildWithRolesSchema) }) } },
+                description: "User's Discord guilds with roles",
+            },
+            400: { content: { 'application/json': { schema: ErrorSchema } }, description: 'No token stored' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            502: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Discord error' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
         const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1)
         if (!user?.discordAccessToken) {
@@ -315,15 +316,38 @@ export default new Hono<AuthEnv>()
             }),
         )
 
-        return c.json({ data: guildData })
-    })
+        return c.json({ data: guildData }, 200)
+    },
+)
 
-    .get('/me', requireAuth, async (c) => {
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/me',
+        operationId: 'getMe',
+        tags: ['Auth'],
+        security: [{ Bearer: [] }],
+        middleware: [requireAuth] as const,
+        responses: {
+            200: {
+                content: {
+                    'application/json': { schema: z.object({ data: UserDtoSchema, token: z.string() }) },
+                },
+                description: 'Current user with refreshed token',
+            },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
         const enriched = await fetchEnrichedUser(eq(users.id, payload.sub))
         if (!enriched) {
             return c.json({ error: { code: 'NOT_FOUND', message: 'User not found' } }, 404)
         }
         const token = await issueToken(enriched)
-        return c.json({ data: userToDto(enriched), token })
-    })
+        return c.json({ data: userToDto(enriched), token }, 200)
+    },
+)
+
+export default app

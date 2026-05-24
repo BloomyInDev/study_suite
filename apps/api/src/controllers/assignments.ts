@@ -1,4 +1,4 @@
-import { zValidator } from '@hono/zod-validator'
+import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import {
     assignmentCompletions,
     assignments,
@@ -9,28 +9,31 @@ import {
     userTeachers,
 } from '@studysuite/db'
 import { and, asc, count, eq, inArray } from 'drizzle-orm'
-import { Hono } from 'hono'
-import { z } from 'zod'
 import { db } from '../db.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
+import { AssignmentDtoSchema, ErrorSchema, IdParamSchema } from '../schemas/responses.js'
 
-const createSchema = z.object({
-    title: z.string().min(1).max(255),
-    subject: z.string().max(100).optional(),
-    description: z.string().optional(),
-    dueDate: z.coerce.date(),
-    studentGroupId: z.string().uuid(),
-    eventId: z.string().uuid().optional(),
-})
+const createSchema = z
+    .object({
+        title: z.string().min(1).max(255),
+        subject: z.string().max(100).optional(),
+        description: z.string().optional(),
+        dueDate: z.coerce.date(),
+        studentGroupId: z.string().uuid(),
+        eventId: z.string().uuid().optional(),
+    })
+    .openapi('CreateAssignment')
 
-const patchSchema = z.object({
-    title: z.string().min(1).max(255).optional(),
-    subject: z.string().max(100).nullable().optional(),
-    description: z.string().nullable().optional(),
-    dueDate: z.coerce.date().optional(),
-    studentGroupId: z.string().uuid().optional(),
-    eventId: z.string().uuid().nullable().optional(),
-})
+const patchSchema = z
+    .object({
+        title: z.string().min(1).max(255).optional(),
+        subject: z.string().max(100).nullable().optional(),
+        description: z.string().nullable().optional(),
+        dueDate: z.coerce.date().optional(),
+        studentGroupId: z.string().uuid().optional(),
+        eventId: z.string().uuid().nullable().optional(),
+    })
+    .openapi('UpdateAssignment')
 
 const listSchema = z.object({
     groupIds: z
@@ -39,6 +42,10 @@ const listSchema = z.object({
         .transform((s) => (s ? s.split(',').filter(Boolean) : undefined)),
     from: z.coerce.date().optional(),
     to: z.coerce.date().optional(),
+})
+
+const CompletionStatusSchema = z.object({
+    data: z.object({ completedByMe: z.boolean(), completionCount: z.number() }),
 })
 
 const withRelations = {
@@ -124,10 +131,26 @@ async function canWrite(userId: string, isAdmin: boolean, groupId: string): Prom
     return accessible.has(groupId)
 }
 
-export default new Hono<AuthEnv>()
-    .use(requireAuth)
+const app = new OpenAPIHono<AuthEnv>()
+app.use(requireAuth)
 
-    .get('/', zValidator('query', listSchema), async (c) => {
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/',
+        operationId: 'listAssignments',
+        tags: ['Assignments'],
+        security: [{ Bearer: [] }],
+        request: { query: listSchema },
+        responses: {
+            200: {
+                content: { 'application/json': { schema: z.object({ data: z.array(AssignmentDtoSchema) }) } },
+                description: 'Assignments accessible to the current user',
+            },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
         const { groupIds, from, to } = c.req.valid('query')
 
@@ -141,7 +164,7 @@ export default new Hono<AuthEnv>()
                 : [...accessible]
         }
 
-        if (allowedGroupIds.length === 0) return c.json({ data: [] })
+        if (allowedGroupIds.length === 0) return c.json({ data: [] }, 200)
 
         const rows = await db.query.assignments.findMany({
             where: (a, { and: _and, inArray: _inArray, gte, lte }) =>
@@ -154,14 +177,31 @@ export default new Hono<AuthEnv>()
             orderBy: asc(assignments.dueDate),
         })
 
-        return c.json({ data: rows.map((r) => assignmentToDto(r, payload.sub)) })
-    })
+        return c.json({ data: rows.map((r) => assignmentToDto(r, payload.sub)) }, 200)
+    },
+)
 
-    .get('/:id', async (c) => {
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/{id}',
+        operationId: 'getAssignment',
+        tags: ['Assignments'],
+        security: [{ Bearer: [] }],
+        request: { params: IdParamSchema },
+        responses: {
+            200: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Assignment detail' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
-        const id = c.req.param('id')
+        const { id } = c.req.valid('param')
         const row = await fetchAssignment(id)
-        if (!row) return c.json({ error: { code: 'NOT_FOUND', message: 'Assignment not found' } }, 404)
+        if (!row)
+            return c.json({ error: { code: 'NOT_FOUND', message: 'Assignment not found' } }, 404)
 
         if (!payload.isAdmin) {
             const accessible = await getUserAccessibleGroupIds(payload.sub)
@@ -170,10 +210,27 @@ export default new Hono<AuthEnv>()
             }
         }
 
-        return c.json({ data: assignmentToDto(row, payload.sub) })
-    })
+        return c.json({ data: assignmentToDto(row, payload.sub) }, 200)
+    },
+)
 
-    .post('/', zValidator('json', createSchema), async (c) => {
+app.openapi(
+    createRoute({
+        method: 'post',
+        path: '/',
+        operationId: 'createAssignment',
+        tags: ['Assignments'],
+        security: [{ Bearer: [] }],
+        request: {
+            body: { content: { 'application/json': { schema: createSchema } }, required: true },
+        },
+        responses: {
+            201: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Created' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
         if (payload.status !== 'approved') {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Account not approved' } }, 403)
@@ -199,14 +256,33 @@ export default new Hono<AuthEnv>()
 
         const row = await fetchAssignment(created.id)
         return c.json({ data: assignmentToDto(row!, payload.sub) }, 201)
-    })
+    },
+)
 
-    .patch('/:id', zValidator('json', patchSchema), async (c) => {
+app.openapi(
+    createRoute({
+        method: 'patch',
+        path: '/{id}',
+        operationId: 'updateAssignment',
+        tags: ['Assignments'],
+        security: [{ Bearer: [] }],
+        request: {
+            params: IdParamSchema,
+            body: { content: { 'application/json': { schema: patchSchema } }, required: true },
+        },
+        responses: {
+            200: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Updated' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
         if (payload.status !== 'approved') {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Account not approved' } }, 403)
         }
-        const id = c.req.param('id')
+        const { id } = c.req.valid('param')
         const body = c.req.valid('json')
 
         const existing = await fetchAssignment(id)
@@ -232,15 +308,34 @@ export default new Hono<AuthEnv>()
             .where(eq(assignments.id, id))
 
         const row = await fetchAssignment(id)
-        return c.json({ data: assignmentToDto(row!, payload.sub) })
-    })
+        return c.json({ data: assignmentToDto(row!, payload.sub) }, 200)
+    },
+)
 
-    .delete('/:id', async (c) => {
+app.openapi(
+    createRoute({
+        method: 'delete',
+        path: '/{id}',
+        operationId: 'deleteAssignment',
+        tags: ['Assignments'],
+        security: [{ Bearer: [] }],
+        request: { params: IdParamSchema },
+        responses: {
+            200: {
+                content: { 'application/json': { schema: z.object({ data: z.object({ id: z.string().uuid() }) }) } },
+                description: 'Deleted',
+            },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
         if (payload.status !== 'approved') {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Account not approved' } }, 403)
         }
-        const id = c.req.param('id')
+        const { id } = c.req.valid('param')
 
         const existing = await fetchAssignment(id)
         if (!existing) {
@@ -251,15 +346,31 @@ export default new Hono<AuthEnv>()
         }
 
         await db.delete(assignments).where(eq(assignments.id, id))
-        return c.json({ data: { id } })
-    })
+        return c.json({ data: { id } }, 200)
+    },
+)
 
-    .post('/:id/complete', async (c) => {
+app.openapi(
+    createRoute({
+        method: 'post',
+        path: '/{id}/complete',
+        operationId: 'completeAssignment',
+        tags: ['Assignments'],
+        security: [{ Bearer: [] }],
+        request: { params: IdParamSchema },
+        responses: {
+            200: { content: { 'application/json': { schema: CompletionStatusSchema } }, description: 'Marked as complete' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
         if (payload.status !== 'approved') {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Account not approved' } }, 403)
         }
-        const id = c.req.param('id')
+        const { id } = c.req.valid('param')
 
         const existing = await fetchAssignment(id)
         if (!existing) {
@@ -276,15 +387,36 @@ export default new Hono<AuthEnv>()
             .from(assignmentCompletions)
             .where(eq(assignmentCompletions.assignmentId, id))
 
-        return c.json({ data: { completedByMe: true, completionCount: total } })
-    })
+        return c.json({ data: { completedByMe: true, completionCount: total } }, 200)
+    },
+)
 
-    .delete('/:id/complete', async (c) => {
+app.openapi(
+    createRoute({
+        method: 'delete',
+        path: '/{id}/complete',
+        operationId: 'uncompleteAssignment',
+        tags: ['Assignments'],
+        security: [{ Bearer: [] }],
+        request: { params: IdParamSchema },
+        responses: {
+            200: { content: { 'application/json': { schema: CompletionStatusSchema } }, description: 'Marked as incomplete' },
+            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+        },
+    }),
+    async (c) => {
         const payload = c.get('user')
         if (payload.status !== 'approved') {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Account not approved' } }, 403)
         }
-        const id = c.req.param('id')
+        const { id } = c.req.valid('param')
+
+        const existing = await fetchAssignment(id)
+        if (!existing) {
+            return c.json({ error: { code: 'NOT_FOUND', message: 'Assignment not found' } }, 404)
+        }
 
         await db
             .delete(assignmentCompletions)
@@ -300,5 +432,8 @@ export default new Hono<AuthEnv>()
             .from(assignmentCompletions)
             .where(eq(assignmentCompletions.assignmentId, id))
 
-        return c.json({ data: { completedByMe: false, completionCount: total } })
-    })
+        return c.json({ data: { completedByMe: false, completionCount: total } }, 200)
+    },
+)
+
+export default app
