@@ -5,7 +5,6 @@ import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
 import type { Event } from '../lib/types.js'
 import CalendarEvent from '../components/CalendarEvent.vue'
-import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import {
     mondayOfWeek,
     nextDay,
@@ -20,7 +19,6 @@ const eventsStore = useEventsStore()
 const events = ref<Event[]>([])
 const date = ref(new Date())
 const loading = ref(false)
-const pickerOpen = ref(false)
 
 const onKeydown = (e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft') previous()
@@ -73,7 +71,6 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
 
 <template>
     <v-container fluid class="pa-4">
-        <GroupPickerDialog v-model="pickerOpen" />
         <v-row align="center" class="mb-4">
             <v-col cols="4" class="d-none d-md-flex" />
             <v-col md="4" class="d-flex justify-start justify-md-center align-center">
@@ -94,17 +91,6 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                 />
             </v-col>
             <v-col cols="auto" md="4" class="d-flex justify-end ga-2">
-                <v-tooltip text="Mes groupes" location="start">
-                    <template #activator="{ props }">
-                        <v-btn
-                            v-bind="props"
-                            variant="tonal"
-                            icon="mdi-account-group"
-                            :size="mobile ? 'small' : undefined"
-                            @click="pickerOpen = true"
-                        />
-                    </template>
-                </v-tooltip>
                 <v-tooltip text="Comparer" location="start">
                     <template #activator="{ props }">
                         <v-btn
@@ -129,8 +115,8 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                 :weekday-format="weekdayFormat"
                 :weekdays="[1, 2, 3, 4, 5, 6]"
                 :interval-format="formatInterval"
-                :first-interval="6"
-                :interval-count="14"
+                :first-interval="7"
+                :interval-count="13"
                 event-overlap-mode="column"
             >
                 <template #event="{ event }">
