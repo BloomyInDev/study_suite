@@ -10,13 +10,15 @@ const groupsStore = useGroupsStore()
 const eventsStore = useEventsStore()
 
 const date = ref(new Date())
-const comparisonGroupId = ref<string | null>(null)
+const comparisonGroupIds = ref<string[]>([])
 const myEvents = ref<Event[]>([])
-const otherEvents = ref<Event[]>([])
+const otherEventsMap = ref<Record<string, Event[]>>({})
 const loadingMy = ref(false)
 const loadingOther = ref(false)
 
 const INTERVAL_HEIGHT = 48
+
+const COMPARISON_COLORS = ['secondary', 'error', 'success', 'warning', 'info']
 
 const groupsThatCanBeCompared = computed(() =>
     groupsStore.allGroups.filter((g) => !groupsStore.selectedGroupIds.includes(g.id)),
@@ -24,8 +26,8 @@ const groupsThatCanBeCompared = computed(() =>
 
 const categories = computed(() => {
     const cats = ['Mon Planning']
-    if (comparisonGroupId.value) {
-        const g = groupsStore.allGroups.find((g) => g.id === comparisonGroupId.value)
+    for (const id of comparisonGroupIds.value) {
+        const g = groupsStore.allGroups.find((g) => g.id === id)
         cats.push(g?.internalName ?? 'Autre')
     }
     return cats
@@ -42,15 +44,15 @@ const transformEvents = (evts: Event[], category: string, color: string) =>
         category,
     }))
 
-const allCalendarEvents = computed(() => [
-    ...transformEvents(myEvents.value, 'Mon Planning', 'primary'),
-    ...transformEvents(
-        otherEvents.value,
-        groupsStore.allGroups.find((g) => g.id === comparisonGroupId.value)?.internalName ??
-            'Autre',
-        'secondary',
-    ),
-])
+const allCalendarEvents = computed(() => {
+    const result = transformEvents(myEvents.value, 'Mon Planning', 'primary')
+    comparisonGroupIds.value.forEach((id, idx) => {
+        const g = groupsStore.allGroups.find((g) => g.id === id)
+        const color = COMPARISON_COLORS[idx % COMPARISON_COLORS.length]
+        result.push(...transformEvents(otherEventsMap.value[id] ?? [], g?.internalName ?? 'Autre', color))
+    })
+    return result
+})
 
 const loading = computed(() => loadingMy.value || loadingOther.value)
 
@@ -90,24 +92,28 @@ watch(
 )
 
 watch(
-    [date, comparisonGroupId],
-    async ([newDate, newGroupId], _, onCleanup) => {
+    [date, comparisonGroupIds],
+    async ([newDate, newGroupIds], _, onCleanup) => {
         let cancelled = false
         onCleanup(() => {
             cancelled = true
         })
-        if (!newGroupId) {
-            otherEvents.value = []
+        const ids = newGroupIds as string[]
+        if (ids.length === 0) {
+            otherEventsMap.value = {}
             return
         }
         loadingOther.value = true
         try {
-            const evts = await eventsStore.fetchEvents(
-                [newGroupId as string],
-                Duration.DAY,
-                newDate as Date,
+            const results = await Promise.all(
+                ids.map(async (id) => {
+                    const evts = await eventsStore.fetchEvents([id], Duration.DAY, newDate as Date)
+                    return [id, evts] as const
+                }),
             )
-            if (!cancelled) otherEvents.value = evts
+            if (!cancelled) {
+                otherEventsMap.value = Object.fromEntries(results)
+            }
         } finally {
             if (!cancelled) loadingOther.value = false
         }
@@ -135,16 +141,19 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
             </v-col>
             <v-col cols="12" md="4" class="d-flex justify-center justify-md-end">
                 <v-autocomplete
-                    v-model="comparisonGroupId"
+                    v-model="comparisonGroupIds"
                     :items="groupsThatCanBeCompared"
                     item-title="internalName"
                     item-value="id"
                     label="Comparer..."
+                    multiple
+                    chips
+                    closable-chips
                     clearable
                     density="compact"
                     variant="outlined"
                     hide-details
-                    style="max-width: 250px"
+                    style="max-width: 350px"
                 />
             </v-col>
         </v-row>
