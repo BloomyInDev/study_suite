@@ -13,12 +13,12 @@ import { router } from './router.js'
 const savedTheme = localStorage.getItem('study_suite_theme') ?? 'light'
 
 const vuetify = createVuetify({
-  theme: { defaultTheme: savedTheme },
-  icons: {
-    defaultSet: 'mdi',
-    aliases,
-    sets: { mdi, fa },
-  },
+    theme: { defaultTheme: savedTheme },
+    icons: {
+        defaultSet: 'mdi',
+        aliases,
+        sets: { mdi, fa },
+    },
 })
 
 createApp(App).use(createPinia()).use(router).use(vuetify).mount('#app')
