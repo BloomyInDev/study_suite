@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useDisplay, useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useGroupsStore } from './stores/groups.js'
@@ -40,14 +40,16 @@ onMounted(async () => {
 
 const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH
 
-const navItems = [
-    { title: 'Accueil', icon: 'mdi-home', to: '/' },
-    { title: 'Planning', icon: 'mdi-calendar', to: '/planning' },
-    { title: 'Devoirs', icon: 'mdi-book-edit', to: '/homework' },
-    { title: 'Enseignants', icon: 'mdi-account-tie', to: '/teachers' },
-    { title: 'Salles', icon: 'mdi-door', to: '/rooms' },
-    { title: 'Profil', icon: 'mdi-account', to: '/profile' },
+const allNavItems = [
+    { title: 'Accueil', icon: 'mdi-home', to: '/', auth: false },
+    { title: 'Planning', icon: 'mdi-calendar', to: '/planning', auth: false },
+    { title: 'Devoirs', icon: 'mdi-book-edit', to: '/homework', auth: true },
+    { title: 'Enseignants', icon: 'mdi-account-tie', to: '/teachers', auth: true },
+    { title: 'Salles', icon: 'mdi-door', to: '/rooms', auth: true },
+    { title: 'Profil', icon: 'mdi-account', to: '/profile', auth: true },
 ]
+
+const navItems = computed(() => allNavItems.filter((i) => !i.auth || auth.isAuthenticated))
 </script>
 
 <template>

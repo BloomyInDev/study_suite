@@ -13,8 +13,16 @@ export const router = createRouter({
             path: '/planning/compare',
             component: () => import('./views/PlanningComparisonView.vue'),
         },
-        { path: '/teachers', component: () => import('./views/TeachersView.vue') },
-        { path: '/rooms', component: () => import('./views/RoomsView.vue') },
+        {
+            path: '/teachers',
+            component: () => import('./views/TeachersView.vue'),
+            meta: { requiresAuth: true },
+        },
+        {
+            path: '/rooms',
+            component: () => import('./views/RoomsView.vue'),
+            meta: { requiresAuth: true },
+        },
         {
             path: '/homework',
             component: () => import('./views/AssignmentsView.vue'),

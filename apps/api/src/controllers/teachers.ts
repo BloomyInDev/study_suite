@@ -2,6 +2,7 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eventTeachers, events, teachers } from '@studysuite/db'
 import { and, asc, eq, gte, ilike, inArray, lt, lte, or } from 'drizzle-orm'
 import { db } from '../db.js'
+import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 import { dateToUTC } from '../lib/date.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { DateFormatSchema, OptionalDateRangeSchema, SearchSchema } from '../schemas/query.js'
@@ -22,7 +23,11 @@ async function busyTeacherIds(at: Date): Promise<Set<string>> {
     return new Set(rows.map((r) => r.teacherId))
 }
 
-export default new OpenAPIHono()
+// Teacher and room directories are not public information.
+const app = new OpenAPIHono<AuthEnv>()
+app.use(requireAuth)
+
+export default app
     .openapi(
         createRoute({
             method: 'get',

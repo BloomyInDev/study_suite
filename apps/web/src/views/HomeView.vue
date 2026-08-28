@@ -183,7 +183,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                 <WeekStatsCard />
             </v-col>
 
-            <v-col cols="12" md="8" lg="6">
+            <v-col v-if="auth.isAuthenticated" cols="12" md="8" lg="6">
                 <FreeRoomsCard />
             </v-col>
         </v-row>

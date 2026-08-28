@@ -2,11 +2,16 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eventLocations, events, locations } from '@studysuite/db'
 import { and, asc, eq, gt, inArray, lt, notInArray } from 'drizzle-orm'
 import { db } from '../db.js'
+import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { DateRangeSchema, OptionalDateRangeSchema } from '../schemas/query.js'
 import { ErrorSchema, EventDtoSchema, IdParamSchema, LocationSchema } from '../schemas/responses.js'
 
-export default new OpenAPIHono()
+// Room directory is not public information.
+const app = new OpenAPIHono<AuthEnv>()
+app.use(requireAuth)
+
+export default app
     .openapi(
         createRoute({
             method: 'get',
