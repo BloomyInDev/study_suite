@@ -42,10 +42,9 @@ export function categorizeLines(
         }
     }
 
-    const rooms: Location[] = middleLines
+    const roomLines = middleLines
         .slice(0, roomsEnd)
         .filter((l) => !isPathLine(l) && !isTeacherLine(l))
-        .map((name) => ({ name }))
 
     const teachers: Teacher[] = teacherIdxs.map((i) => parseTeacherLine(middleLines[i]!))
 
@@ -53,15 +52,27 @@ export function categorizeLines(
         .slice(groupsStart)
         .filter((l) => !isPathLine(l) && !isTeacherLine(l))
 
-    // Without a teacher line the boundary is the last path line, so anything the
-    // site lists after it — a second room with no path of its own, for instance —
-    // looks like a group. In strict mode only known names get through.
-    const accepted = strictGroups ? groupLines.filter((l) => knownGroupNames.has(l)) : groupLines
-    for (const line of groupLines) {
-        if (!accepted.includes(line)) console.warn(`[parser] ignoring unknown group "${line}"`)
+    // An empty table means the groups have not been discovered yet; enforcing
+    // strict mode there would reject every line.
+    const strict = strictGroups && knownGroupNames.size > 0
+    if (strictGroups && knownGroupNames.size === 0) {
+        console.warn('[parser] strictGroups is on but no groups are known yet — ignoring it')
     }
 
-    const groups: StudentGroup[] = accepted.map((internalName) => ({ internalName }))
+    // Without a teacher line the boundary is the last path line, so anything the
+    // site lists after it looks like a group. In practice that is a trailing room
+    // whose path line the site omitted, so unknown names are read as rooms.
+    const groups: StudentGroup[] = []
+    const reclassified: string[] = []
+    for (const line of groupLines) {
+        if (!strict || knownGroupNames.has(line)) groups.push({ internalName: line })
+        else reclassified.push(line)
+    }
+    for (const line of reclassified) {
+        console.warn(`[parser] "${line}" is not a known group, reading it as a room`)
+    }
+
+    const rooms: Location[] = [...roomLines, ...reclassified].map((name) => ({ name }))
 
     return { rooms, teachers, groups }
 }

@@ -147,9 +147,10 @@ Middle lines are categorized:
 The site does not always emit a path line per room. When an event has no teacher,
 the boundary is the last path line, so a trailing room with no path of its own is
 read as a group (this is how `Salle 007` became a student group). With
-`scrape.strictGroups` enabled, only names already in `student_groups` are accepted
-and the rest are logged and dropped — run once without it to discover the real
-groups, purge the bogus rows, then turn it on.
+`scrape.strictGroups` enabled, only names already in `student_groups` are accepted;
+an unknown name is read as a room instead, since that is what it usually is. Run
+once without it to discover the real groups, purge the bogus rows, then turn it
+on. It is ignored while the table is empty, so a fresh database still bootstraps.
 
 ---
 
