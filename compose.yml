@@ -45,8 +45,10 @@ services:
             # Required — create api.config.yaml next to this file.
             # See apps/api/example.config.yaml. The api exits if it is missing.
             - ./api.config.yaml:/config.yaml:ro
-        ports:
-            - '3000:3000'
+        # No host port: the external proxy hits web:80 and nginx routes /api/
+        # and /auth/ here over the frontend network.
+        expose:
+            - '3000'
         depends_on:
             postgres:
                 condition: service_healthy
@@ -96,8 +98,11 @@ services:
             - scraper
 
 networks:
-    # web ↔ api only; carries the public traffic and gives api its egress
-    # (Discord OAuth token exchange).
+    # Lets nginx resolve and reach `api` for its /api/ and /auth/ proxy_pass.
+    # Not internal: the reverse proxy lives on another host and reaches web
+    # through the published :80, and api needs egress for the Discord OAuth
+    # token exchange. (A container only on an internal network cannot serve a
+    # published port.)
     frontend:
 
     # Database segment. internal:true — no route off the host, so nothing here
