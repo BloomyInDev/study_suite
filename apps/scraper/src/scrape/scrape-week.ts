@@ -58,7 +58,7 @@ export async function scrapeAllWeeks(
     durationMs: number
 }> {
     const t0 = Date.now()
-    const { browser, page } = await launchBrowser(config.scrape.headless)
+    const { browser, page } = await launchBrowser(config.scrape.headless, config.scrape.timeoutMs)
 
     try {
         await gotoPlanning(page, config.scrape.url)

@@ -10,7 +10,7 @@ import { parseEventText } from './parser/event-text.js'
 
 const outPath = path.resolve(process.cwd(), 'dump.json')
 
-const { browser, page } = await launchBrowser(config.scrape.headless)
+const { browser, page } = await launchBrowser(config.scrape.headless, config.scrape.timeoutMs)
 
 try {
     await gotoPlanning(page, config.scrape.url)
