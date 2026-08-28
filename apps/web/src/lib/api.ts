@@ -1,9 +1,9 @@
 import type { AppType } from '@studysuite/api'
 import { hc } from 'hono/client'
+import { API_URL } from './api-url'
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
-export const backend = hc<AppType>(BASE_URL, {
+export const backend = hc<AppType>(API_URL, {
     fetch: (input: RequestInfo | URL, init?: RequestInit) => {
         const token = localStorage.getItem('auth_token')
         const headers = new Headers(init?.headers)

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { API_URL } from '../lib/api-url'
 import { computed, onMounted, ref } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
@@ -11,7 +12,6 @@ const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 const showCompleted = ref(false)
 const search = ref('')
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const assignments = ref<Assignment[]>([])
 const loading = ref(false)

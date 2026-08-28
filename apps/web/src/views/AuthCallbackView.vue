@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { API_URL } from '../lib/api-url'
 import { onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore, type AuthUser } from '../stores/auth.js'
@@ -7,7 +8,6 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 onMounted(async () => {
     const token = route.query.token as string | undefined

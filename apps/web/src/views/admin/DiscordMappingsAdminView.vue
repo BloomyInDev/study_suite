@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { API_URL } from '../../lib/api-url'
 import { ref, onMounted, computed } from 'vue'
 import { useGroupsStore } from '../../stores/groups.js'
 import { useNotificationsStore } from '../../stores/notifications.js'
@@ -30,7 +31,6 @@ interface DiscordGuild {
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const guilds = ref<Guild[]>([])
 const loading = ref(false)

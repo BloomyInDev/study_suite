@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { API_URL } from '../lib/api-url'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
@@ -15,7 +16,6 @@ const groupStore = useGroupsStore()
 const eventsStore = useEventsStore()
 const auth = useAuthStore()
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const events = ref<Event[]>([])
 const assignments = ref<Assignment[]>([])

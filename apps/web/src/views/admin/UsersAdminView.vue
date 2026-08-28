@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { API_URL } from '../../lib/api-url'
 import { ref, onMounted, computed, reactive } from 'vue'
 import type { AuthUser } from '../../stores/auth.js'
 import { useAuthStore } from '../../stores/auth.js'
@@ -9,7 +10,6 @@ const auth = useAuthStore()
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const users = ref<AuthUser[]>([])
 const loading = ref(false)

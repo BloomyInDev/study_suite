@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { API_URL } from '../lib/api-url'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -10,7 +11,6 @@ const errorMessages: Record<string, string> = {
     missing_code: "Code d'autorisation manquant.",
 }
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const callbackUri = encodeURIComponent(window.location.origin + '/auth/callback')
 const discordLoginUrl = `${API_URL}/auth/discord?redirect_uri=${callbackUri}`
 </script>

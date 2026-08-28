@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { API_URL } from '../lib/api-url'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
@@ -18,7 +19,6 @@ const emit = defineEmits<{
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 const auth = useAuthStore()
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 const show = computed({
     get: () => props.modelValue,

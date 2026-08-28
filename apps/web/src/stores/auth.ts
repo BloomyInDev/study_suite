@@ -1,3 +1,4 @@
+import { API_URL } from '../lib/api-url'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -31,7 +32,6 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function refresh(): Promise<void> {
         if (!token.value) return
-        const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
         const res = await fetch(`${API_URL}/auth/me`, {
             headers: { Authorization: `Bearer ${token.value}` },
         })
