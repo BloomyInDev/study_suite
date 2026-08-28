@@ -22,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
     const isAdmin = computed(() => user.value?.isAdmin ?? false)
     const isPending = computed(() => user.value?.status === 'pending')
     const isApproved = computed(() => user.value?.status === 'approved')
+    const isRejected = computed(() => user.value?.status === 'rejected')
 
     function setAuth(newToken: string, newUser: AuthUser) {
         token.value = newToken
@@ -47,5 +48,16 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem('auth_user')
     }
 
-    return { token, user, isAuthenticated, isAdmin, isPending, isApproved, setAuth, refresh, logout }
+    return {
+        token,
+        user,
+        isAuthenticated,
+        isAdmin,
+        isPending,
+        isApproved,
+        isRejected,
+        setAuth,
+        refresh,
+        logout,
+    }
 })

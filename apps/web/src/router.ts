@@ -16,7 +16,7 @@ export const router = createRouter({
         { path: '/teachers', component: () => import('./views/TeachersView.vue') },
         { path: '/rooms', component: () => import('./views/RoomsView.vue') },
         {
-            path: '/devoirs',
+            path: '/homework',
             component: () => import('./views/AssignmentsView.vue'),
             meta: { requiresAuth: true },
         },
@@ -54,7 +54,12 @@ router.beforeEach((to) => {
 
     if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login'
 
-    if (auth.isAuthenticated && auth.isPending && !auth.isAdmin && to.path !== '/pending')
+    if (
+        auth.isAuthenticated &&
+        (auth.isPending || auth.isRejected) &&
+        !auth.isAdmin &&
+        to.path !== '/pending'
+    )
         return '/pending'
 
     if (to.meta.requiresAdmin && !auth.isAdmin) return '/'

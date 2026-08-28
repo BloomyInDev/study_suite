@@ -43,7 +43,7 @@ const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH
 const navItems = [
     { title: 'Accueil', icon: 'mdi-home', to: '/' },
     { title: 'Planning', icon: 'mdi-calendar', to: '/planning' },
-    { title: 'Devoirs', icon: 'mdi-book-edit', to: '/devoirs' },
+    { title: 'Devoirs', icon: 'mdi-book-edit', to: '/homework' },
     { title: 'Enseignants', icon: 'mdi-account-tie', to: '/teachers' },
     { title: 'Salles', icon: 'mdi-door', to: '/rooms' },
     { title: 'Profil', icon: 'mdi-account', to: '/profile' },

@@ -22,11 +22,22 @@ async function checkApproval() {
     <v-container class="d-flex align-center justify-center" style="min-height: 80vh">
         <v-card max-width="480" width="100%" elevation="4">
             <v-card-text class="text-center pa-8">
-                <v-icon size="64" color="warning" class="mb-4">mdi-clock-outline</v-icon>
-                <div class="text-h6 font-weight-bold mb-2">Compte en attente</div>
+                <v-icon v-if="auth.isRejected" size="64" color="error" class="mb-4"
+                    >mdi-account-cancel-outline</v-icon
+                >
+                <v-icon v-else size="64" color="warning" class="mb-4">mdi-clock-outline</v-icon>
+                <div class="text-h6 font-weight-bold mb-2">
+                    {{ auth.isRejected ? 'Accès refusé' : 'Compte en attente' }}
+                </div>
                 <div class="text-medium-emphasis mb-6">
-                    Votre compte est en attente de validation par un administrateur. Vous serez
-                    notifié dès que votre accès sera approuvé.
+                    <template v-if="auth.isRejected">
+                        L'accès à cette application vous a été refusé par un administrateur.
+                        Contactez-le si vous pensez qu'il s'agit d'une erreur.
+                    </template>
+                    <template v-else>
+                        Votre compte est en attente de validation par un administrateur. Vous serez
+                        notifié dès que votre accès sera approuvé.
+                    </template>
                 </div>
                 <div class="text-caption text-medium-emphasis mb-6">
                     Connecté en tant que

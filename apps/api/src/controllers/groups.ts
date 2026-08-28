@@ -9,6 +9,7 @@ import {
 } from '@studysuite/db'
 import { and, asc, eq, gt, inArray, lt } from 'drizzle-orm'
 import { db } from '../db.js'
+import { requireAdmin, requireAuth } from '../middleware/auth.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { OptionalDateRangeSchema } from '../schemas/query.js'
 import { ErrorSchema, EventDtoSchema, GroupSchema, IdParamSchema } from '../schemas/responses.js'
@@ -166,6 +167,8 @@ export default new OpenAPIHono()
         createRoute({
             method: 'patch',
             path: '/{id}',
+            middleware: [requireAuth, requireAdmin] as const,
+            security: [{ Bearer: [] }],
             operationId: 'updateGroup',
             tags: ['Groups'],
             request: {
@@ -211,6 +214,8 @@ export default new OpenAPIHono()
         createRoute({
             method: 'post',
             path: '/',
+            middleware: [requireAuth, requireAdmin] as const,
+            security: [{ Bearer: [] }],
             operationId: 'createGroup',
             tags: ['Groups'],
             request: {
@@ -276,6 +281,8 @@ export default new OpenAPIHono()
         createRoute({
             method: 'delete',
             path: '/{id}',
+            middleware: [requireAuth, requireAdmin] as const,
+            security: [{ Bearer: [] }],
             operationId: 'deleteGroup',
             tags: ['Groups'],
             request: { params: IdParamSchema, query: DeleteGroupQuerySchema },
@@ -340,6 +347,8 @@ export default new OpenAPIHono()
         createRoute({
             method: 'post',
             path: '/{id}/parents',
+            middleware: [requireAuth, requireAdmin] as const,
+            security: [{ Bearer: [] }],
             operationId: 'addGroupParent',
             tags: ['Groups'],
             request: {
@@ -381,6 +390,8 @@ export default new OpenAPIHono()
         createRoute({
             method: 'delete',
             path: '/{id}/parents/{parentId}',
+            middleware: [requireAuth, requireAdmin] as const,
+            security: [{ Bearer: [] }],
             operationId: 'removeGroupParent',
             tags: ['Groups'],
             request: { params: IdParentIdParamSchema },

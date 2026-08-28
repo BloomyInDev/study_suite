@@ -89,9 +89,13 @@ app.openapi(
             await db
                 .insert(userStudents)
                 .values({ userId: id, studentGroupId: body.studentGroupId ?? null })
+                // Re-sending the role without a group must not clear the one set.
                 .onConflictDoUpdate({
                     target: userStudents.userId,
-                    set: { studentGroupId: body.studentGroupId ?? null },
+                    set:
+                        body.studentGroupId !== undefined
+                            ? { studentGroupId: body.studentGroupId }
+                            : {},
                 })
         } else if (body.role === 'teacher') {
             await db.delete(userStudents).where(eq(userStudents.userId, id))
@@ -100,7 +104,7 @@ app.openapi(
                 .values({ userId: id, teacherId: body.teacherId ?? null })
                 .onConflictDoUpdate({
                     target: userTeachers.userId,
-                    set: { teacherId: body.teacherId ?? null },
+                    set: body.teacherId !== undefined ? { teacherId: body.teacherId } : {},
                 })
         } else if (body.studentGroupId !== undefined) {
             await db

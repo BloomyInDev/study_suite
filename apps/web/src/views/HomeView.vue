@@ -152,7 +152,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                         <v-btn
                             variant="flat"
                             color="primary"
-                            to="/devoirs"
+                            to="/homework"
                             append-icon="mdi-arrow-right"
                         >
                             Tous les devoirs

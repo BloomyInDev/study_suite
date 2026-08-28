@@ -95,9 +95,22 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { limit, dateFormat } = c.req.valid('query')
+            const { limit, dateFormat, groupIds } = c.req.valid('query')
             const rows = await db.query.events.findMany({
-                where: gte(events.startDate, new Date()),
+                where: and(
+                    gte(events.startDate, new Date()),
+                    // Filter here, not client-side: limiting first would return
+                    // other groups' events and leave the user with an empty list.
+                    groupIds && groupIds.length > 0
+                        ? inArray(
+                              events.id,
+                              db
+                                  .select({ id: eventStudentGroups.eventId })
+                                  .from(eventStudentGroups)
+                                  .where(inArray(eventStudentGroups.studentGroupId, groupIds)),
+                          )
+                        : undefined,
+                ),
                 with: withEventRelations,
                 orderBy: asc(events.startDate),
                 limit,

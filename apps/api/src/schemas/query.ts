@@ -25,6 +25,12 @@ export const FilteredEventsSchema = z.object({
 
 export const LimitSchema = z.object({
     limit: z.coerce.number().int().positive().max(100).default(10),
+    /** Comma-separated group ids; the limit then applies to those groups only. */
+    groupIds: z
+        .string()
+        .optional()
+        .transform((v) => (v ? v.split(',').filter(Boolean) : undefined))
+        .openapi({ param: { name: 'groupIds', in: 'query' } }),
     dateFormat: DateFormatSchema,
 })
 

@@ -211,6 +211,9 @@ app.openapi(
 
         let userId: string
         const wasAlreadyApproved = existing.length > 0 && existing[0].status === 'approved'
+        // A role mapping must never undo an admin's decision to reject someone.
+        const wasRejected = existing.length > 0 && existing[0].status === 'rejected'
+        const shouldApprove = autoApproved && !wasAlreadyApproved && !wasRejected
 
         if (existing.length > 0) {
             await db
@@ -220,7 +223,7 @@ app.openapi(
                     discordAvatar: discordUser.avatar,
                     discordAccessToken: access_token,
                     discordTokenExpiresAt: tokenExpiresAt,
-                    ...(autoApproved && !wasAlreadyApproved ? { status: 'approved' as const } : {}),
+                    ...(shouldApprove ? { status: 'approved' as const } : {}),
                     updatedAt: new Date(),
                 })
                 .where(eq(users.discordId, discordUser.id))
@@ -240,7 +243,7 @@ app.openapi(
             userId = created.id
         }
 
-        if (autoApproved && !wasAlreadyApproved && mappedRole) {
+        if (shouldApprove && mappedRole) {
             await upsertProfile(userId, mappedRole, mappedGroupId)
         }
 

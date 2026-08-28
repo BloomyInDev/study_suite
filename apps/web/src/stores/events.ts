@@ -92,12 +92,13 @@ export const useEventsStore = defineStore('events', {
         },
 
         async fetchUpcoming(groupIds: string[], limit = 5): Promise<Event[]> {
-            const res = await backend.api.events.upcoming.$get({ query: { limit } })
+            // The api applies the limit after filtering, so this really is the
+            // user's next `limit` events rather than everyone's.
+            const res = await backend.api.events.upcoming.$get({
+                query: groupIds.length > 0 ? { limit, groupIds: groupIds.join(',') } : { limit },
+            })
             const body = await res.json()
-            const all: Event[] = (body.data ?? []).map(enhanceEvent)
-            return groupIds.length > 0
-                ? all.filter((e) => e.groups.some((g) => groupIds.includes(g.id)))
-                : all
+            return (body.data ?? []).map(enhanceEvent)
         },
 
         clearCache() {
