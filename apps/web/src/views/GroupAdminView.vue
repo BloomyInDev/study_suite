@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { backend } from '../lib/api.js'
+import { groupLabel } from '../lib/group-label.js'
 import type { Group, GroupRef } from '../lib/types.js'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
@@ -9,6 +10,7 @@ const groupsStore = useGroupsStore()
 const notifs = useNotificationsStore()
 
 const search = ref('')
+const displayNameDraft = ref('')
 const dialogOpen = ref(false)
 const dialogGroup = ref<Group | null>(null)
 const addParentIds = ref<string[]>([])
@@ -29,7 +31,31 @@ const addableParents = computed(() => {
     )
 })
 
+// The admin view is the one place hidden groups must stay visible.
+onMounted(() => groupsStore.fetchAll(true))
+
+async function saveDetails() {
+    if (!dialogGroup.value) return
+    const name = displayNameDraft.value.trim()
+    saving.value = true
+    try {
+        await backend.api.groups[':id'].$patch({
+            param: { id: dialogGroup.value.id },
+            json: { displayName: name === '' ? null : name, hidden: dialogGroup.value.hidden },
+        })
+        await groupsStore.fetchAll(true)
+        dialogGroup.value =
+            groupsStore.allGroups.find((g) => g.id === dialogGroup.value!.id) ?? null
+        notifs.success('Groupe mis à jour')
+    } catch {
+        notifs.error('Impossible de mettre à jour le groupe')
+    } finally {
+        saving.value = false
+    }
+}
+
 function openDialog(group: Group) {
+    displayNameDraft.value = group.displayName ?? ''
     dialogGroup.value = {
         ...group,
         parents: [...(group.parents ?? [])],
@@ -51,7 +77,7 @@ async function addParent() {
                 }),
             ),
         )
-        await groupsStore.fetchAll()
+        await groupsStore.fetchAll(true)
         dialogGroup.value =
             groupsStore.allGroups.find((g) => g.id === dialogGroup.value!.id) ?? null
         addParentIds.value = []
@@ -67,7 +93,7 @@ async function removeParent(parent: GroupRef) {
         await backend.api.groups[':id'].parents[':parentId'].$delete({
             param: { id: dialogGroup.value.id, parentId: parent.id },
         })
-        await groupsStore.fetchAll()
+        await groupsStore.fetchAll(true)
         dialogGroup.value =
             groupsStore.allGroups.find((g) => g.id === dialogGroup.value!.id) ?? null
     } finally {
@@ -100,7 +126,15 @@ async function removeParent(parent: GroupRef) {
                 <v-divider v-if="i > 0" />
                 <v-list-item @click="openDialog(group)" link>
                     <v-list-item-title class="font-weight-medium">
-                        {{ group.internalName }}
+                        {{ groupLabel(group) }}
+                        <span
+                            v-if="group.displayName"
+                            class="text-caption text-medium-emphasis font-weight-regular ml-1"
+                            >({{ group.internalName }})</span
+                        >
+                        <v-chip v-if="group.hidden" size="x-small" class="ml-2" variant="tonal">
+                            <v-icon icon="mdi-eye-off-outline" start size="x-small" />Masqué
+                        </v-chip>
                     </v-list-item-title>
                     <v-list-item-subtitle>
                         <template v-if="group.parents?.length">
@@ -143,6 +177,39 @@ async function removeParent(parent: GroupRef) {
                 </v-card-title>
 
                 <v-card-text class="pa-4">
+                    <v-text-field
+                        v-model="displayNameDraft"
+                        label="Nom affiché"
+                        :placeholder="dialogGroup.internalName"
+                        persistent-placeholder
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                        clearable
+                        class="mb-3"
+                    />
+                    <v-switch
+                        v-model="dialogGroup.hidden"
+                        label="Masquer ce groupe"
+                        color="primary"
+                        density="compact"
+                        hide-details
+                        class="mb-1"
+                    />
+                    <div class="text-caption text-medium-emphasis mb-3">
+                        Un groupe masqué reste lié aux évènements mais disparaît des listes et des
+                        sélecteurs.
+                    </div>
+                    <v-btn
+                        :loading="saving"
+                        color="primary"
+                        variant="flat"
+                        size="small"
+                        class="mb-4"
+                        @click="saveDetails"
+                        >Enregistrer</v-btn
+                    >
+                    <v-divider class="mb-4" />
                     <!-- Current parents -->
                     <div class="mb-4">
                         <p class="text-body-2 font-weight-medium mb-2">Groupes parents directs</p>

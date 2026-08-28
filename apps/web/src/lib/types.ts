@@ -13,6 +13,8 @@ export interface Room {
 export interface Group {
     id: string
     internalName: string
+    displayName?: string | null
+    hidden?: boolean
     parents?: GroupRef[]
     children?: GroupRef[]
 }
@@ -20,6 +22,7 @@ export interface Group {
 export interface GroupRef {
     id: string
     internalName: string
+    displayName?: string | null
 }
 
 export interface ApiEvent {
@@ -59,7 +62,7 @@ export interface Assignment {
     subject: string | null
     description: string | null
     dueDate: string
-    studentGroup: { id: string; internalName: string }
+    studentGroup: { id: string; internalName: string; displayName?: string | null }
     event: { id: string; title: string } | null
     createdBy: { id: string; discordUsername: string } | null
     updatedBy: { id: string; discordUsername: string } | null

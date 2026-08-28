@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../../lib/group-label.js'
 import { API_URL } from '../../lib/api-url'
 import { ref, onMounted, computed, reactive } from 'vue'
 import type { AuthUser } from '../../stores/auth.js'
@@ -118,7 +119,8 @@ const statusLabel: Record<string, string> = {
 
 function groupName(id: string | null) {
     if (!id) return '—'
-    return groups.allGroups.find((g) => g.id === id)?.internalName ?? id
+    const g = groups.allGroups.find((g) => g.id === id)
+    return g ? groupLabel(g) : id
 }
 
 onMounted(fetchUsers)
@@ -274,7 +276,7 @@ onMounted(fetchUsers)
                         density="compact"
                         variant="outlined"
                         clearable
-                        :items="groups.allGroups.map((g) => ({ title: g.internalName, value: g.id }))"
+                        :items="groups.allGroups.map((g) => ({ title: groupLabel(g), value: g.id }))"
                     />
                     <v-checkbox
                         v-model="editForm.isAdmin"

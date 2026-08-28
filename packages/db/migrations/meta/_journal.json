@@ -71,6 +71,13 @@
       "when": 1779369174060,
       "tag": "0009_messy_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787955081810,
+      "tag": "0010_woozy_blade",
+      "breakpoints": true
     }
   ]
 }

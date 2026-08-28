@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import { computed } from 'vue'
 import type { Event } from '../lib/types.js'
 import { formatTime } from '../lib/date.js'
@@ -34,7 +35,7 @@ const eventFull = computed<Event>(() => props.event.full!)
                     </div>
                     <div class="text-caption">
                         {{
-                            eventFull.groups.map((g) => g.internalName).join(', ') || 'Aucun groupe'
+                            eventFull.groups.map(groupLabel).join(', ') || 'Aucun groupe'
                         }}
                     </div>
                 </v-card-text>

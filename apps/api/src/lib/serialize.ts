@@ -25,7 +25,7 @@ export type EventRow = {
     source: string
     eventLocations: { location: { id: string; name: string } }[]
     eventTeachers: { teacher: { id: string; firstName: string; lastName: string } }[]
-    eventStudentGroups: { studentGroup: { id: string; internalName: string } }[]
+    eventStudentGroups: { studentGroup: { id: string; internalName: string; displayName: string | null } }[]
 }
 
 export function eventToDto(row: EventRow, fmt: DateFormat) {

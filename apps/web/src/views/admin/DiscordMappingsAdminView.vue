@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../../lib/group-label.js'
 import { API_URL } from '../../lib/api-url'
 import { ref, onMounted, computed } from 'vue'
 import { useGroupsStore } from '../../stores/groups.js'
@@ -174,7 +175,7 @@ async function addMapping() {
         const guild = guilds.value.find((g) => g.id === mappingTarget.value!.id)
         if (guild) {
             const group = groups.allGroups.find((g) => g.id === mappingForm.value.studentGroupId)
-            guild.mappings.push({ ...body.data, studentGroupName: group?.internalName ?? null })
+            guild.mappings.push({ ...body.data, studentGroupName: group ? groupLabel(group) : null })
         }
         notifs.success('Liaison ajoutée')
         mappingDialog.value = false
@@ -472,7 +473,7 @@ onMounted(fetchGuilds)
                     <v-select
                         v-model="mappingForm.studentGroupId"
                         :items="groups.allGroups"
-                        item-title="internalName"
+                        :item-title="groupLabel"
                         item-value="id"
                         label="Classe"
                         variant="outlined"

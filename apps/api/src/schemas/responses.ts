@@ -22,7 +22,7 @@ export const TeacherRefSchema = z
     .openapi('TeacherRef')
 
 export const GroupRefSchema = z
-    .object({ id: z.string().uuid(), internalName: z.string() })
+    .object({ id: z.string().uuid(), internalName: z.string(), displayName: z.string().nullable() })
     .openapi('GroupRef')
 
 export const EventDtoSchema = z
@@ -65,6 +65,8 @@ export const GroupSchema = z
     .object({
         id: z.string().uuid(),
         internalName: z.string(),
+        displayName: z.string().nullable(),
+        hidden: z.boolean(),
         parents: z.array(GroupRefSchema),
         children: z.array(GroupRefSchema),
     })

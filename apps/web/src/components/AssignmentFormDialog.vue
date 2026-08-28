@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import { API_URL } from '../lib/api-url'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
@@ -185,7 +186,7 @@ async function deleteAssignment() {
                             density="compact"
                             hide-details
                             :disabled="!auth.isAdmin"
-                            :items="groups.allGroups.map((g) => ({ title: g.internalName, value: g.id }))"
+                            :items="groups.allGroups.map((g) => ({ title: groupLabel(g), value: g.id }))"
                         />
                     </v-col>
 

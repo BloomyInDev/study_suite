@@ -31,8 +31,10 @@ export const useGroupsStore = defineStore('groups', {
     },
 
     actions: {
-        async fetchAll() {
-            const res = await backend.api.groups.$get()
+        async fetchAll(includeHidden = false) {
+            const res = await backend.api.groups.$get({
+                query: includeHidden ? { includeHidden: 'true' } : {},
+            })
             const { data } = await res.json()
             this.allGroups = data
         },

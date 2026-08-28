@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import type { Assignment } from '../lib/types.js'
 import { formatDueRelative } from '../lib/date.js'
 
@@ -68,7 +69,7 @@ function formatAbsolute(iso: string) {
                 </v-tooltip>
             </v-chip>
             <v-chip size="x-small" variant="tonal" prepend-icon="mdi-account-group">
-                {{ assignment.studentGroup.internalName }}
+                {{ groupLabel(assignment.studentGroup) }}
             </v-chip>
         </v-list-item-subtitle>
 

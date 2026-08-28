@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import type { Event } from '../lib/types.js'
 import { formatFullDate } from '../lib/date.js'
 
@@ -31,7 +32,7 @@ const groupAccentClass = (index: number): string => {
                                 v-for="(group, index) in event.groups"
                                 :key="group.id"
                                 :class="['group-badge', groupAccentClass(index)]"
-                                >{{ group.internalName }}</span
+                                >{{ groupLabel(group) }}</span
                             >
                         </div>
                         <span v-else>Aucun groupe</span>

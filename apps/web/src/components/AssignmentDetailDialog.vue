@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import { computed } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
 import type { Assignment } from '../lib/types.js'
@@ -73,7 +74,7 @@ function formatAuthor(user: { discordUsername: string } | null, dateIso: string)
                         </v-tooltip>
                     </v-chip>
                     <v-chip variant="tonal" size="small" prepend-icon="mdi-account-group">
-                        {{ assignment.studentGroup.internalName }}
+                        {{ groupLabel(assignment.studentGroup) }}
                     </v-chip>
                     <v-chip
                         v-if="assignment.event"

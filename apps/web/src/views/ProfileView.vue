@@ -1,10 +1,16 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import { ref } from 'vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import { useGroupsStore } from '../stores/groups.js'
 
 const groups = useGroupsStore()
 const pickerOpen = ref(false)
+
+function groupLabelById(id: string): string {
+    const g = groups.allGroups.find((group) => group.id === id)
+    return g ? groupLabel(g) : id
+}
 </script>
 
 <template>
@@ -15,7 +21,7 @@ const pickerOpen = ref(false)
                     <v-card-title>Mes groupes</v-card-title>
                     <v-card-text>
                         <v-chip v-for="id in groups.selectedGroupIds" :key="id" class="mr-2 mb-2">
-                            {{ groups.allGroups.find((g) => g.id === id)?.internalName ?? id }}
+                            {{ groupLabelById(id) }}
                         </v-chip>
                         <div
                             v-if="groups.selectedGroupIds.length === 0"

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
@@ -28,7 +29,7 @@ const categories = computed(() => {
     const cats = ['Mon Planning']
     for (const id of comparisonGroupIds.value) {
         const g = groupsStore.allGroups.find((g) => g.id === id)
-        cats.push(g?.internalName ?? 'Autre')
+        cats.push(g ? groupLabel(g) : 'Autre')
     }
     return cats
 })
@@ -49,7 +50,7 @@ const allCalendarEvents = computed(() => {
     comparisonGroupIds.value.forEach((id, idx) => {
         const g = groupsStore.allGroups.find((g) => g.id === id)
         const color = COMPARISON_COLORS[idx % COMPARISON_COLORS.length]
-        result.push(...transformEvents(otherEventsMap.value[id] ?? [], g?.internalName ?? 'Autre', color))
+        result.push(...transformEvents(otherEventsMap.value[id] ?? [], g ? groupLabel(g) : 'Autre', color))
     })
     return result
 })
@@ -143,7 +144,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                 <v-autocomplete
                     v-model="comparisonGroupIds"
                     :items="groupsThatCanBeCompared"
-                    item-title="internalName"
+                    :item-title="groupLabel"
                     item-value="id"
                     label="Comparer..."
                     multiple

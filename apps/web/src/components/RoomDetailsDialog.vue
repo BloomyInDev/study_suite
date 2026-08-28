@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import { computed } from 'vue'
 import type { RoomWithDetails } from '../lib/types.js'
 import { formatTime } from '../lib/date.js'
@@ -72,7 +73,7 @@ const show = computed({
                                                     />
                                                     {{
                                                         event.groups
-                                                            .map((g) => g.internalName)
+                                                            .map(groupLabel)
                                                             .join(', ')
                                                     }}
                                                 </span>

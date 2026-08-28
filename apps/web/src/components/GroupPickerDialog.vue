@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { groupLabel } from '../lib/group-label.js'
 import { computed, ref, watch } from 'vue'
 import type { Group } from '../lib/types.js'
 import { useGroupsStore } from '../stores/groups.js'
@@ -59,7 +60,7 @@ const displayNodes = computed(() => {
     const q = search.value.trim().toLowerCase()
     if (!q) return treeNodes.value
     return groups.allGroups
-        .filter((g) => g.internalName.toLowerCase().includes(q))
+        .filter((g) => groupLabel(g).toLowerCase().includes(q) || g.internalName.toLowerCase().includes(q))
         .map((g) => ({ group: g, depth: 0, isLeaf: !g.children?.length }))
 })
 
@@ -112,7 +113,7 @@ const confirm = () => {
                         </template>
 
                         <v-list-item-title :class="node.isLeaf ? '' : 'font-weight-medium'">
-                            {{ node.group.internalName }}
+                            {{ groupLabel(node.group) }}
                         </v-list-item-title>
 
                         <template v-if="!node.isLeaf && !search" #append>

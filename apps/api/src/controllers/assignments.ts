@@ -72,7 +72,11 @@ function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: string) {
         subject: row.subject,
         description: row.description,
         dueDate: row.dueDate.toISOString(),
-        studentGroup: { id: row.studentGroup.id, internalName: row.studentGroup.internalName },
+        studentGroup: {
+            id: row.studentGroup.id,
+            internalName: row.studentGroup.internalName,
+            displayName: row.studentGroup.displayName,
+        },
         event: row.event ? { id: row.event.id, title: row.event.title } : null,
         createdBy: row.createdBy
             ? { id: row.createdBy.id, discordUsername: row.createdBy.discordUsername }
