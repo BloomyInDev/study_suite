@@ -15,6 +15,18 @@ services:
             timeout: 5s
             retries: 10
 
+    migrate:
+        image: forge.red.bloomyindev.me/bastien/study_suite_migrate:latest
+        build:
+            context: .
+            dockerfile: packages/db/Dockerfile
+        environment:
+            DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+        depends_on:
+            postgres:
+                condition: service_healthy
+        restart: 'no'
+
     api:
         image: forge.red.bloomyindev.me/bastien/study_suite_api:latest
         build:
@@ -29,6 +41,8 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+            migrate:
+                condition: service_completed_successfully
 
     web:
         image: forge.red.bloomyindev.me/bastien/study_suite_web:latest
@@ -53,6 +67,8 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+            migrate:
+                condition: service_completed_successfully
         # The scraper runs once and exits. Use a cron / orchestrator to schedule it.
         profiles:
             - scraper
