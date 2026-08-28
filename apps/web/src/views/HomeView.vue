@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { API_URL } from '../lib/api-url'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -28,7 +28,7 @@ const detailOpen = ref(false)
 const viewingAssignment = ref<Assignment | null>(null)
 let intervalId: ReturnType<typeof setInterval> | null = null
 
-onMounted(async () => {
+async function load() {
     loading.value = true
     try {
         const promises: Promise<void>[] = [
@@ -58,6 +58,10 @@ onMounted(async () => {
     } finally {
         loading.value = false
     }
+}
+
+onMounted(() => {
+    void load()
     intervalId = setInterval(() => {
         now.value = new Date()
     }, 5_000)
@@ -85,6 +89,13 @@ const todoAssignments = computed(() =>
     upcomingAssignments.value.filter((a) => !a.completedByMe),
 )
 const doneCount = computed(() => upcomingAssignments.value.length - todoAssignments.value.length)
+
+// allGroups loads after mount, so the ancestors — and with them the promo's
+// events — only join effectiveGroupIds a moment later.
+watch(
+    () => groupStore.effectiveGroupIds.join(','),
+    () => void load(),
+)
 
 function openDetail(a: Assignment) {
     viewingAssignment.value = a

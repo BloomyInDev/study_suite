@@ -4,10 +4,24 @@ import type { Group } from '../lib/types.js'
 
 const LS_KEY = 'study_suite_selected_groups'
 
+/**
+ * Read straight away, before any request: components mount before App.vue's
+ * onMounted, and a homepage that loads with an empty selection asks for every
+ * group's events.
+ */
+function storedGroupIds(): string[] {
+    try {
+        const raw = localStorage.getItem(LS_KEY)
+        return raw ? (JSON.parse(raw) as string[]) : []
+    } catch {
+        return []
+    }
+}
+
 export const useGroupsStore = defineStore('groups', {
     state: () => ({
         allGroups: [] as Group[],
-        selectedGroupIds: [] as string[],
+        selectedGroupIds: storedGroupIds(),
     }),
 
     getters: {
@@ -42,18 +56,11 @@ export const useGroupsStore = defineStore('groups', {
             this.allGroups = data
         },
 
-        hydrateFromStorage() {
-            try {
-                const stored = localStorage.getItem(LS_KEY)
-                if (stored) {
-                    const ids: string[] = JSON.parse(stored)
-                    this.selectedGroupIds = ids.filter((id) =>
-                        this.allGroups.some((g) => g.id === id),
-                    )
-                }
-            } catch {
-                this.selectedGroupIds = []
-            }
+        /** Drop ids that no longer exist, once the real list is known. */
+        pruneUnknownGroups() {
+            this.selectedGroupIds = this.selectedGroupIds.filter((id) =>
+                this.allGroups.some((g) => g.id === id),
+            )
         },
 
         select(ids: string[]) {
@@ -68,7 +75,7 @@ export const useGroupsStore = defineStore('groups', {
 
         async onLoad() {
             await this.fetchAll()
-            this.hydrateFromStorage()
+            this.pruneUnknownGroups()
         },
     },
 })

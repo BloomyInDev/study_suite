@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
 import type { Event } from '../lib/types.js'
@@ -10,13 +10,20 @@ const groups = useGroupsStore()
 const events = ref<Event[]>([])
 const loading = ref(true)
 
-onMounted(async () => {
+async function load() {
     try {
         events.value = await eventsStore.fetchWeekEvents(new Date(), groups.effectiveGroupIds)
     } finally {
         loading.value = false
     }
-})
+}
+
+onMounted(() => void load())
+// The hierarchy arrives after mount; reload when the ancestors join in.
+watch(
+    () => groups.effectiveGroupIds.join(','),
+    () => void load(),
+)
 
 const DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
