@@ -11,6 +11,10 @@ const notifs = useNotificationsStore()
 
 const search = ref('')
 const displayNameDraft = ref('')
+const createOpen = ref(false)
+const createInternalName = ref('')
+const createDisplayName = ref('')
+const deleting = ref(false)
 const dialogOpen = ref(false)
 const dialogGroup = ref<Group | null>(null)
 const addParentIds = ref<string[]>([])
@@ -51,6 +55,55 @@ async function saveDetails() {
         notifs.error('Impossible de mettre à jour le groupe')
     } finally {
         saving.value = false
+    }
+}
+
+async function createGroup() {
+    const internalName = createInternalName.value.trim()
+    if (!internalName) return
+    const displayName = createDisplayName.value.trim()
+    saving.value = true
+    try {
+        const res = await backend.api.groups.$post({
+            json: { internalName, displayName: displayName === '' ? null : displayName },
+        })
+        if (res.status === 409) {
+            notifs.error(`Un groupe nommé « ${internalName} » existe déjà`)
+            return
+        }
+        await groupsStore.fetchAll(true)
+        createOpen.value = false
+        createInternalName.value = ''
+        createDisplayName.value = ''
+        notifs.success('Groupe créé')
+    } finally {
+        saving.value = false
+    }
+}
+
+/** Cascades to assignments and Discord mappings, so the api refuses without force. */
+async function deleteGroup(force = false) {
+    if (!dialogGroup.value) return
+    deleting.value = true
+    try {
+        const res = await backend.api.groups[':id'].$delete({
+            param: { id: dialogGroup.value.id },
+            query: force ? { force: 'true' } : {},
+        })
+        if (res.status === 409) {
+            const body = await res.json()
+            const message = 'error' in body ? body.error.message : 'Suppression refusée'
+            if (window.confirm(`${message}\n\nSupprimer quand même ?`)) {
+                await deleteGroup(true)
+            }
+            return
+        }
+        await groupsStore.fetchAll(true)
+        dialogOpen.value = false
+        dialogGroup.value = null
+        notifs.success('Groupe supprimé')
+    } finally {
+        deleting.value = false
     }
 }
 
@@ -116,8 +169,20 @@ async function removeParent(parent: GroupRef) {
                     clearable
                 />
             </v-col>
-            <v-col cols="12" md="6" class="text-medium-emphasis text-body-2">
-                {{ groupsStore.allGroups.length }} groupes au total
+            <v-col
+                cols="12"
+                md="6"
+                class="text-medium-emphasis text-body-2 d-flex align-center justify-space-between"
+            >
+                <span>{{ groupsStore.allGroups.length }} groupes au total</span>
+                <v-btn
+                    prepend-icon="mdi-plus"
+                    variant="tonal"
+                    size="small"
+                    color="primary"
+                    @click="createOpen = true"
+                    >Nouveau groupe</v-btn
+                >
             </v-col>
         </v-row>
 
@@ -162,6 +227,44 @@ async function removeParent(parent: GroupRef) {
             </v-list-item>
         </v-list>
 
+        <!-- Create dialog -->
+        <v-dialog v-model="createOpen" max-width="420">
+            <v-card>
+                <v-card-title class="text-h6 pt-4 px-4">Nouveau groupe</v-card-title>
+                <v-card-text class="pa-4">
+                    <v-text-field
+                        v-model="createInternalName"
+                        label="Nom interne"
+                        hint="Doit correspondre exactement au nom publié par Prose Consult"
+                        persistent-hint
+                        variant="outlined"
+                        density="compact"
+                        class="mb-3"
+                    />
+                    <v-text-field
+                        v-model="createDisplayName"
+                        label="Nom affiché (optionnel)"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                    />
+                </v-card-text>
+                <v-card-actions class="px-4 pb-4">
+                    <v-spacer />
+                    <v-btn variant="text" size="small" @click="createOpen = false">Annuler</v-btn>
+                    <v-btn
+                        :loading="saving"
+                        :disabled="createInternalName.trim() === ''"
+                        color="primary"
+                        variant="flat"
+                        size="small"
+                        @click="createGroup"
+                        >Créer</v-btn
+                    >
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
         <!-- Edit dialog -->
         <v-dialog v-model="dialogOpen" max-width="520">
             <v-card v-if="dialogGroup">
@@ -200,15 +303,26 @@ async function removeParent(parent: GroupRef) {
                         Un groupe masqué reste lié aux évènements mais disparaît des listes et des
                         sélecteurs.
                     </div>
-                    <v-btn
-                        :loading="saving"
-                        color="primary"
-                        variant="flat"
-                        size="small"
-                        class="mb-4"
-                        @click="saveDetails"
-                        >Enregistrer</v-btn
-                    >
+                    <div class="d-flex align-center mb-4">
+                        <v-btn
+                            :loading="saving"
+                            color="primary"
+                            variant="flat"
+                            size="small"
+                            @click="saveDetails"
+                            >Enregistrer</v-btn
+                        >
+                        <v-spacer />
+                        <v-btn
+                            :loading="deleting"
+                            color="error"
+                            variant="text"
+                            size="small"
+                            prepend-icon="mdi-delete-outline"
+                            @click="deleteGroup(false)"
+                            >Supprimer</v-btn
+                        >
+                    </div>
                     <v-divider class="mb-4" />
                     <!-- Current parents -->
                     <div class="mb-4">

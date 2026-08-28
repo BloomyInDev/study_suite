@@ -1,5 +1,12 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { eventStudentGroups, events, studentGroupMemberships, studentGroups } from '@studysuite/db'
+import {
+    assignments,
+    discordRoleMappings,
+    eventStudentGroups,
+    events,
+    studentGroupMemberships,
+    studentGroups,
+} from '@studysuite/db'
 import { and, asc, eq, gt, inArray, lt } from 'drizzle-orm'
 import { db } from '../db.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
@@ -14,6 +21,20 @@ const ListGroupsQuerySchema = z.object({
         .optional()
         .transform((v) => v === 'true')
         .openapi({ param: { name: 'includeHidden', in: 'query' } }),
+})
+
+const CreateGroupBodySchema = z.object({
+    internalName: z.string().trim().min(1),
+    displayName: z.string().trim().min(1).nullable().optional(),
+    hidden: z.boolean().optional(),
+})
+
+const DeleteGroupQuerySchema = z.object({
+    force: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((v) => v === 'true')
+        .openapi({ param: { name: 'force', in: 'query' } }),
 })
 
 const UpdateGroupBodySchema = z.object({
@@ -184,6 +205,135 @@ export default new OpenAPIHono()
                 )
             }
             return c.json({ data: groupToDto(row) }, 200)
+        },
+    )
+    .openapi(
+        createRoute({
+            method: 'post',
+            path: '/',
+            operationId: 'createGroup',
+            tags: ['Groups'],
+            request: {
+                body: {
+                    content: { 'application/json': { schema: CreateGroupBodySchema } },
+                    required: true,
+                },
+            },
+            responses: {
+                201: {
+                    content: { 'application/json': { schema: z.object({ data: GroupSchema }) } },
+                    description: 'Group created',
+                },
+                409: {
+                    content: { 'application/json': { schema: ErrorSchema } },
+                    description: 'A group with that internal name already exists',
+                },
+            },
+        }),
+        async (c) => {
+            const body = c.req.valid('json')
+
+            const existing = await db.query.studentGroups.findFirst({
+                where: eq(studentGroups.internalName, body.internalName),
+            })
+            if (existing) {
+                return c.json(
+                    {
+                        error: {
+                            code: 'GROUP_EXISTS',
+                            message: `A group named "${body.internalName}" already exists`,
+                        },
+                    },
+                    409,
+                )
+            }
+
+            const [created] = await db
+                .insert(studentGroups)
+                .values({
+                    internalName: body.internalName,
+                    displayName: body.displayName ?? null,
+                    hidden: body.hidden ?? false,
+                })
+                .returning()
+
+            return c.json(
+                {
+                    data: {
+                        id: created!.id,
+                        internalName: created!.internalName,
+                        displayName: created!.displayName,
+                        hidden: created!.hidden,
+                        parents: [],
+                        children: [],
+                    },
+                },
+                201,
+            )
+        },
+    )
+    .openapi(
+        createRoute({
+            method: 'delete',
+            path: '/{id}',
+            operationId: 'deleteGroup',
+            tags: ['Groups'],
+            request: { params: IdParamSchema, query: DeleteGroupQuerySchema },
+            responses: {
+                200: {
+                    content: {
+                        'application/json': {
+                            schema: z.object({ data: z.object({ id: z.string().uuid() }) }),
+                        },
+                    },
+                    description: 'Group deleted',
+                },
+                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                409: {
+                    content: { 'application/json': { schema: ErrorSchema } },
+                    description: 'Group still carries data that would be deleted with it',
+                },
+            },
+        }),
+        async (c) => {
+            const { id } = c.req.valid('param')
+            const { force } = c.req.valid('query')
+
+            const group = await db.query.studentGroups.findFirst({
+                where: eq(studentGroups.id, id),
+            })
+            if (!group) {
+                return c.json({ error: { code: 'NOT_FOUND', message: 'Group not found' } }, 404)
+            }
+
+            // Deleting cascades: assignments and discord role mappings go with it,
+            // and members lose their group. Event links just unlink and are rescraped.
+            if (!force) {
+                const [assignmentRows, mappingRows] = await Promise.all([
+                    db.select({ id: assignments.id }).from(assignments).where(eq(assignments.studentGroupId, id)),
+                    db
+                        .select({ id: discordRoleMappings.id })
+                        .from(discordRoleMappings)
+                        .where(eq(discordRoleMappings.studentGroupId, id)),
+                ])
+                if (assignmentRows.length > 0 || mappingRows.length > 0) {
+                    return c.json(
+                        {
+                            error: {
+                                code: 'GROUP_IN_USE',
+                                message:
+                                    `Deleting "${group.internalName}" would also delete ` +
+                                    `${assignmentRows.length} devoir(s) and ${mappingRows.length} ` +
+                                    `mapping(s) Discord. Retry with force=true to confirm.`,
+                            },
+                        },
+                        409,
+                    )
+                }
+            }
+
+            await db.delete(studentGroups).where(eq(studentGroups.id, id))
+            return c.json({ data: { id } }, 200)
         },
     )
     .openapi(
