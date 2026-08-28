@@ -11,3 +11,6 @@ apps/scraper/dump.html
 apps/*/config.yaml
 !apps/*/example.config.yaml
 data/
+# Deployment configs mounted by compose.yml
+/api.config.yaml
+/scraper.config.yaml

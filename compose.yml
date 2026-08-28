@@ -9,6 +9,8 @@ services:
             - '5432:5432'
         volumes:
             - ./data/postgres:/var/lib/postgresql/data
+        networks:
+            - backend
         healthcheck:
             test: ['CMD-SHELL', 'pg_isready -U postgres']
             interval: 5s
@@ -25,6 +27,8 @@ services:
         depends_on:
             postgres:
                 condition: service_healthy
+        networks:
+            - backend
         restart: 'no'
 
     api:
@@ -36,6 +40,11 @@ services:
             DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
             PORT: 3000
             CORS_ORIGIN: '*'
+            CONFIG_PATH: /config.yaml
+        volumes:
+            # Required — create api.config.yaml next to this file.
+            # See apps/api/example.config.yaml. The api exits if it is missing.
+            - ./api.config.yaml:/config.yaml:ro
         ports:
             - '3000:3000'
         depends_on:
@@ -43,6 +52,9 @@ services:
                 condition: service_healthy
             migrate:
                 condition: service_completed_successfully
+        networks:
+            - backend
+            - frontend
 
     web:
         image: forge.red.bloomyindev.me/bastien/study_suite_web:latest
@@ -56,6 +68,8 @@ services:
             - '80:80'
         depends_on:
             - api
+        networks:
+            - frontend
 
     scraper:
         image: forge.red.bloomyindev.me/bastien/study_suite_scraper:latest
@@ -64,11 +78,33 @@ services:
             dockerfile: apps/scraper/Dockerfile
         environment:
             DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+            CONFIG_PATH: /config.yaml
+        volumes:
+            # Required — create scraper.config.yaml next to this file.
+            # See apps/scraper/example.config.yaml. The scraper exits if it is missing.
+            - ./scraper.config.yaml:/config.yaml:ro
         depends_on:
             postgres:
                 condition: service_healthy
             migrate:
                 condition: service_completed_successfully
+        networks:
+            - backend
+            - egress
         # The scraper runs once and exits. Use a cron / orchestrator to schedule it.
         profiles:
             - scraper
+
+networks:
+    # web ↔ api only; carries the public traffic and gives api its egress
+    # (Discord OAuth token exchange).
+    frontend:
+
+    # Database segment. internal:true — no route off the host, so nothing here
+    # can reach (or be reached from) the internet.
+    backend:
+        internal: true
+
+    # The scraper sits on backend for the DB, and needs its own way out to
+    # reach Prose Consult since backend is internal.
+    egress:

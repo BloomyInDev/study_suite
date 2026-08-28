@@ -23,7 +23,10 @@ const schema = z.object({
 
 export const config = loadConfig({
     schema,
-    yamlPath: resolve(dirname(fileURLToPath(import.meta.url)), '..', 'config.yaml'),
+    // CONFIG_PATH lets the deployment point at a file mounted next to compose.yml.
+    yamlPath:
+        process.env.CONFIG_PATH ??
+        resolve(dirname(fileURLToPath(import.meta.url)), '..', 'config.yaml'),
     envMap: {
         PORT: 'server.port',
         DATABASE_URL: 'database.url',

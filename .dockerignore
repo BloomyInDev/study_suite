@@ -8,3 +8,5 @@ data/
 .vscode
 .playwright-mcp
 ressources
+/api.config.yaml
+/scraper.config.yaml
