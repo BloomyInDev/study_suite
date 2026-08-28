@@ -99,9 +99,11 @@ async function getAncestorGroupIds(groupId: string): Promise<Set<string>> {
             .select({ parentId: studentGroupMemberships.parentId })
             .from(studentGroupMemberships)
             .where(inArray(studentGroupMemberships.childId, current))
-        const parents = rows.map((r) => r.parentId)
-        parents.forEach((p) => result.add(p))
-        current = parents.filter((p) => !result.has(p))
+        // Only follow parents not seen yet — filtering after adding them to the
+        // result would end the walk at the first level.
+        const next = [...new Set(rows.map((r) => r.parentId))].filter((p) => !result.has(p))
+        next.forEach((p) => result.add(p))
+        current = next
     }
     return result
 }
