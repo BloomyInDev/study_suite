@@ -11,6 +11,8 @@ import NoEventsCard from '../components/NoEventsCard.vue'
 import AssignmentCard from '../components/AssignmentCard.vue'
 import AssignmentDetailDialog from '../components/AssignmentDetailDialog.vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
+import WeekStatsCard from '../components/WeekStatsCard.vue'
+import FreeRoomsCard from '../components/FreeRoomsCard.vue'
 
 const groupStore = useGroupsStore()
 const eventsStore = useEventsStore()
@@ -78,6 +80,12 @@ const upcomingAssignments = computed(() =>
     assignments.value.filter((a) => new Date(a.dueDate) >= now.value),
 )
 
+/** The homepage lists what is left to do; the homework page shows everything. */
+const todoAssignments = computed(() =>
+    upcomingAssignments.value.filter((a) => !a.completedByMe),
+)
+const doneCount = computed(() => upcomingAssignments.value.length - todoAssignments.value.length)
+
 function openDetail(a: Assignment) {
     viewingAssignment.value = a
     detailOpen.value = true
@@ -136,11 +144,21 @@ async function toggleDone(a: Assignment, done: boolean) {
                         <template #prepend>
                             <v-icon color="primary" size="32">mdi-book-edit</v-icon>
                         </template>
-                        <v-card-title>Devoirs à venir</v-card-title>
+                        <v-card-title>Devoirs à faire</v-card-title>
+                        <v-card-subtitle v-if="doneCount > 0">
+                            {{ doneCount }} déjà fait{{ doneCount > 1 ? 's' : '' }}
+                        </v-card-subtitle>
                     </v-card-item>
-                    <v-list density="compact">
+                    <v-card-text
+                        v-if="todoAssignments.length === 0"
+                        class="text-medium-emphasis d-flex align-center"
+                    >
+                        <v-icon color="success" class="mr-2">mdi-check-circle-outline</v-icon>
+                        Rien à faire pour l'instant.
+                    </v-card-text>
+                    <v-list v-else density="compact">
                         <AssignmentCard
-                            v-for="a in upcomingAssignments"
+                            v-for="a in todoAssignments"
                             :key="a.id"
                             :assignment="a"
                             compact
@@ -159,6 +177,14 @@ async function toggleDone(a: Assignment, done: boolean) {
                         </v-btn>
                     </v-card-actions>
                 </v-card>
+            </v-col>
+
+            <v-col v-if="groupStore.selectedGroupIds.length > 0" cols="12" md="8" lg="6">
+                <WeekStatsCard />
+            </v-col>
+
+            <v-col cols="12" md="8" lg="6">
+                <FreeRoomsCard />
             </v-col>
         </v-row>
 
