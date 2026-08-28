@@ -7,9 +7,13 @@ const runOnce = process.argv.includes('--once')
 
 runWatchLoop(config, db, runOnce)
     .then(async () => {
-        // The postgres connection holds the event loop open, so a --once run
-        // would never exit on its own.
-        if (runOnce) await db.$client.end()
+        // A --once run does not exit on its own: the postgres connection holds
+        // the event loop open, and playwright leaves child handles behind.
+        // Everything is committed by now, so close the pool and exit.
+        if (runOnce) {
+            await db.$client.end()
+            process.exit(process.exitCode ?? 0)
+        }
     })
     .catch((err) => {
         console.error('[scraper] Fatal error:', err)
