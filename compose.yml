@@ -8,7 +8,9 @@ services:
         ports:
             - '5432:5432'
         volumes:
-            - ./data/postgres:/var/lib/postgresql/data
+            # postgres:18 sets PGDATA=/var/lib/postgresql/18/docker and declares its
+            # volume at /var/lib/postgresql — mounting .../data would persist nothing.
+            - ./data/postgres:/var/lib/postgresql
         networks:
             - backend
         healthcheck:
