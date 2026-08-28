@@ -98,12 +98,11 @@ services:
         networks:
             - backend
             - egress
-        # The scraper schedules its own reruns, so it is not started by
-        # `up` — it is opt-in via its profile. One-shot pass to test the
-        # setup (scrapes once, exits, removes the container):
-        #   docker compose --profile scraper run --rm scraper
-        profiles:
-            - scraper
+        # Long-lived: the scraper schedules its own reruns on scrape.intervalMs.
+        # One-shot pass to test the setup (scrapes once, exits, removes the
+        # container — exit code 1 if the scrape failed):
+        #   docker compose run --rm scraper pnpm -F @studysuite/scraper scrape
+        restart: unless-stopped
 
 networks:
     # Lets nginx resolve and reach `api` for its /api/ and /auth/ proxy_pass.

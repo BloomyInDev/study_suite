@@ -19,4 +19,5 @@ RUN pnpm install --frozen-lockfile --filter @studysuite/scraper...
 COPY packages/ packages/
 COPY apps/scraper/ apps/scraper/
 
-CMD ["pnpm", "--filter", "@studysuite/scraper", "run", "scrape"]
+# Watch loop: rescrapes every scrape.intervalMs and stays up.
+CMD ["pnpm", "--filter", "@studysuite/scraper", "run", "start"]

@@ -6,6 +6,7 @@
         "dev": "tsx watch src/index.ts",
         "dump": "tsx --env-file .env src/dump.ts",
         "validate": "tsx src/validate.ts",
+        "start": "tsx src/index.ts",
         "scrape": "tsx src/index.ts --once",
         "build": "tsc",
         "typecheck": "tsc --noEmit"
