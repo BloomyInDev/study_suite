@@ -22,6 +22,10 @@ COPY apps/web/ apps/web/
 ARG VITE_API_URL=/
 ENV VITE_API_URL=${VITE_API_URL}
 
+# Shown in the footer, linking back to the commit the image was built from
+ARG VITE_GIT_COMMIT_HASH=unknown
+ENV VITE_GIT_COMMIT_HASH=${VITE_GIT_COMMIT_HASH}
+
 RUN pnpm --filter @studysuite/web build
 
 # ── runtime ───────────────────────────────────────────────────────────────────

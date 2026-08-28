@@ -65,8 +65,10 @@ services:
         build:
             context: .
             dockerfile: apps/web/Dockerfile
+            args:
+                # docker compose build GIT_COMMIT=$(git rev-parse HEAD) to stamp it
+                VITE_GIT_COMMIT_HASH: ${GIT_COMMIT:-unknown}
             # Override VITE_API_URL here if the API is on a different public URL
-            # args:
             #   VITE_API_URL: https://api.example.com
         ports:
             - '80:80'

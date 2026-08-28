@@ -56,6 +56,8 @@ jobs:
         with:
           context: .
           file: apps/web/Dockerfile
+          build-args: |
+            VITE_GIT_COMMIT_HASH=${{ github.sha }}
           push: true
           provenance: false
           platforms: linux/amd64

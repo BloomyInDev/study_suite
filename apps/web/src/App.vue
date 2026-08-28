@@ -39,6 +39,7 @@ onMounted(async () => {
 })
 
 const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH
+const shortHash = commitHash?.slice(0, 7) ?? 'unknown'
 
 const allNavItems = [
     { title: 'Accueil', icon: 'mdi-home', to: '/', auth: false },
@@ -142,7 +143,7 @@ const navItems = computed(() => allNavItems.filter((i) => !i.auth || auth.isAuth
                     :href="`https://forge.red.bloomyindev.me/bastien/study_suite/commit/${commitHash}`"
                     class="text-medium-emphasis text-decoration-underline commit-hash"
                     target="_blank"
-                    >{{ commitHash }}</a
+                    >{{ shortHash }}</a
                 >
             </div>
         </v-footer>
