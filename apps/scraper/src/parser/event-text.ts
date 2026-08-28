@@ -7,6 +7,7 @@ export function parseEventText(
     dayIndex: number,
     weekDates: string[],
     knownGroupNames: Set<string>,
+    strictGroups = false,
 ): ParsedEvent | null {
     const lines = rawText
         .replace(/ /g, ' ')
@@ -29,7 +30,7 @@ export function parseEventText(
         return null
     }
 
-    const { rooms, teachers, groups } = categorizeLines(middleLines, knownGroupNames)
+    const { rooms, teachers, groups } = categorizeLines(middleLines, knownGroupNames, strictGroups)
 
     return { title, startDate: hours.start, endDate: hours.end, rooms, teachers, groups }
 }

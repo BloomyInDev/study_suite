@@ -16,7 +16,8 @@ function isPathLine(line: string): boolean {
 
 export function categorizeLines(
     middleLines: string[],
-    _knownGroupNames: Set<string>,
+    knownGroupNames: Set<string>,
+    strictGroups = false,
 ): CategorizedLines {
     const teacherIdxs = middleLines
         .map((l, i) => (isTeacherLine(l) ? i : -1))
@@ -48,10 +49,19 @@ export function categorizeLines(
 
     const teachers: Teacher[] = teacherIdxs.map((i) => parseTeacherLine(middleLines[i]!))
 
-    const groups: StudentGroup[] = middleLines
+    const groupLines = middleLines
         .slice(groupsStart)
         .filter((l) => !isPathLine(l) && !isTeacherLine(l))
-        .map((internalName) => ({ internalName }))
+
+    // Without a teacher line the boundary is the last path line, so anything the
+    // site lists after it — a second room with no path of its own, for instance —
+    // looks like a group. In strict mode only known names get through.
+    const accepted = strictGroups ? groupLines.filter((l) => knownGroupNames.has(l)) : groupLines
+    for (const line of groupLines) {
+        if (!accepted.includes(line)) console.warn(`[parser] ignoring unknown group "${line}"`)
+    }
+
+    const groups: StudentGroup[] = accepted.map((internalName) => ({ internalName }))
 
     return { rooms, teachers, groups }
 }

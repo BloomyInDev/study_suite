@@ -15,6 +15,12 @@ const schema = z.object({
         timeoutMs: zInt.positive().default(60_000),
         /** Where failure screenshots are written. */
         debugDir: z.string().default('./debug'),
+        /**
+         * Only accept group names that already exist in the database. Leave off
+         * for a first run so the planning's groups are discovered, then purge the
+         * bogus rows and turn it on to stop them coming back.
+         */
+        strictGroups: zBool.default(false),
     }),
 })
 
@@ -31,6 +37,7 @@ export const config = loadConfig({
         SCRAPE_INTERVAL_MS: 'scrape.intervalMs',
         SCRAPE_TIMEOUT_MS: 'scrape.timeoutMs',
         SCRAPE_DEBUG_DIR: 'scrape.debugDir',
+        SCRAPE_STRICT_GROUPS: 'scrape.strictGroups',
     },
 })
 

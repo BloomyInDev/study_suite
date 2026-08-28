@@ -117,6 +117,7 @@ Scrapes a **Prose Consult** planning page via Playwright.
 | `SCRAPE_INTERVAL_MS` | `scrape.intervalMs` | `1800000` (30 min) |
 | `SCRAPE_TIMEOUT_MS` | `scrape.timeoutMs` | `60000` (per page action) |
 | `SCRAPE_DEBUG_DIR` | `scrape.debugDir` | `./debug` (failure screenshots) |
+| `SCRAPE_STRICT_GROUPS` | `scrape.strictGroups` | `false` (only accept known group names) |
 
 Run modes: watch loop (default) or `node index.js --once`.
 
@@ -142,6 +143,13 @@ Middle lines are categorized:
 - **Path line**: contains `/` — building hierarchy, discarded
 - **Room**: lines before the first teacher that are not path lines
 - **Group**: lines after the last teacher that are not path lines
+
+The site does not always emit a path line per room. When an event has no teacher,
+the boundary is the last path line, so a trailing room with no path of its own is
+read as a group (this is how `Salle 007` became a student group). With
+`scrape.strictGroups` enabled, only names already in `student_groups` are accepted
+and the rest are logged and dropped — run once without it to discover the real
+groups, purge the bogus rows, then turn it on.
 
 ---
 

@@ -15,3 +15,4 @@ data/
 /api.config.yaml
 /scraper.config.yaml
 debug/
+apps/scraper/dump.*

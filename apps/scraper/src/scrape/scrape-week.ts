@@ -24,6 +24,7 @@ async function scrapeWeek(
     weekId: number,
     db: Db,
     knownGroupNames: Set<string>,
+    strictGroups: boolean,
 ): Promise<WeekDiff> {
     await gotoWeek(page, weekId)
 
@@ -34,7 +35,7 @@ async function scrapeWeek(
     const parsed: ParsedEvent[] = []
     for (const { rawText, left } of rawEvents) {
         const dayIndex = Math.floor(left / columnWidth)
-        const event = parseEventText(rawText, dayIndex, weekDates, knownGroupNames)
+        const event = parseEventText(rawText, dayIndex, weekDates, knownGroupNames, strictGroups)
         if (event) parsed.push(event)
     }
 
@@ -68,7 +69,9 @@ export async function scrapeAllWeeks(
 
         const diffs: WeekDiff[] = []
         for (const weekId of weekIds) {
-            diffs.push(await scrapeWeek(page, weekId, db, knownGroupNames))
+            diffs.push(
+                await scrapeWeek(page, weekId, db, knownGroupNames, config.scrape.strictGroups),
+            )
         }
 
         const stats = await insertAllChanges(db, diffs)

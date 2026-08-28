@@ -14,3 +14,6 @@ scrape:
     timeoutMs: 60000
     # Failure screenshots land here (compose mounts ./debug)
     debugDir: ./debug
+    # Leave false for a first run to discover the planning's groups, purge the
+    # bogus rows, then set true so only known group names are accepted.
+    strictGroups: false

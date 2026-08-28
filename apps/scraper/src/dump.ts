@@ -42,7 +42,9 @@ try {
         const events = rawEvents.map(({ rawText, left }) => {
             const dayIndex = Math.floor(left / columnWidth)
             const parsed = parseEventText(rawText, dayIndex, weekDates, new Set())
-            return { date: weekDates[dayIndex] ?? null, parsed }
+            // rawText is what the parser actually saw — keep it, it is the only
+            // way to diagnose a miscategorised line after the fact.
+            return { date: weekDates[dayIndex] ?? null, rawText, parsed }
         })
 
         weeks.push({ weekId, weekDates, events })
