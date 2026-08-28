@@ -276,7 +276,7 @@ onMounted(fetchUsers)
                         density="compact"
                         variant="outlined"
                         clearable
-                        :items="groups.allGroups.map((g) => ({ title: groupLabel(g), value: g.id }))"
+                        :items="groups.visibleGroups.map((g) => ({ title: groupLabel(g), value: g.id }))"
                     />
                     <v-checkbox
                         v-model="editForm.isAdmin"

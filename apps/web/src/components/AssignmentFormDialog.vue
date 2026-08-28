@@ -186,7 +186,7 @@ async function deleteAssignment() {
                             density="compact"
                             hide-details
                             :disabled="!auth.isAdmin"
-                            :items="groups.allGroups.map((g) => ({ title: groupLabel(g), value: g.id }))"
+                            :items="groups.visibleGroups.map((g) => ({ title: groupLabel(g), value: g.id }))"
                         />
                     </v-col>
 

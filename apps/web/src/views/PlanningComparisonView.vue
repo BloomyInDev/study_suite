@@ -22,7 +22,7 @@ const INTERVAL_HEIGHT = 48
 const COMPARISON_COLORS = ['secondary', 'error', 'success', 'warning', 'info']
 
 const groupsThatCanBeCompared = computed(() =>
-    groupsStore.allGroups.filter((g) => !groupsStore.selectedGroupIds.includes(g.id)),
+    groupsStore.visibleGroups.filter((g) => !groupsStore.selectedGroupIds.includes(g.id)),
 )
 
 const categories = computed(() => {

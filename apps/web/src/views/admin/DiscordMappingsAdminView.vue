@@ -472,7 +472,7 @@ onMounted(fetchGuilds)
                     />
                     <v-select
                         v-model="mappingForm.studentGroupId"
-                        :items="groups.allGroups"
+                        :items="groups.visibleGroups"
                         :item-title="groupLabel"
                         item-value="id"
                         label="Classe"

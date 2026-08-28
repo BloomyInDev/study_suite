@@ -28,28 +28,43 @@ watch(show, (open) => {
     if (open) selected.value = [...groups.selectedGroupIds]
 })
 
+/**
+ * Hidden groups are not offered for selection, but they still hold the tree
+ * together, so walk through them and hang their children off the nearest
+ * visible ancestor instead of dropping the branch.
+ */
 function buildTree(list: Group[]): TreeNode[] {
     const nodes: TreeNode[] = []
     const visited = new Set<string>()
+    const byId = new Map(list.map((g) => [g.id, g]))
+    const visibleChildren = (group: Group): Group[] =>
+        (group.children ?? []).flatMap((ref) => {
+            const child = byId.get(ref.id)
+            if (!child) return []
+            return child.hidden ? visibleChildren(child) : [child]
+        })
 
     function traverse(group: Group, depth: number) {
         if (visited.has(group.id)) return
         visited.add(group.id)
-        const childRefs = group.children ?? []
-        const isLeaf = childRefs.length === 0
-        nodes.push({ group, depth, isLeaf })
+        const children = visibleChildren(group)
+        nodes.push({ group, depth, isLeaf: children.length === 0 })
         if (!collapsed.value.has(group.id)) {
-            for (const childRef of childRefs) {
-                const child = list.find((g) => g.id === childRef.id)
-                if (child) traverse(child, depth + 1)
-            }
+            for (const child of children) traverse(child, depth + 1)
         }
     }
 
-    const roots = list.filter((g) => !g.parents?.length)
-    for (const root of roots) traverse(root, 0)
+    const hasVisibleParent = (g: Group) =>
+        (g.parents ?? []).some((p) => {
+            const parent = byId.get(p.id)
+            return parent ? !parent.hidden : false
+        })
+
+    for (const root of list.filter((g) => !g.hidden && !hasVisibleParent(g))) traverse(root, 0)
     for (const g of list) {
-        if (!visited.has(g.id)) nodes.push({ group: g, depth: 0, isLeaf: !g.children?.length })
+        if (!g.hidden && !visited.has(g.id)) {
+            nodes.push({ group: g, depth: 0, isLeaf: !g.children?.length })
+        }
     }
     return nodes
 }
@@ -59,7 +74,7 @@ const treeNodes = computed(() => buildTree(groups.allGroups))
 const displayNodes = computed(() => {
     const q = search.value.trim().toLowerCase()
     if (!q) return treeNodes.value
-    return groups.allGroups
+    return groups.visibleGroups
         .filter((g) => groupLabel(g).toLowerCase().includes(q) || g.internalName.toLowerCase().includes(q))
         .map((g) => ({ group: g, depth: 0, isLeaf: !g.children?.length }))
 })

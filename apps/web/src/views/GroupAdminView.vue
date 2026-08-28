@@ -36,7 +36,7 @@ const addableParents = computed(() => {
 })
 
 // The admin view is the one place hidden groups must stay visible.
-onMounted(() => groupsStore.fetchAll(true))
+onMounted(() => groupsStore.fetchAll())
 
 async function saveDetails() {
     if (!dialogGroup.value) return
@@ -47,7 +47,7 @@ async function saveDetails() {
             param: { id: dialogGroup.value.id },
             json: { displayName: name === '' ? null : name, hidden: dialogGroup.value.hidden },
         })
-        await groupsStore.fetchAll(true)
+        await groupsStore.fetchAll()
         dialogGroup.value =
             groupsStore.allGroups.find((g) => g.id === dialogGroup.value!.id) ?? null
         notifs.success('Groupe mis à jour')
@@ -71,7 +71,7 @@ async function createGroup() {
             notifs.error(`Un groupe nommé « ${internalName} » existe déjà`)
             return
         }
-        await groupsStore.fetchAll(true)
+        await groupsStore.fetchAll()
         createOpen.value = false
         createInternalName.value = ''
         createDisplayName.value = ''
@@ -98,7 +98,7 @@ async function deleteGroup(force = false) {
             }
             return
         }
-        await groupsStore.fetchAll(true)
+        await groupsStore.fetchAll()
         dialogOpen.value = false
         dialogGroup.value = null
         notifs.success('Groupe supprimé')
@@ -130,7 +130,7 @@ async function addParent() {
                 }),
             ),
         )
-        await groupsStore.fetchAll(true)
+        await groupsStore.fetchAll()
         dialogGroup.value =
             groupsStore.allGroups.find((g) => g.id === dialogGroup.value!.id) ?? null
         addParentIds.value = []
@@ -146,7 +146,7 @@ async function removeParent(parent: GroupRef) {
         await backend.api.groups[':id'].parents[':parentId'].$delete({
             param: { id: dialogGroup.value.id, parentId: parent.id },
         })
-        await groupsStore.fetchAll(true)
+        await groupsStore.fetchAll()
         dialogGroup.value =
             groupsStore.allGroups.find((g) => g.id === dialogGroup.value!.id) ?? null
     } finally {

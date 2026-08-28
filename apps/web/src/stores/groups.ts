@@ -11,6 +11,9 @@ export const useGroupsStore = defineStore('groups', {
     }),
 
     getters: {
+        /** Groups offered to users; the admin view works off allGroups instead. */
+        visibleGroups: (state): Group[] => state.allGroups.filter((g) => !g.hidden),
+
         selectedGroups: (state): Group[] =>
             state.allGroups.filter((g) => state.selectedGroupIds.includes(g.id)),
 
@@ -31,10 +34,10 @@ export const useGroupsStore = defineStore('groups', {
     },
 
     actions: {
-        async fetchAll(includeHidden = false) {
-            const res = await backend.api.groups.$get({
-                query: includeHidden ? { includeHidden: 'true' } : {},
-            })
+        // Always the full graph: hiding is a display concern, but the hierarchy
+        // still has to resolve through hidden nodes (see effectiveGroupIds).
+        async fetchAll() {
+            const res = await backend.api.groups.$get({ query: { includeHidden: 'true' } })
             const { data } = await res.json()
             this.allGroups = data
         },
