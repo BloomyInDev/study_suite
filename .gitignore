@@ -14,3 +14,4 @@ data/
 # Deployment configs mounted by compose.yml
 /api.config.yaml
 /scraper.config.yaml
+debug/

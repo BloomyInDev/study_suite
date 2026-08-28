@@ -12,3 +12,5 @@ scrape:
     intervalMs: 1800000
     # Raise if the planning page is slow to render (Playwright default is 30000)
     timeoutMs: 60000
+    # Failure screenshots land here (compose mounts ./debug)
+    debugDir: ./debug

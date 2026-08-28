@@ -13,6 +13,8 @@ const schema = z.object({
         intervalMs: zInt.positive().default(1_800_000),
         /** Per-action cap for page loads and selector waits. */
         timeoutMs: zInt.positive().default(60_000),
+        /** Where failure screenshots are written. */
+        debugDir: z.string().default('./debug'),
     }),
 })
 
@@ -28,6 +30,7 @@ export const config = loadConfig({
         HEADLESS: 'scrape.headless',
         SCRAPE_INTERVAL_MS: 'scrape.intervalMs',
         SCRAPE_TIMEOUT_MS: 'scrape.timeoutMs',
+        SCRAPE_DEBUG_DIR: 'scrape.debugDir',
     },
 })
 

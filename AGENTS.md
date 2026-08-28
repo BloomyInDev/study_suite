@@ -116,6 +116,7 @@ Scrapes a **Prose Consult** planning page via Playwright.
 | `HEADLESS` | `scrape.headless` | `true` |
 | `SCRAPE_INTERVAL_MS` | `scrape.intervalMs` | `1800000` (30 min) |
 | `SCRAPE_TIMEOUT_MS` | `scrape.timeoutMs` | `60000` (per page action) |
+| `SCRAPE_DEBUG_DIR` | `scrape.debugDir` | `./debug` (failure screenshots) |
 
 Run modes: watch loop (default) or `node index.js --once`.
 

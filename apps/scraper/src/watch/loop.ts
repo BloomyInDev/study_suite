@@ -31,6 +31,11 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
             )
         } catch (err) {
             console.error('[scraper] Error during scrape:', err)
+            // A one-shot run is a manual/CI check: surface the failure.
+            if (runOnce) {
+                process.exitCode = 1
+                break
+            }
         }
 
         if (runOnce) break

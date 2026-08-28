@@ -2,6 +2,7 @@ import type { Page } from 'playwright'
 import { applyWeekEvents, createDb, insertAllChanges } from '@studysuite/db'
 import type { WeekDiff } from '@studysuite/db'
 import type { ParsedEvent } from '@studysuite/shared'
+import { captureFailure } from '../browser/debug.js'
 import { launchBrowser } from '../browser/launch.js'
 import { getAllWeekIds, gotoPlanning, gotoWeek } from '../browser/navigation.js'
 import type { Config } from '../config.js'
@@ -76,6 +77,10 @@ export async function scrapeAllWeeks(
         )
 
         return { ...stats, weeks: weekIds.length, durationMs: Date.now() - t0 }
+    } catch (err) {
+        // Screenshot while the page is still alive — finally closes the browser.
+        await captureFailure(page, config.scrape.debugDir)
+        throw err
     } finally {
         await browser.close()
     }

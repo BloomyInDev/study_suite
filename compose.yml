@@ -83,10 +83,13 @@ services:
         environment:
             DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
             CONFIG_PATH: /config.yaml
+            SCRAPE_DEBUG_DIR: /debug
         volumes:
             # Required — create scraper.config.yaml next to this file.
             # See apps/scraper/example.config.yaml. The scraper exits if it is missing.
             - ./scraper.config.yaml:/config.yaml:ro
+            # Screenshots written when a scrape fails.
+            - ./debug:/debug
         depends_on:
             postgres:
                 condition: service_healthy
