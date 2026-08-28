@@ -1,5 +1,5 @@
 # Use the official Playwright image — browsers + all system deps pre-installed
-FROM mcr.microsoft.com/playwright:v1.52.0-noble
+FROM mcr.microsoft.com/playwright:v1.60.0-noble
 WORKDIR /app
 
 RUN npm install -g pnpm@10
