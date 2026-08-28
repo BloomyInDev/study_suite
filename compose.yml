@@ -95,7 +95,10 @@ services:
         networks:
             - backend
             - egress
-        # The scraper runs once and exits. Use a cron / orchestrator to schedule it.
+        # The scraper schedules its own reruns, so it is not started by
+        # `up` — it is opt-in via its profile. One-shot pass to test the
+        # setup (scrapes once, exits, removes the container):
+        #   docker compose --profile scraper run --rm scraper
         profiles:
             - scraper
 
