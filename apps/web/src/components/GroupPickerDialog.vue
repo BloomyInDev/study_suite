@@ -54,13 +54,20 @@ function buildTree(list: Group[]): TreeNode[] {
         }
     }
 
-    const hasVisibleParent = (g: Group) =>
-        (g.parents ?? []).some((p) => {
+    // A group is a root only when nothing visible sits above it, hidden
+    // intermediates included — otherwise whether it renders nested or at the
+    // top level would depend on the order groups arrive in.
+    const hasVisibleAncestor = (g: Group, seen = new Set<string>()): boolean => {
+        if (seen.has(g.id)) return false
+        seen.add(g.id)
+        return (g.parents ?? []).some((p) => {
             const parent = byId.get(p.id)
-            return parent ? !parent.hidden : false
+            if (!parent) return false
+            return parent.hidden ? hasVisibleAncestor(parent, seen) : true
         })
+    }
 
-    for (const root of list.filter((g) => !g.hidden && !hasVisibleParent(g))) traverse(root, 0)
+    for (const root of list.filter((g) => !g.hidden && !hasVisibleAncestor(g))) traverse(root, 0)
     for (const g of list) {
         if (!g.hidden && !visited.has(g.id)) {
             nodes.push({ group: g, depth: 0, isLeaf: !g.children?.length })
