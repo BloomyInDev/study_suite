@@ -38,7 +38,8 @@ function toggleTheme() {
 
 onMounted(async () => {
     await groupsStore.onLoad()
-    if (groupsStore.selectedGroupIds.length === 0) {
+    // A signed-in student already has a class; only visitors need to pick one.
+    if (!groupsStore.usesAccountGroup && groupsStore.selectedGroupIds.length === 0) {
         pickerOpen.value = true
     }
 })

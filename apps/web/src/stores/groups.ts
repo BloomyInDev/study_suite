@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { backend } from '../lib/api.js'
 import type { Group } from '../lib/types.js'
+import { useAuthStore } from './auth.js'
 
 const LS_KEY = 'study_suite_selected_groups'
 
@@ -28,11 +29,28 @@ export const useGroupsStore = defineStore('groups', {
         /** Groups offered to users; the admin view works off allGroups instead. */
         visibleGroups: (state): Group[] => state.allGroups.filter((g) => !g.hidden),
 
-        selectedGroups: (state): Group[] =>
-            state.allGroups.filter((g) => state.selectedGroupIds.includes(g.id)),
+        /** The class attached to the account, when there is one. */
+        accountGroupId: (): string | null => useAuthStore().user?.studentGroupId ?? null,
 
-        effectiveGroupIds: (state): string[] => {
-            const ids = new Set(state.selectedGroupIds)
+        /**
+         * A signed-in student follows their own class — the manual picker is for
+         * visitors who have no account to read it from.
+         */
+        activeGroupIds(state): string[] {
+            return this.accountGroupId ? [this.accountGroupId] : state.selectedGroupIds
+        },
+
+        usesAccountGroup(): boolean {
+            return this.accountGroupId !== null
+        },
+
+        selectedGroups(state): Group[] {
+            return state.allGroups.filter((g) => this.activeGroupIds.includes(g.id))
+        },
+
+        effectiveGroupIds(state): string[] {
+            const active = this.activeGroupIds
+            const ids = new Set(active)
             const addAncestors = (groupId: string) => {
                 const group = state.allGroups.find((g) => g.id === groupId)
                 for (const parent of group?.parents ?? []) {
@@ -42,7 +60,7 @@ export const useGroupsStore = defineStore('groups', {
                     }
                 }
             }
-            for (const id of state.selectedGroupIds) addAncestors(id)
+            for (const id of active) addAncestors(id)
             return [...ids]
         },
     },

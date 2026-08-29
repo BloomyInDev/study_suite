@@ -78,6 +78,13 @@
       "when": 1787955081810,
       "tag": "0010_woozy_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1787963481067,
+      "tag": "0011_slim_tempest",
+      "breakpoints": true
     }
   ]
 }

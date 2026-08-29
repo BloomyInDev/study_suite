@@ -129,7 +129,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                         <v-progress-circular indeterminate color="primary" size="48" />
                     </v-card>
                 </template>
-                <template v-else-if="!groupStore.selectedGroupIds.length">
+                <template v-else-if="!groupStore.activeGroupIds.length">
                     <NoGroupsCard @open-picker="pickerOpen = true" />
                 </template>
                 <template v-else-if="currentOrNextEvent">

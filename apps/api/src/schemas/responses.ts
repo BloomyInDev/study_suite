@@ -100,6 +100,7 @@ export const UserDtoSchema = z
         isAdmin: z.boolean(),
         status: z.enum(['pending', 'approved', 'rejected']),
         studentGroupId: z.string().uuid().nullable(),
+        assignedGroupId: z.string().uuid().nullable(),
         teacherId: z.string().uuid().nullable(),
     })
     .openapi('User')

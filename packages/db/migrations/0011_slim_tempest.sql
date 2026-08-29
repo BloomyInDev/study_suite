@@ -1,0 +1,2 @@
+ALTER TABLE "user_students" ADD COLUMN "assigned_group_id" uuid;--> statement-breakpoint
+ALTER TABLE "user_students" ADD CONSTRAINT "user_students_assigned_group_id_student_groups_id_fk" FOREIGN KEY ("assigned_group_id") REFERENCES "public"."student_groups"("id") ON DELETE set null ON UPDATE no action;

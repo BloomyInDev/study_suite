@@ -3,7 +3,7 @@ import { eq, inArray } from 'drizzle-orm'
 import { sign } from 'hono/jwt'
 import { db } from '../db.js'
 import { users, discordGuilds, discordRoleMappings } from '@studysuite/db'
-import { userStudents, userTeachers } from '@studysuite/db'
+import { studentGroupMemberships, studentGroups, userStudents, userTeachers } from '@studysuite/db'
 import { config } from '../config.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 import { ErrorSchema, UserDtoSchema } from '../schemas/responses.js'
@@ -66,15 +66,33 @@ async function upsertProfile(
     if (role === 'student') {
         await db
             .insert(userStudents)
-            .values({ userId, studentGroupId: groupId })
+            .values({ userId, studentGroupId: groupId, assignedGroupId: groupId })
             .onConflictDoUpdate({
                 target: userStudents.userId,
-                set: { studentGroupId: groupId },
+                set: { studentGroupId: groupId, assignedGroupId: groupId },
             })
     } else {
         await db.insert(userTeachers).values({ userId }).onConflictDoNothing()
     }
 }
+
+/** Every group below `rootId`, walking the membership tree downwards. */
+async function getDescendantGroupIds(rootId: string): Promise<Set<string>> {
+    const result = new Set<string>()
+    let current = [rootId]
+    while (current.length > 0) {
+        const rows = await db
+            .select({ childId: studentGroupMemberships.childId })
+            .from(studentGroupMemberships)
+            .where(inArray(studentGroupMemberships.parentId, current))
+        const next = [...new Set(rows.map((r) => r.childId))].filter((id) => !result.has(id))
+        next.forEach((id) => result.add(id))
+        current = next
+    }
+    return result
+}
+
+const StudentGroupBodySchema = z.object({ studentGroupId: z.string().uuid() })
 
 const GuildWithRolesSchema = z
     .object({
@@ -350,6 +368,84 @@ app.openapi(
         }
         const token = await issueToken(enriched)
         return c.json({ data: userToDto(enriched), token }, 200)
+    },
+)
+
+app.openapi(
+    createRoute({
+        method: 'patch',
+        path: '/me/student-group',
+        operationId: 'updateMyStudentGroup',
+        tags: ['Auth'],
+        security: [{ Bearer: [] }],
+        middleware: [requireAuth] as const,
+        request: {
+            body: {
+                content: { 'application/json': { schema: StudentGroupBodySchema } },
+                required: true,
+            },
+        },
+        responses: {
+            200: {
+                content: { 'application/json': { schema: z.object({ data: UserDtoSchema }) } },
+                description: 'Updated profile',
+            },
+            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unknown group' },
+        },
+    }),
+    async (c) => {
+        const payload = c.get('user')
+        const { studentGroupId } = c.req.valid('json')
+
+        const target = await db.query.studentGroups.findFirst({
+            where: eq(studentGroups.id, studentGroupId),
+        })
+        if (!target) {
+            return c.json({ error: { code: 'NOT_FOUND', message: 'Group not found' } }, 404)
+        }
+
+        const [student] = await db
+            .select()
+            .from(userStudents)
+            .where(eq(userStudents.userId, payload.sub))
+        if (!student) {
+            return c.json(
+                {
+                    error: {
+                        code: 'NOT_A_STUDENT',
+                        message: 'Only a student profile can pick a group',
+                    },
+                },
+                403,
+            )
+        }
+
+        // A Discord role can only map to the class staff knows about (S1), so a
+        // student may move anywhere at or below it — including back up to it.
+        const anchor = student.assignedGroupId ?? student.studentGroupId
+        if (anchor && anchor !== studentGroupId) {
+            const allowed = await getDescendantGroupIds(anchor)
+            if (!allowed.has(studentGroupId)) {
+                return c.json(
+                    {
+                        error: {
+                            code: 'GROUP_NOT_ALLOWED',
+                            message: 'Pick a subgroup of your own group, or ask an admin',
+                        },
+                    },
+                    403,
+                )
+            }
+        }
+
+        await db
+            .update(userStudents)
+            .set({ studentGroupId })
+            .where(eq(userStudents.userId, payload.sub))
+
+        const enriched = await fetchEnrichedUser(eq(users.id, payload.sub))
+        return c.json({ data: userToDto(enriched!) }, 200)
     },
 )
 

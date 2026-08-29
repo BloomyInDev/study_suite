@@ -5,6 +5,7 @@ import { db } from '../db.js'
 export type EnrichedUser = typeof users.$inferSelect & {
     role: 'student' | 'teacher' | null
     studentGroupId: string | null
+    assignedGroupId: string | null
     teacherId: string | null
 }
 
@@ -18,6 +19,7 @@ export function userToDto(user: EnrichedUser) {
         isAdmin: user.isAdmin,
         status: user.status,
         studentGroupId: user.studentGroupId,
+        assignedGroupId: user.assignedGroupId,
         teacherId: user.teacherId,
     }
 }
@@ -36,6 +38,7 @@ type RawRow = {
     _studentUserId: string | null
     _teacherUserId: string | null
     studentGroupId: string | null
+    assignedGroupId: string | null
     teacherId: string | null
 }
 
@@ -44,6 +47,7 @@ function toEnriched({ _studentUserId, _teacherUserId, ...rest }: RawRow): Enrich
         ...rest,
         role: _studentUserId ? 'student' : _teacherUserId ? 'teacher' : null,
         studentGroupId: rest.studentGroupId ?? null,
+        assignedGroupId: rest.assignedGroupId ?? null,
         teacherId: rest.teacherId ?? null,
     }
 }
@@ -62,6 +66,7 @@ const enrichedSelect = {
     _studentUserId: userStudents.userId,
     _teacherUserId: userTeachers.userId,
     studentGroupId: userStudents.studentGroupId,
+    assignedGroupId: userStudents.assignedGroupId,
     teacherId: userTeachers.teacherId,
 }
 

@@ -11,6 +11,7 @@ export interface AuthUser {
     isAdmin: boolean
     status: 'pending' | 'approved' | 'rejected'
     studentGroupId: string | null
+    assignedGroupId: string | null
     teacherId: string | null
 }
 
