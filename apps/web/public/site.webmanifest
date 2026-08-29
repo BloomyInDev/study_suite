@@ -1,0 +1,17 @@
+{
+    "name": "Study Suite",
+    "short_name": "Study Suite",
+    "description": "Emploi du temps, devoirs et salles de l'IUT",
+    "lang": "fr",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "theme_color": "#1867c0",
+    "background_color": "#ffffff",
+    "icons": [
+        { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any" },
+        { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192" },
+        { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512" },
+        { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "maskable" }
+    ]
+}

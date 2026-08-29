@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useDisplay, useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useGroupsStore } from './stores/groups.js'
@@ -41,16 +41,16 @@ onMounted(async () => {
 const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH
 const shortHash = commitHash?.slice(0, 7) ?? 'unknown'
 
-const allNavItems = [
-    { title: 'Accueil', icon: 'mdi-home', to: '/', auth: false },
-    { title: 'Planning', icon: 'mdi-calendar', to: '/planning', auth: false },
-    { title: 'Devoirs', icon: 'mdi-book-edit', to: '/homework', auth: true },
-    { title: 'Enseignants', icon: 'mdi-account-tie', to: '/teachers', auth: true },
-    { title: 'Salles', icon: 'mdi-door', to: '/rooms', auth: true },
-    { title: 'Profil', icon: 'mdi-account', to: '/profile', auth: true },
+// Every page stays listed: the router sends a visitor to /login when a page
+// needs an account, which explains the app better than hiding it would.
+const navItems = [
+    { title: 'Accueil', icon: 'mdi-home', to: '/' },
+    { title: 'Planning', icon: 'mdi-calendar', to: '/planning' },
+    { title: 'Devoirs', icon: 'mdi-book-edit', to: '/homework' },
+    { title: 'Enseignants', icon: 'mdi-account-tie', to: '/teachers' },
+    { title: 'Salles', icon: 'mdi-door', to: '/rooms' },
+    { title: 'Profil', icon: 'mdi-account', to: '/profile' },
 ]
-
-const navItems = computed(() => allNavItems.filter((i) => !i.auth || auth.isAuthenticated))
 </script>
 
 <template>
@@ -68,7 +68,7 @@ const navItems = computed(() => allNavItems.filter((i) => !i.auth || auth.isAuth
                     @click="drawerOpen = false"
                 />
             </v-list>
-            <template #append>
+            <template #append v-if="auth.isAdmin">
                 <v-divider />
                 <v-list nav density="compact">
                     <v-list-item
