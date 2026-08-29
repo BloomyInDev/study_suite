@@ -53,7 +53,7 @@ async function saveClass() {
     if (!classDraft.value) return
     savingGroup.value = true
     try {
-        const res = await fetch(`${API_URL}/auth/me/student-group`, {
+        const res = await fetch(`${API_URL}/api/auth/me/student-group`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',

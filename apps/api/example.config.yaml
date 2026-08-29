@@ -14,7 +14,7 @@ discord:
     # clientId: "your_discord_app_client_id"
     # clientSecret: "your_discord_app_client_secret"
     # guildId: "your_discord_server_id"
-    # redirectUri: http://localhost:3000/auth/discord/callback
+    # redirectUri: http://localhost:3000/api/auth/discord/callback
 
 jwt:
     # secret: "a_random_secret_at_least_32_characters_long"

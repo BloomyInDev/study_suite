@@ -34,7 +34,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     async function refresh(): Promise<void> {
         if (!token.value) return
-        const res = await fetch(`${API_URL}/auth/me`, {
+        const res = await fetch(`${API_URL}/api/auth/me`, {
             headers: { Authorization: `Bearer ${token.value}` },
         })
         if (!res.ok) return

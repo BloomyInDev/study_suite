@@ -164,11 +164,11 @@ Hono server on Bun, port 3000.
 
 | Method | Path                                        | Auth  | Description                                                        |
 | ------ | ------------------------------------------- | ----- | ------------------------------------------------------------------ |
-| GET    | `/health`                                   | —     | Health check                                                       |
-| GET    | `/auth/discord`                             | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
-| GET    | `/auth/discord/callback`                    | —     | Exchange code, upsert user, issue JWT                              |
-| GET    | `/auth/discord/my-guilds`                   | user  | User's guilds + roles from stored Discord token                    |
-| GET    | `/auth/me`                                  | user  | Refresh JWT and return user DTO                                    |
+| GET    | `/api/health`                               | —     | Health check                                                       |
+| GET    | `/api/auth/discord`                             | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
+| GET    | `/api/auth/discord/callback`                    | —     | Exchange code, upsert user, issue JWT                              |
+| GET    | `/api/auth/discord/my-guilds`                   | user  | User's guilds + roles from stored Discord token                    |
+| GET    | `/api/auth/me`                                  | user  | Refresh JWT and return user DTO                                    |
 | GET    | `/api/events/week`                          | —     | Events for a week (`?date=`)                                       |
 | GET    | `/api/events/day`                           | —     | Events for a day (`?date=`)                                        |
 | GET    | `/api/events/upcoming`                      | —     | Next N events (`?limit=`)                                          |
@@ -193,8 +193,8 @@ Hono server on Bun, port 3000.
 
 **Discord OAuth flow**:
 
-1. `/auth/discord` → encodes optional `clientRedirectUri` in base64url `state` param
-2. `/auth/discord/callback` → exchanges code, fetches `@me` + member roles across all configured guilds in parallel
+1. `/api/auth/discord` → encodes optional `clientRedirectUri` in base64url `state` param
+2. `/api/auth/discord/callback` → exchanges code, fetches `@me` + member roles across all configured guilds in parallel
 3. If any guild role matches a `discord_role_mappings` entry → auto-approve user, assign `studentGroupId`
 4. Issues JWT; redirects to `clientRedirectUri?token=...` if provided
 

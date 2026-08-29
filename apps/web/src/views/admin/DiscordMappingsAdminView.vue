@@ -77,7 +77,7 @@ async function fetchMyDiscordGuilds() {
     loadingDiscordGuilds.value = true
     myDiscordGuilds.value = []
     try {
-        const res = await fetch(`${API_URL}/auth/discord/my-guilds`, { headers: authHeaders() })
+        const res = await fetch(`${API_URL}/api/auth/discord/my-guilds`, { headers: authHeaders() })
         if (!res.ok) {
             const body = (await res.json()) as { error: { code: string } }
             if (body.error.code === 'TOKEN_EXPIRED' || body.error.code === 'NO_TOKEN') {

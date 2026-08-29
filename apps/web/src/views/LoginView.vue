@@ -12,7 +12,7 @@ const errorMessages: Record<string, string> = {
 }
 
 const callbackUri = encodeURIComponent(window.location.origin + '/auth/callback')
-const discordLoginUrl = `${API_URL}/auth/discord?redirect_uri=${callbackUri}`
+const discordLoginUrl = `${API_URL}/api/auth/discord?redirect_uri=${callbackUri}`
 </script>
 
 <template>
