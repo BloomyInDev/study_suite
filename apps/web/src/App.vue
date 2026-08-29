@@ -25,6 +25,11 @@ function logout() {
     router.push('/login')
 }
 
+function logoutFromDrawer() {
+    drawerOpen.value = false
+    logout()
+}
+
 function toggleTheme() {
     isDark.value = !isDark.value
     theme.change(isDark.value ? 'dark' : 'light')
@@ -68,13 +73,28 @@ const navItems = [
                     @click="drawerOpen = false"
                 />
             </v-list>
-            <template #append v-if="auth.isAdmin">
+            <template #append>
                 <v-divider />
                 <v-list nav density="compact">
                     <v-list-item
+                        v-if="auth.isAdmin"
                         prepend-icon="mdi-shield-crown"
                         title="Admin"
                         to="/admin"
+                        @click="drawerOpen = false"
+                    />
+                    <v-list-item
+                        v-if="auth.isAuthenticated"
+                        prepend-icon="mdi-logout"
+                        title="Se déconnecter"
+                        :subtitle="auth.user?.discordUsername"
+                        @click="logoutFromDrawer"
+                    />
+                    <v-list-item
+                        v-else
+                        prepend-icon="mdi-login"
+                        title="Se connecter"
+                        to="/login"
                         @click="drawerOpen = false"
                     />
                 </v-list>
