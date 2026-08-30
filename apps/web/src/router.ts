@@ -28,11 +28,9 @@ export const router = createRouter({
             component: () => import('./views/AssignmentsView.vue'),
             meta: { requiresAuth: true },
         },
-        {
-            path: '/profile',
-            component: () => import('./views/ProfileView.vue'),
-            meta: { requiresAuth: true },
-        },
+        // No auth: a visitor's group selection lives here too, and the view
+        // already picks the right card for account holders and visitors alike.
+        { path: '/profile', component: () => import('./views/ProfileView.vue') },
         {
             path: '/admin',
             component: () => import('./layouts/AdminLayout.vue'),
