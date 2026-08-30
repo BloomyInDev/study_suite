@@ -155,8 +155,11 @@ async function toggleDone(a: Assignment, done: boolean) {
                 </template>
             </v-col>
 
+            <!-- Shown even with nothing due, so the card can say so. Gated on
+                 having a group because that is what decides whether assignments
+                 were fetched at all: without one, empty means unasked. -->
             <v-col
-                v-if="auth.isAuthenticated && upcomingAssignments.length > 0"
+                v-if="auth.isAuthenticated && groupStore.effectiveGroupIds.length > 0"
                 cols="12"
                 md="8"
                 lg="6"
