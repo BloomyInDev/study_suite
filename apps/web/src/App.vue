@@ -37,6 +37,10 @@ function toggleTheme() {
 }
 
 onMounted(async () => {
+    // auth.user is restored from localStorage, so it still holds whatever was
+    // true at the last login: a class an admin has since changed, a status that
+    // has since been approved. Re-read it before anything branches on it.
+    await auth.refresh()
     await groupsStore.onLoad()
     // A signed-in student already has a class; only visitors need to pick one.
     if (!groupsStore.usesAccountGroup && groupsStore.selectedGroupIds.length === 0) {

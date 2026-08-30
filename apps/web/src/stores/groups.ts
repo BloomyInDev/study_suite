@@ -48,20 +48,30 @@ export const useGroupsStore = defineStore('groups', {
             return state.allGroups.filter((g) => this.activeGroupIds.includes(g.id))
         },
 
-        effectiveGroupIds(state): string[] {
-            const active = this.activeGroupIds
-            const ids = new Set(active)
-            const addAncestors = (groupId: string) => {
-                const group = state.allGroups.find((g) => g.id === groupId)
-                for (const parent of group?.parents ?? []) {
-                    if (!ids.has(parent.id)) {
-                        ids.add(parent.id)
-                        addAncestors(parent.id)
+        /**
+         * A group inherits its ancestors' events: a promo-wide lecture is tagged
+         * on `BUT1`, not on `S5`. Anything asking the api for a group's events
+         * has to widen the ids first or it silently drops those.
+         */
+        withAncestors(state) {
+            return (groupIds: string[]): string[] => {
+                const ids = new Set(groupIds)
+                const addAncestors = (groupId: string) => {
+                    const group = state.allGroups.find((g) => g.id === groupId)
+                    for (const parent of group?.parents ?? []) {
+                        if (!ids.has(parent.id)) {
+                            ids.add(parent.id)
+                            addAncestors(parent.id)
+                        }
                     }
                 }
+                for (const id of groupIds) addAncestors(id)
+                return [...ids]
             }
-            for (const id of active) addAncestors(id)
-            return [...ids]
+        },
+
+        effectiveGroupIds(): string[] {
+            return this.withAncestors(this.activeGroupIds)
         },
     },
 

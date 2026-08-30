@@ -21,8 +21,10 @@ const INTERVAL_HEIGHT = 48
 
 const COMPARISON_COLORS = ['secondary', 'error', 'success', 'warning', 'info']
 
+// activeGroupIds, not selectedGroupIds: an account-bound student never touches
+// the local picker, so filtering on that offered them their own class.
 const groupsThatCanBeCompared = computed(() =>
-    groupsStore.visibleGroups.filter((g) => !groupsStore.selectedGroupIds.includes(g.id)),
+    groupsStore.visibleGroups.filter((g) => !groupsStore.activeGroupIds.includes(g.id)),
 )
 
 const categories = computed(() => {
@@ -93,7 +95,9 @@ watch(
 )
 
 watch(
-    [date, comparisonGroupIds],
+    // allGroups is a source of its own: the hierarchy lands after the first
+    // fetch, and until it does withAncestors can only return the id itself.
+    [date, comparisonGroupIds, () => groupsStore.allGroups],
     async ([newDate, newGroupIds], _, onCleanup) => {
         let cancelled = false
         onCleanup(() => {
@@ -108,7 +112,11 @@ watch(
         try {
             const results = await Promise.all(
                 ids.map(async (id) => {
-                    const evts = await eventsStore.fetchEvents([id], Duration.DAY, newDate as Date)
+                    const evts = await eventsStore.fetchEvents(
+                        groupsStore.withAncestors([id]),
+                        Duration.DAY,
+                        newDate as Date,
+                    )
                     return [id, evts] as const
                 }),
             )
@@ -179,6 +187,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                         :model-value="date"
                         type="category"
                         :categories="categories"
+                        category-show-all
                         :weekday-format="weekdayFormat"
                         :interval-format="formatInterval"
                         :first-interval="6"
