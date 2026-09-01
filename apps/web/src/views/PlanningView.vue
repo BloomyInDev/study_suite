@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
-import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
+import { useGroupsStore } from '../stores/groups.js'
+import { useGroupOverride } from '../lib/group-override.js'
+import { groupLabel } from '../lib/group-label.js'
 import type { Event } from '../lib/types.js'
 import CalendarEvent from '../components/CalendarEvent.vue'
 import {
@@ -15,6 +17,14 @@ import {
 
 const { mobile } = useDisplay()
 const groups = useGroupsStore()
+const override = useGroupOverride()
+
+// A single v-model over the url: picking a group writes `?group=`, clearing it
+// (or picking one's own class) removes it.
+const pickedGroupIds = computed({
+    get: () => override.pickedIds.value,
+    set: (ids: string[]) => override.set(ids),
+})
 const eventsStore = useEventsStore()
 const events = ref<Event[]>([])
 const date = ref(new Date())
@@ -29,13 +39,19 @@ onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 watch(
-    [() => groups.effectiveGroupIds, date],
-    async ([newGroupIds, newDate], [_oldIds, oldDate]) => {
+    [() => override.groupIds.value, date],
+    async ([newGroupIds, newDate], [oldGroupIds, oldDate]) => {
         if (newGroupIds.length === 0) {
             events.value = []
             return
         }
+        // Paging within a week shows the same events; a group change never does.
+        const sameGroups =
+            oldGroupIds !== undefined &&
+            oldGroupIds.length === newGroupIds.length &&
+            newGroupIds.every((id) => oldGroupIds.includes(id))
         if (
+            sameGroups &&
             oldDate &&
             mondayOfWeek(newDate as Date).getTime() === mondayOfWeek(oldDate as Date).getTime()
         )
@@ -71,8 +87,53 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
 
 <template>
     <v-container fluid class="pa-4">
+        <v-alert
+            v-if="override.isActive.value"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+            icon="mdi-account-switch"
+        >
+            <div class="d-flex align-center ga-2 flex-wrap">
+                <span>
+                    Vous consultez le planning de
+                    <strong>{{ override.labels.value.join(', ') }}</strong>
+                    au lieu du vôtre.
+                </span>
+                <v-spacer />
+                <v-btn size="small" variant="text" @click="override.clear()">
+                    Revenir au mien
+                </v-btn>
+            </div>
+        </v-alert>
+        <v-alert
+            v-else-if="override.unknownNames.value.length > 0"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+        >
+            Groupe introuvable : {{ override.unknownNames.value.join(', ') }}.
+        </v-alert>
         <v-row align="center" class="mb-4">
-            <v-col cols="4" class="d-none d-md-flex" />
+            <v-col cols="12" md="4" class="d-flex align-center">
+                <v-autocomplete
+                    v-model="pickedGroupIds"
+                    :items="groups.visibleGroups"
+                    :item-title="groupLabel"
+                    item-value="id"
+                    label="Voir le planning de..."
+                    multiple
+                    chips
+                    closable-chips
+                    clearable
+                    density="compact"
+                    variant="outlined"
+                    hide-details
+                    style="max-width: 350px"
+                />
+            </v-col>
             <v-col md="4" class="d-flex justify-start justify-md-center align-center">
                 <v-btn
                     variant="text"
