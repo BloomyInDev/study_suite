@@ -7,11 +7,12 @@ import { dateToUTC } from '../lib/date.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { DateFormatSchema, OptionalDateRangeSchema, SearchSchema } from '../schemas/query.js'
 import {
-    ErrorSchema,
     EventDtoSchema,
     IdParamSchema,
     TeacherDetailSchema,
     TeacherSchema,
+    dataResponse,
+    errorResponse,
 } from '../schemas/responses.js'
 
 async function busyTeacherIds(at: Date): Promise<Set<string>> {
@@ -33,13 +34,11 @@ export default app
             method: 'get',
             path: '/search',
             operationId: 'searchTeachers',
+            summary: 'Search teachers by name',
             tags: ['Teachers'],
             request: { query: SearchSchema },
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(TeacherSchema) }) } },
-                    description: 'Search results',
-                },
+                200: dataResponse(z.array(TeacherSchema), 'Search results'),
             },
         }),
         async (c) => {
@@ -57,12 +56,10 @@ export default app
             method: 'get',
             path: '/',
             operationId: 'listTeachers',
+            summary: 'List all teachers',
             tags: ['Teachers'],
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(TeacherSchema) }) } },
-                    description: 'All teachers with availability',
-                },
+                200: dataResponse(z.array(TeacherSchema), 'All teachers with availability'),
             },
         }),
         async (c) => {
@@ -79,17 +76,15 @@ export default app
             method: 'get',
             path: '/{id}',
             operationId: 'getTeacher',
+            summary: 'Get one teacher and what they are teaching now',
             tags: ['Teachers'],
             request: {
                 params: IdParamSchema,
                 query: z.object({ dateFormat: DateFormatSchema }),
             },
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: TeacherDetailSchema }) } },
-                    description: 'Teacher detail with current event',
-                },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                200: dataResponse(TeacherDetailSchema, 'Teacher detail with current event'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {
@@ -122,14 +117,12 @@ export default app
             method: 'get',
             path: '/{id}/events',
             operationId: 'listTeacherEvents',
+            summary: "List a teacher's events",
             tags: ['Teachers'],
             request: { params: IdParamSchema, query: OptionalDateRangeSchema },
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(EventDtoSchema) }) } },
-                    description: 'Events for the teacher',
-                },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                200: dataResponse(z.array(EventDtoSchema), 'Events for the teacher'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {

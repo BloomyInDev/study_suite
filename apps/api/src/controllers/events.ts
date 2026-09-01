@@ -12,9 +12,13 @@ import {
     FilteredEventsSchema,
     LimitSchema,
 } from '../schemas/query.js'
-import { ErrorSchema, EventDtoSchema, IdParamSchema } from '../schemas/responses.js'
-
-const EventList = z.object({ data: z.array(EventDtoSchema) })
+import {
+    EventDtoSchema,
+    IdParamSchema,
+    dataResponse,
+    errorResponse,
+    jsonResponse,
+} from '../schemas/responses.js'
 
 export default new OpenAPIHono()
     .openapi(
@@ -22,12 +26,10 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/titles',
             operationId: 'listEventTitles',
+            summary: 'List distinct course titles',
             tags: ['Events'],
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(z.string()) }) } },
-                    description: 'Distinct event titles',
-                },
+                200: dataResponse(z.array(z.string()), 'Distinct event titles'),
             },
         }),
         async (c) => {
@@ -43,10 +45,12 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/week',
             operationId: 'getWeekEvents',
+            summary: 'List a week of events',
+            description: 'Returns the Monday-to-Sunday week containing `date`.',
             tags: ['Events'],
             request: { query: DateParamSchema },
             responses: {
-                200: { content: { 'application/json': { schema: EventList } }, description: 'Events for the week' },
+                200: dataResponse(z.array(EventDtoSchema), 'Events for the week'),
             },
         }),
         async (c) => {
@@ -66,10 +70,11 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/day',
             operationId: 'getDayEvents',
+            summary: 'List a day of events',
             tags: ['Events'],
             request: { query: DateParamSchema },
             responses: {
-                200: { content: { 'application/json': { schema: EventList } }, description: 'Events for the day' },
+                200: dataResponse(z.array(EventDtoSchema), 'Events for the day'),
             },
         }),
         async (c) => {
@@ -89,10 +94,13 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/upcoming',
             operationId: 'getUpcomingEvents',
+            summary: 'List the next events',
+            description:
+                'Filtering by `groupIds` happens in SQL, before the limit, so the caller gets `limit` events for those groups rather than the next `limit` events overall.',
             tags: ['Events'],
             request: { query: LimitSchema },
             responses: {
-                200: { content: { 'application/json': { schema: EventList } }, description: 'Upcoming events' },
+                200: dataResponse(z.array(EventDtoSchema), 'Upcoming events'),
             },
         }),
         async (c) => {
@@ -124,10 +132,12 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/',
             operationId: 'listEvents',
+            summary: 'Search events',
+            description: 'All filters are optional and combine with AND.',
             tags: ['Events'],
             request: { query: FilteredEventsSchema },
             responses: {
-                200: { content: { 'application/json': { schema: EventList } }, description: 'Filtered events' },
+                200: dataResponse(z.array(EventDtoSchema), 'Filtered events'),
             },
         }),
         async (c) => {
@@ -146,14 +156,15 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/{id}',
             operationId: 'getEvent',
+            summary: 'Get one event',
             tags: ['Events'],
             request: {
                 params: IdParamSchema,
                 query: z.object({ dateFormat: DateFormatSchema }),
             },
             responses: {
-                200: { content: { 'application/json': { schema: EventDtoSchema } }, description: 'Event detail' },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                200: jsonResponse(EventDtoSchema, 'Event detail'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {

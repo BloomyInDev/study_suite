@@ -1,5 +1,6 @@
 import { swaggerUI } from '@hono/swagger-ui'
 import { OpenAPIHono } from '@hono/zod-openapi'
+import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
 import authController from './controllers/auth.js'
@@ -51,8 +52,11 @@ const app = _app
             .route('/calendar.ics', calendarController),
     )
     // Transitional: Discord may still call back on the pre-/api path until the
-    // developer portal entry is updated. Remove once that is done.
-    .route('/auth', authController)
+    // developer portal entry is updated. Remove once that is done. The plain
+    // Hono wrapper keeps the alias serving while leaving it out of the OpenAPI
+    // document — `route` only merges the registry of an OpenAPIHono — so the
+    // spec advertises each auth route once, under /api.
+    .route('/auth', new Hono().route('/', authController))
     .route(
         '/api/admin',
         new OpenAPIHono()

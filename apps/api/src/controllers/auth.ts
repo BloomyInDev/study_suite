@@ -6,7 +6,7 @@ import { users, discordGuilds, discordRoleMappings } from '@studysuite/db'
 import { studentGroupMemberships, studentGroups, userStudents, userTeachers } from '@studysuite/db'
 import { config } from '../config.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
-import { ErrorSchema, UserDtoSchema } from '../schemas/responses.js'
+import { UserDtoSchema, dataResponse, errorResponse, jsonResponse } from '../schemas/responses.js'
 import { fetchEnrichedUser, userToDto, type EnrichedUser } from '../lib/users.js'
 
 export type { EnrichedUser }
@@ -110,6 +110,9 @@ app.openapi(
         method: 'get',
         path: '/discord',
         operationId: 'discordLogin',
+        summary: 'Start the Discord OAuth2 flow',
+        description:
+            'Redirects to Discord. An optional `clientRedirectUri` is carried through the `state` parameter and receives the token at the end of the flow.',
         tags: ['Auth'],
         request: { query: z.object({ redirect_uri: z.string().url().optional() }) },
         responses: {
@@ -137,19 +140,18 @@ app.openapi(
         method: 'get',
         path: '/discord/callback',
         operationId: 'discordCallback',
+        summary: 'Finish the Discord OAuth2 flow',
+        description:
+            'Exchanges the code, upserts the user, and auto-approves them when one of their Discord roles matches a configured mapping. Redirects with `?token=` when the flow began with a `clientRedirectUri`, otherwise answers with the token as JSON.',
         tags: ['Auth'],
         request: { query: z.object({ code: z.string().optional(), state: z.string().optional() }) },
         responses: {
             302: { description: 'Redirect back to client with token' },
-            200: {
-                content: {
-                    'application/json': {
-                        schema: z.object({ data: UserDtoSchema, token: z.string() }),
-                    },
-                },
-                description: 'Auth result (when no clientRedirectUri)',
-            },
-            400: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Auth error' },
+            200: jsonResponse(
+                z.object({ data: UserDtoSchema, token: z.string() }),
+                'Auth result (when no clientRedirectUri)',
+            ),
+            400: errorResponse('Auth error'),
         },
     }),
     async (c) => {
@@ -282,17 +284,17 @@ app.openapi(
         method: 'get',
         path: '/discord/my-guilds',
         operationId: 'getMyGuilds',
+        summary: "List the caller's Discord guilds and roles",
+        description:
+            'Read live from Discord with the token stored at login; answers 400 once that token is gone.',
         tags: ['Auth'],
         security: [{ Bearer: [] }],
         middleware: [requireAuth] as const,
         responses: {
-            200: {
-                content: { 'application/json': { schema: z.object({ data: z.array(GuildWithRolesSchema) }) } },
-                description: "User's Discord guilds with roles",
-            },
-            400: { content: { 'application/json': { schema: ErrorSchema } }, description: 'No token stored' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            502: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Discord error' },
+            200: dataResponse(z.array(GuildWithRolesSchema), "User's Discord guilds with roles"),
+            400: errorResponse('No token stored'),
+            401: errorResponse('Unauthorized'),
+            502: errorResponse('Discord error'),
         },
     }),
     async (c) => {
@@ -346,18 +348,17 @@ app.openapi(
         method: 'get',
         path: '/me',
         operationId: 'getMe',
+        summary: 'Get the current user and refresh the token',
         tags: ['Auth'],
         security: [{ Bearer: [] }],
         middleware: [requireAuth] as const,
         responses: {
-            200: {
-                content: {
-                    'application/json': { schema: z.object({ data: UserDtoSchema, token: z.string() }) },
-                },
-                description: 'Current user with refreshed token',
-            },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: jsonResponse(
+                z.object({ data: UserDtoSchema, token: z.string() }),
+                'Current user with refreshed token',
+            ),
+            401: errorResponse('Unauthorized'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {
@@ -376,6 +377,7 @@ app.openapi(
         method: 'patch',
         path: '/me/student-group',
         operationId: 'updateMyStudentGroup',
+        summary: 'Choose your own student group',
         tags: ['Auth'],
         security: [{ Bearer: [] }],
         middleware: [requireAuth] as const,
@@ -386,12 +388,9 @@ app.openapi(
             },
         },
         responses: {
-            200: {
-                content: { 'application/json': { schema: z.object({ data: UserDtoSchema }) } },
-                description: 'Updated profile',
-            },
-            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unknown group' },
+            200: dataResponse(UserDtoSchema, 'Updated profile'),
+            403: errorResponse('Forbidden'),
+            404: errorResponse('Unknown group'),
         },
     }),
     async (c) => {

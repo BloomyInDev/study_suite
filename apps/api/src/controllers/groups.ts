@@ -12,7 +12,13 @@ import { db } from '../db.js'
 import { requireAdmin, requireAuth } from '../middleware/auth.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { OptionalDateRangeSchema } from '../schemas/query.js'
-import { ErrorSchema, EventDtoSchema, GroupSchema, IdParamSchema } from '../schemas/responses.js'
+import {
+    EventDtoSchema,
+    GroupSchema,
+    IdParamSchema,
+    dataResponse,
+    errorResponse,
+} from '../schemas/responses.js'
 
 const ParentBodySchema = z.object({ parentId: z.string().uuid() })
 
@@ -80,13 +86,11 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/',
             operationId: 'listGroups',
+            summary: 'List all groups with their hierarchy',
             tags: ['Groups'],
             request: { query: ListGroupsQuerySchema },
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(GroupSchema) }) } },
-                    description: 'All groups with hierarchy',
-                },
+                200: dataResponse(z.array(GroupSchema), 'All groups with hierarchy'),
             },
         }),
         async (c) => {
@@ -104,11 +108,12 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/{id}',
             operationId: 'getGroup',
+            summary: 'Get one group with its hierarchy',
             tags: ['Groups'],
             request: { params: IdParamSchema },
             responses: {
-                200: { content: { 'application/json': { schema: z.object({ data: GroupSchema }) } }, description: 'Group with hierarchy' },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                200: dataResponse(GroupSchema, 'Group with hierarchy'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {
@@ -127,14 +132,12 @@ export default new OpenAPIHono()
             method: 'get',
             path: '/{id}/events',
             operationId: 'listGroupEvents',
+            summary: "List a group's events",
             tags: ['Groups'],
             request: { params: IdParamSchema, query: OptionalDateRangeSchema },
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(EventDtoSchema) }) } },
-                    description: 'Events for the group',
-                },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                200: dataResponse(z.array(EventDtoSchema), 'Events for the group'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {
@@ -170,6 +173,7 @@ export default new OpenAPIHono()
             middleware: [requireAuth, requireAdmin] as const,
             security: [{ Bearer: [] }],
             operationId: 'updateGroup',
+            summary: 'Rename or hide a group',
             tags: ['Groups'],
             request: {
                 params: IdParamSchema,
@@ -179,11 +183,8 @@ export default new OpenAPIHono()
                 },
             },
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: GroupSchema }) } },
-                    description: 'Updated group',
-                },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                200: dataResponse(GroupSchema, 'Updated group'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {
@@ -217,6 +218,7 @@ export default new OpenAPIHono()
             middleware: [requireAuth, requireAdmin] as const,
             security: [{ Bearer: [] }],
             operationId: 'createGroup',
+            summary: 'Create a group',
             tags: ['Groups'],
             request: {
                 body: {
@@ -225,14 +227,8 @@ export default new OpenAPIHono()
                 },
             },
             responses: {
-                201: {
-                    content: { 'application/json': { schema: z.object({ data: GroupSchema }) } },
-                    description: 'Group created',
-                },
-                409: {
-                    content: { 'application/json': { schema: ErrorSchema } },
-                    description: 'A group with that internal name already exists',
-                },
+                201: dataResponse(GroupSchema, 'Group created'),
+                409: errorResponse('A group with that internal name already exists'),
             },
         }),
         async (c) => {
@@ -284,22 +280,14 @@ export default new OpenAPIHono()
             middleware: [requireAuth, requireAdmin] as const,
             security: [{ Bearer: [] }],
             operationId: 'deleteGroup',
+            summary: 'Delete a group',
+            description: 'Refuses with 409 while the group still holds events or children.',
             tags: ['Groups'],
             request: { params: IdParamSchema, query: DeleteGroupQuerySchema },
             responses: {
-                200: {
-                    content: {
-                        'application/json': {
-                            schema: z.object({ data: z.object({ id: z.string().uuid() }) }),
-                        },
-                    },
-                    description: 'Group deleted',
-                },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
-                409: {
-                    content: { 'application/json': { schema: ErrorSchema } },
-                    description: 'Group still carries data that would be deleted with it',
-                },
+                200: dataResponse(z.object({ id: z.string().uuid() }), 'Group deleted'),
+                404: errorResponse('Not found'),
+                409: errorResponse('Group still carries data that would be deleted with it'),
             },
         }),
         async (c) => {
@@ -350,22 +338,19 @@ export default new OpenAPIHono()
             middleware: [requireAuth, requireAdmin] as const,
             security: [{ Bearer: [] }],
             operationId: 'addGroupParent',
+            summary: 'Attach a group to a parent group',
             tags: ['Groups'],
             request: {
                 params: IdParamSchema,
                 body: { content: { 'application/json': { schema: ParentBodySchema } }, required: true },
             },
             responses: {
-                201: {
-                    content: {
-                        'application/json': {
-                            schema: z.object({ data: z.object({ parentId: z.string().uuid(), childId: z.string().uuid() }) }),
-                        },
-                    },
-                    description: 'Parent relation created',
-                },
-                400: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Bad request' },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                201: dataResponse(
+                    z.object({ parentId: z.string().uuid(), childId: z.string().uuid() }),
+                    'Parent relation created',
+                ),
+                400: errorResponse('Bad request'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {
@@ -393,17 +378,14 @@ export default new OpenAPIHono()
             middleware: [requireAuth, requireAdmin] as const,
             security: [{ Bearer: [] }],
             operationId: 'removeGroupParent',
+            summary: 'Detach a group from a parent group',
             tags: ['Groups'],
             request: { params: IdParentIdParamSchema },
             responses: {
-                200: {
-                    content: {
-                        'application/json': {
-                            schema: z.object({ data: z.object({ parentId: z.string().uuid(), childId: z.string().uuid() }) }),
-                        },
-                    },
-                    description: 'Parent relation removed',
-                },
+                200: dataResponse(
+                    z.object({ parentId: z.string().uuid(), childId: z.string().uuid() }),
+                    'Parent relation removed',
+                ),
             },
         }),
         async (c) => {

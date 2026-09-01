@@ -5,7 +5,14 @@ import { db } from '../db.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { DateRangeSchema, OptionalDateRangeSchema } from '../schemas/query.js'
-import { ErrorSchema, EventDtoSchema, IdParamSchema, LocationSchema } from '../schemas/responses.js'
+import {
+    EventDtoSchema,
+    IdParamSchema,
+    LocationSchema,
+    dataResponse,
+    errorResponse,
+    jsonResponse,
+} from '../schemas/responses.js'
 
 // Room directory is not public information.
 const app = new OpenAPIHono<AuthEnv>()
@@ -17,13 +24,13 @@ export default app
             method: 'get',
             path: '/available',
             operationId: 'getAvailableRooms',
+            summary: 'List rooms free over a time range',
+            description:
+                'A room counts as busy when any event overlaps the range, not merely starts inside it.',
             tags: ['Rooms'],
             request: { query: DateRangeSchema },
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(LocationSchema) }) } },
-                    description: 'Rooms available during the time range',
-                },
+                200: dataResponse(z.array(LocationSchema), 'Rooms available during the time range'),
             },
         }),
         async (c) => {
@@ -49,12 +56,10 @@ export default app
             method: 'get',
             path: '/',
             operationId: 'listRooms',
+            summary: 'List all rooms',
             tags: ['Rooms'],
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(LocationSchema) }) } },
-                    description: 'All rooms',
-                },
+                200: dataResponse(z.array(LocationSchema), 'All rooms'),
             },
         }),
         async (c) => {
@@ -67,11 +72,12 @@ export default app
             method: 'get',
             path: '/{id}',
             operationId: 'getRoom',
+            summary: 'Get one room',
             tags: ['Rooms'],
             request: { params: IdParamSchema },
             responses: {
-                200: { content: { 'application/json': { schema: LocationSchema } }, description: 'Room detail' },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                200: jsonResponse(LocationSchema, 'Room detail'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {
@@ -87,14 +93,12 @@ export default app
             method: 'get',
             path: '/{id}/events',
             operationId: 'listRoomEvents',
+            summary: "List a room's events",
             tags: ['Rooms'],
             request: { params: IdParamSchema, query: OptionalDateRangeSchema },
             responses: {
-                200: {
-                    content: { 'application/json': { schema: z.object({ data: z.array(EventDtoSchema) }) } },
-                    description: 'Events for the room',
-                },
-                404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+                200: dataResponse(z.array(EventDtoSchema), 'Events for the room'),
+                404: errorResponse('Not found'),
             },
         }),
         async (c) => {

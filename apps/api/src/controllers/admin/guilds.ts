@@ -3,24 +3,24 @@ import { eq } from 'drizzle-orm'
 import { db } from '../../db.js'
 import { discordGuilds, discordRoleMappings, studentGroups } from '@studysuite/db'
 import { requireAuth, requireAdmin, type AuthEnv } from '../../middleware/auth.js'
-import { ErrorSchema, IdParamSchema } from '../../schemas/responses.js'
+import { IdParamSchema, dataResponse, errorResponse } from '../../schemas/responses.js'
 
 const createGuildSchema = z
     .object({
-        discordGuildId: z.string().min(1),
-        name: z.string().min(1),
+        discordGuildId: z.string().min(1).openapi({ example: '705623509884796939' }),
+        name: z.string().min(1).openapi({ example: 'BUT Info Montpellier' }),
     })
     .openapi('CreateGuild')
 
 const MappingBodySchema = z
     .discriminatedUnion('userRole', [
         z.object({
-            discordRoleId: z.string().min(1),
+            discordRoleId: z.string().min(1).openapi({ example: '812340987654321098' }),
             userRole: z.literal('student'),
-            studentGroupId: z.string().uuid(),
+            studentGroupId: z.string().uuid().openapi({ example: '4d8b6a2c-7e1f-4a3b-9c5d-8e0f2a4b6c8d' }),
         }),
         z.object({
-            discordRoleId: z.string().min(1),
+            discordRoleId: z.string().min(1).openapi({ example: '812340987654321098' }),
             userRole: z.literal('teacher'),
             studentGroupId: z.string().uuid().optional(),
         }),
@@ -29,10 +29,10 @@ const MappingBodySchema = z
 
 const GuildSchema = z
     .object({
-        id: z.string().uuid(),
-        discordGuildId: z.string(),
-        name: z.string(),
-        createdAt: z.string(),
+        id: z.string().uuid().openapi({ example: '3e5a7c9b-1d2f-4e6a-8b0c-2d4f6a8b0c2e' }),
+        discordGuildId: z.string().openapi({ example: '705623509884796939' }),
+        name: z.string().openapi({ example: 'BUT Info Montpellier' }),
+        createdAt: z.string().openapi({ example: '2026-08-20T14:03:11.000Z' }),
     })
     .openapi('Guild')
 
@@ -63,14 +63,12 @@ app.openapi(
         method: 'get',
         path: '/',
         operationId: 'adminListGuilds',
+        summary: 'List configured Discord servers and their mappings',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         responses: {
-            200: {
-                content: { 'application/json': { schema: z.object({ data: z.array(GuildWithMappingsSchema) }) } },
-                description: 'All Discord guilds with role mappings',
-            },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            200: dataResponse(z.array(GuildWithMappingsSchema), 'All Discord guilds with role mappings'),
+            401: errorResponse('Unauthorized'),
         },
     }),
     async (c) => {
@@ -101,17 +99,15 @@ app.openapi(
         method: 'post',
         path: '/',
         operationId: 'adminCreateGuild',
+        summary: 'Configure a Discord server',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: {
             body: { content: { 'application/json': { schema: createGuildSchema } }, required: true },
         },
         responses: {
-            201: {
-                content: { 'application/json': { schema: z.object({ data: GuildWithMappingsSchema }) } },
-                description: 'Created guild',
-            },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            201: dataResponse(GuildWithMappingsSchema, 'Created guild'),
+            401: errorResponse('Unauthorized'),
         },
     }),
     async (c) => {
@@ -126,13 +122,14 @@ app.openapi(
         method: 'delete',
         path: '/{id}',
         operationId: 'adminDeleteGuild',
+        summary: 'Remove a Discord server',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
-            200: { content: { 'application/json': { schema: z.object({ data: GuildSchema }) } }, description: 'Deleted guild' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: dataResponse(GuildSchema, 'Deleted guild'),
+            401: errorResponse('Unauthorized'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {
@@ -150,6 +147,7 @@ app.openapi(
         method: 'post',
         path: '/{id}/mappings',
         operationId: 'adminCreateMapping',
+        summary: 'Map a Discord role to a student group',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: {
@@ -157,8 +155,8 @@ app.openapi(
             body: { content: { 'application/json': { schema: MappingBodySchema } }, required: true },
         },
         responses: {
-            201: { content: { 'application/json': { schema: z.object({ data: MappingSchema }) } }, description: 'Created mapping' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            201: dataResponse(MappingSchema, 'Created mapping'),
+            401: errorResponse('Unauthorized'),
         },
     }),
     async (c) => {
@@ -177,13 +175,14 @@ app.openapi(
         method: 'delete',
         path: '/{id}/mappings/{mappingId}',
         operationId: 'adminDeleteMapping',
+        summary: 'Remove a Discord role mapping',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: { params: IdMappingIdParamSchema },
         responses: {
-            200: { content: { 'application/json': { schema: z.object({ data: MappingSchema }) } }, description: 'Deleted mapping' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: dataResponse(MappingSchema, 'Deleted mapping'),
+            401: errorResponse('Unauthorized'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {

@@ -46,14 +46,22 @@ export default new OpenAPIHono().openapi(
         method: 'get',
         path: '/',
         operationId: 'getCalendar',
+        summary: 'Subscribe to the planning as iCal',
         tags: ['Events'],
         description:
             'iCalendar feed of the events matching the filters, meant to be subscribed to from a calendar client.',
         request: { query: CalendarQuerySchema },
         responses: {
             200: {
-                content: { 'text/calendar': { schema: z.string() } },
-                description: 'iCalendar document',
+                content: {
+                    'text/calendar': {
+                        schema: z.string().openapi({
+                            example:
+                                'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//StudySuite//Planning//FR\r\n…\r\nEND:VCALENDAR',
+                        }),
+                    },
+                },
+                description: 'iCalendar document, served as an attachment-less text/calendar body',
             },
         },
     }),

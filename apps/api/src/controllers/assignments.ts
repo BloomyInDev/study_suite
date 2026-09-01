@@ -11,25 +11,35 @@ import {
 import { and, asc, count, eq, inArray } from 'drizzle-orm'
 import { db } from '../db.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
-import { AssignmentDtoSchema, ErrorSchema, IdParamSchema } from '../schemas/responses.js'
+import {
+    AssignmentDtoSchema,
+    IdParamSchema,
+    dataResponse,
+    errorResponse,
+    jsonResponse,
+} from '../schemas/responses.js'
 
 const createSchema = z
     .object({
-        title: z.string().min(1).max(255),
-        subject: z.string().max(100).optional(),
-        description: z.string().optional(),
-        dueDate: z.coerce.date(),
-        studentGroupId: z.string().uuid(),
-        eventId: z.string().uuid().optional(),
+        title: z.string().min(1).max(255).openapi({ example: 'Rendu TP3' }),
+        subject: z.string().max(100).optional().openapi({ example: 'R5.05' }),
+        description: z.string().optional().openapi({ example: 'Archive .tar.gz sur Moodle' }),
+        dueDate: z.coerce.date().openapi({ example: '2026-09-15T23:59:00.000Z' }),
+        studentGroupId: z.string().uuid().openapi({ example: '4d8b6a2c-7e1f-4a3b-9c5d-8e0f2a4b6c8d' }),
+        eventId: z
+            .string()
+            .uuid()
+            .optional()
+            .openapi({ description: 'Course this was set in', example: '2a7c9e1b-5d3f-4a8b-9c2e-6f0a1b3c5d7e' }),
     })
     .openapi('CreateAssignment')
 
 const patchSchema = z
     .object({
-        title: z.string().min(1).max(255).optional(),
-        subject: z.string().max(100).nullable().optional(),
-        description: z.string().nullable().optional(),
-        dueDate: z.coerce.date().optional(),
+        title: z.string().min(1).max(255).optional().openapi({ example: 'Rendu TP3 (reporté)' }),
+        subject: z.string().max(100).nullable().optional().openapi({ example: 'R5.05' }),
+        description: z.string().nullable().optional().openapi({ example: 'Sujet mis à jour' }),
+        dueDate: z.coerce.date().optional().openapi({ example: '2026-09-22T23:59:00.000Z' }),
         studentGroupId: z.string().uuid().optional(),
         eventId: z.string().uuid().nullable().optional(),
     })
@@ -145,15 +155,13 @@ app.openapi(
         method: 'get',
         path: '/',
         operationId: 'listAssignments',
+        summary: 'List assignments for your group',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { query: listSchema },
         responses: {
-            200: {
-                content: { 'application/json': { schema: z.object({ data: z.array(AssignmentDtoSchema) }) } },
-                description: 'Assignments accessible to the current user',
-            },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            200: dataResponse(z.array(AssignmentDtoSchema), 'Assignments accessible to the current user'),
+            401: errorResponse('Unauthorized'),
         },
     }),
     async (c) => {
@@ -192,14 +200,15 @@ app.openapi(
         method: 'get',
         path: '/{id}',
         operationId: 'getAssignment',
+        summary: 'Get one assignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
-            200: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Assignment detail' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: dataResponse(AssignmentDtoSchema, 'Assignment detail'),
+            401: errorResponse('Unauthorized'),
+            403: errorResponse('Forbidden'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {
@@ -225,15 +234,16 @@ app.openapi(
         method: 'post',
         path: '/',
         operationId: 'createAssignment',
+        summary: 'Create an assignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: {
             body: { content: { 'application/json': { schema: createSchema } }, required: true },
         },
         responses: {
-            201: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Created' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
+            201: dataResponse(AssignmentDtoSchema, 'Created'),
+            401: errorResponse('Unauthorized'),
+            403: errorResponse('Forbidden'),
         },
     }),
     async (c) => {
@@ -270,6 +280,7 @@ app.openapi(
         method: 'patch',
         path: '/{id}',
         operationId: 'updateAssignment',
+        summary: 'Edit an assignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: {
@@ -277,10 +288,10 @@ app.openapi(
             body: { content: { 'application/json': { schema: patchSchema } }, required: true },
         },
         responses: {
-            200: { content: { 'application/json': { schema: z.object({ data: AssignmentDtoSchema }) } }, description: 'Updated' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: dataResponse(AssignmentDtoSchema, 'Updated'),
+            401: errorResponse('Unauthorized'),
+            403: errorResponse('Forbidden'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {
@@ -323,17 +334,15 @@ app.openapi(
         method: 'delete',
         path: '/{id}',
         operationId: 'deleteAssignment',
+        summary: 'Delete an assignment',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
-            200: {
-                content: { 'application/json': { schema: z.object({ data: z.object({ id: z.string().uuid() }) }) } },
-                description: 'Deleted',
-            },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: dataResponse(z.object({ id: z.string().uuid() }), 'Deleted'),
+            401: errorResponse('Unauthorized'),
+            403: errorResponse('Forbidden'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {
@@ -361,14 +370,15 @@ app.openapi(
         method: 'post',
         path: '/{id}/complete',
         operationId: 'completeAssignment',
+        summary: 'Mark an assignment done',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
-            200: { content: { 'application/json': { schema: CompletionStatusSchema } }, description: 'Marked as complete' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: jsonResponse(CompletionStatusSchema, 'Marked as complete'),
+            401: errorResponse('Unauthorized'),
+            403: errorResponse('Forbidden'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {
@@ -402,14 +412,15 @@ app.openapi(
         method: 'delete',
         path: '/{id}/complete',
         operationId: 'uncompleteAssignment',
+        summary: 'Mark an assignment not done',
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { params: IdParamSchema },
         responses: {
-            200: { content: { 'application/json': { schema: CompletionStatusSchema } }, description: 'Marked as incomplete' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: jsonResponse(CompletionStatusSchema, 'Marked as incomplete'),
+            401: errorResponse('Unauthorized'),
+            403: errorResponse('Forbidden'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {

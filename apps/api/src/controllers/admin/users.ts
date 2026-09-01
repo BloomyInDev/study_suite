@@ -4,14 +4,24 @@ import { db } from '../../db.js'
 import { users, userStudents, userTeachers } from '@studysuite/db'
 import { requireAuth, requireAdmin, type AuthEnv } from '../../middleware/auth.js'
 import { fetchEnrichedUser, listEnrichedUsers, userToDto } from '../../lib/users.js'
-import { ErrorSchema, IdParamSchema, UserDtoSchema } from '../../schemas/responses.js'
+import {
+    IdParamSchema,
+    UserDtoSchema,
+    dataResponse,
+    errorResponse,
+} from '../../schemas/responses.js'
 
 const patchSchema = z
     .object({
-        status: z.enum(['approved', 'rejected', 'pending']).optional(),
-        isAdmin: z.boolean().optional(),
-        role: z.enum(['student', 'teacher']).nullable().optional(),
-        studentGroupId: z.string().uuid().nullable().optional(),
+        status: z.enum(['approved', 'rejected', 'pending']).optional().openapi({ example: 'approved' }),
+        isAdmin: z.boolean().optional().openapi({ example: false }),
+        role: z.enum(['student', 'teacher']).nullable().optional().openapi({ example: 'student' }),
+        studentGroupId: z
+            .string()
+            .uuid()
+            .nullable()
+            .optional()
+            .openapi({ example: '4d8b6a2c-7e1f-4a3b-9c5d-8e0f2a4b6c8d' }),
         teacherId: z.string().uuid().nullable().optional(),
     })
     .openapi('AdminUpdateUser')
@@ -24,14 +34,12 @@ app.openapi(
         method: 'get',
         path: '/',
         operationId: 'adminListUsers',
+        summary: 'List every user',
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         responses: {
-            200: {
-                content: { 'application/json': { schema: z.object({ data: z.array(UserDtoSchema) }) } },
-                description: 'All users',
-            },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
+            200: dataResponse(z.array(UserDtoSchema), 'All users'),
+            401: errorResponse('Unauthorized'),
         },
     }),
     async (c) => {
@@ -45,6 +53,7 @@ app.openapi(
         method: 'patch',
         path: '/{id}',
         operationId: 'adminUpdateUser',
+        summary: "Change a user's status, role, group or admin flag",
         tags: ['Admin'],
         security: [{ Bearer: [] }],
         request: {
@@ -52,10 +61,10 @@ app.openapi(
             body: { content: { 'application/json': { schema: patchSchema } }, required: true },
         },
         responses: {
-            200: { content: { 'application/json': { schema: z.object({ data: UserDtoSchema }) } }, description: 'Updated user' },
-            401: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Unauthorized' },
-            403: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Forbidden' },
-            404: { content: { 'application/json': { schema: ErrorSchema } }, description: 'Not found' },
+            200: dataResponse(UserDtoSchema, 'Updated user'),
+            401: errorResponse('Unauthorized'),
+            403: errorResponse('Forbidden'),
+            404: errorResponse('Not found'),
         },
     }),
     async (c) => {
