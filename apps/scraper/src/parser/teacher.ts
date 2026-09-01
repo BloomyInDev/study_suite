@@ -4,7 +4,7 @@ import type { Teacher } from '@studysuite/shared'
 const TEACHER_SEPARATOR = '   '
 
 // Uppercase Latin-1 block (À-Ö U+00C0-D6, Ø-Þ U+00D8-DE), apostrophe, hyphen, space allowed
-const TEACHER_REGEX = /^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ' \-]*   [A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ' \-]*$/
+const TEACHER_REGEX = /^[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ' -]* {3}[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ' -]*$/
 
 export function isTeacherLine(line: string): boolean {
     return TEACHER_REGEX.test(line)

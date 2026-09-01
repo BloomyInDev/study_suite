@@ -50,6 +50,6 @@ if (failures.length > 0) {
     console.log(`\n--- First ${Math.min(10, failures.length)} failures ---`)
     for (const f of failures.slice(0, 10)) {
         console.log(`\ndayIndex=${f.dayIndex}  dates=${f.weekDates.slice(0, 3).join(', ')}`)
-        console.log(f.rawText.replace(/ /g, '·').replace(/\n/g, ' | '))
+        console.log(f.rawText.replace(/\u00a0/g, '·').replace(/\n/g, ' | '))
     }
 }

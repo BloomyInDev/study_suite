@@ -10,7 +10,7 @@ export function parseEventText(
     strictGroups = false,
 ): ParsedEvent | null {
     const lines = rawText
-        .replace(/ /g, ' ')
+        .replace(/\u00a0/g, ' ')
         .split('\n')
         .map((l) => l.trim())
         .filter((l) => l.length > 0)
