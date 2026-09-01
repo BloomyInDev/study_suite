@@ -1,3 +1,13 @@
 packages:
     - 'apps/*'
     - 'packages/*'
+
+# pnpm 11 no longer reads the "pnpm" field of package.json — both of these
+# used to live there (onlyBuiltDependencies / overrides).
+allowBuilds:
+    # esbuild's postinstall fetches its platform binary; without this vite
+    # cannot start.
+    esbuild: true
+
+overrides:
+    hono: ^4.12.21

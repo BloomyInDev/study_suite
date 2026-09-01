@@ -2,20 +2,13 @@
     "name": "study-suite",
     "private": true,
     "type": "module",
+    "packageManager": "pnpm@11.21.0",
     "scripts": {
         "dev": "pnpm -r --parallel dev",
         "build": "pnpm -r build",
         "lint": "eslint .",
         "format": "prettier --write apps packages \"*.{json,md,yaml,yml}\" .prettierrc",
         "typecheck": "pnpm -r typecheck"
-    },
-    "pnpm": {
-        "onlyBuiltDependencies": [
-            "esbuild"
-        ],
-        "overrides": {
-            "hono": "^4.12.21"
-        }
     },
     "devDependencies": {
         "@eslint/js": "^9.27.0",

@@ -252,6 +252,6 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
 - The web app never imports `@studysuite/db` — DB access is server-side only.
 - `drizzle.config.ts` is excluded from `packages/db/tsconfig.json` (drizzle-kit bundles it itself; including it breaks `rootDir`).
 - `schema/index.ts` must always have at least `export {}` to be a valid TS module.
-- `pnpm.onlyBuiltDependencies: ["esbuild"]` in root `package.json` is required to allow esbuild's postinstall script.
+- pnpm 11 ignores the `pnpm` field of `package.json`: `allowBuilds` (esbuild's postinstall, without which vite cannot start) and `overrides` live in `pnpm-workspace.yaml`. The version is pinned by `packageManager` and by `npm install -g pnpm@11` in each Dockerfile.
 - `ALTER TYPE ... ADD VALUE` (Postgres enum extension) cannot run inside a transaction — drizzle-kit handles this via migration breakpoints.
 - Cross-week move detection works because `insertAllChanges` sees all weeks' diffs at once. Adding per-week change insertion would regress this.

@@ -1,6 +1,6 @@
 # Runs `drizzle-kit migrate` once against DATABASE_URL, then exits.
 FROM node:22-alpine
-RUN npm install -g pnpm@10
+RUN npm install -g pnpm@11
 WORKDIR /app
 
 # Copy manifests for all workspace packages (needed by pnpm for graph resolution)
