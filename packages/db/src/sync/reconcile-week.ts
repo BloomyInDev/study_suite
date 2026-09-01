@@ -65,11 +65,18 @@ function relationsKey(ev: ParsedEvent): string {
     return `${rooms}|${tchrs}|${groups}`
 }
 
-function existingRelationsKey(existing: {
+/** An events row with the relations reconciliation needs, as loaded below. */
+interface ExistingEvent {
+    id: string
+    title: string
+    startDate: Date
+    endDate: Date
     eventLocations: Array<{ location: { name: string } }>
     eventTeachers: Array<{ teacher: { firstName: string; lastName: string } }>
     eventStudentGroups: Array<{ studentGroup: { internalName: string } }>
-}): string {
+}
+
+function existingRelationsKey(existing: ExistingEvent): string {
     return [
         existing.eventLocations
             .map((el) => el.location.name)
@@ -84,6 +91,94 @@ function existingRelationsKey(existing: {
             .sort()
             .join(','),
     ].join('|')
+}
+
+/** The three name sets a match is scored on, in one shape for both sides. */
+interface Relations {
+    rooms: string[]
+    teachers: string[]
+    groups: string[]
+}
+
+function scrapedRelations(ev: ParsedEvent): Relations {
+    return {
+        rooms: ev.rooms.map((r) => r.name),
+        teachers: ev.teachers.map((t) => `${t.lastName}:${t.firstName}`),
+        groups: ev.groups.map((g) => g.internalName),
+    }
+}
+
+function existingRelations(existing: ExistingEvent): Relations {
+    return {
+        rooms: existing.eventLocations.map((el) => el.location.name),
+        teachers: existing.eventTeachers.map(
+            (et) => `${et.teacher.lastName}:${et.teacher.firstName}`,
+        ),
+        groups: existing.eventStudentGroups.map((eg) => eg.studentGroup.internalName),
+    }
+}
+
+const sharedCount = (a: string[], b: string[]): number => {
+    const set = new Set(b)
+    return a.filter((name) => set.has(name)).length
+}
+
+/**
+ * How likely two events in the same slot are the same event with something
+ * changed. The audience decides first — a room swap is routine, but two
+ * "Réunion de rentrée BUT2" for Q-Sète and Q1..Q4 are different meetings.
+ */
+function matchScore(a: Relations, b: Relations): number {
+    return (
+        sharedCount(a.groups, b.groups) * 100 +
+        sharedCount(a.teachers, b.teachers) * 10 +
+        sharedCount(a.rooms, b.rooms)
+    )
+}
+
+/**
+ * Pairs the events a slot holds on both sides. Identical relations pair off
+ * first, then the leftovers greedily by best score — whatever is left over is
+ * a genuine removal or addition.
+ */
+function matchSlot(
+    existing: ExistingEvent[],
+    scraped: ParsedEvent[],
+): {
+    updated: { existing: ExistingEvent; scraped: ParsedEvent }[]
+    removed: ExistingEvent[]
+    added: ParsedEvent[]
+} {
+    const remainingExisting = [...existing]
+    const remainingScraped = [...scraped]
+
+    // Untouched events: same slot, same relations. They pair off and are left alone.
+    for (let i = remainingExisting.length - 1; i >= 0; i--) {
+        const relKey = existingRelationsKey(remainingExisting[i]!)
+        const match = remainingScraped.findIndex((ev) => relationsKey(ev) === relKey)
+        if (match !== -1) {
+            remainingExisting.splice(i, 1)
+            remainingScraped.splice(match, 1)
+        }
+    }
+
+    const updated: { existing: ExistingEvent; scraped: ParsedEvent }[] = []
+    while (remainingExisting.length > 0 && remainingScraped.length > 0) {
+        let best = { score: -1, existingIdx: 0, scrapedIdx: 0 }
+        remainingExisting.forEach((ex, existingIdx) => {
+            const exRel = existingRelations(ex)
+            remainingScraped.forEach((ev, scrapedIdx) => {
+                const score = matchScore(exRel, scrapedRelations(ev))
+                if (score > best.score) best = { score, existingIdx, scrapedIdx }
+            })
+        })
+        updated.push({
+            existing: remainingExisting.splice(best.existingIdx, 1)[0]!,
+            scraped: remainingScraped.splice(best.scrapedIdx, 1)[0]!,
+        })
+    }
+
+    return { updated, removed: remainingExisting, added: remainingScraped }
 }
 
 async function getOrCreateLocation(
@@ -169,14 +264,20 @@ export async function applyWeekEvents(
             },
         })
 
-        const existingByKey = new Map<string, (typeof existingEvents)[0]>()
+        // A slot holds as many events as the planning shows in it: the same
+        // meeting runs in Montpellier and in Sète, same title, same hour. Keyed
+        // on the slot alone, one silently overwrote the other and never reached
+        // the database — hence the bucket per slot.
+        const existingBySlot = new Map<string, ExistingEvent[]>()
         for (const ev of existingEvents) {
-            existingByKey.set(eventKey(ev.title, ev.startDate, ev.endDate), ev)
+            const key = eventKey(ev.title, ev.startDate, ev.endDate)
+            existingBySlot.set(key, [...(existingBySlot.get(key) ?? []), ev])
         }
 
-        const scrapedByKey = new Map<string, ParsedEvent>()
+        const scrapedBySlot = new Map<string, ParsedEvent[]>()
         for (const ev of scraped) {
-            scrapedByKey.set(eventKey(ev.title, ev.startDate, ev.endDate), ev)
+            const key = eventKey(ev.title, ev.startDate, ev.endDate)
+            scrapedBySlot.set(key, [...(scrapedBySlot.get(key) ?? []), ev])
         }
 
         const toRemove: string[] = []
@@ -185,35 +286,25 @@ export async function applyWeekEvents(
 
         const diff: WeekDiff = { added: [], removed: [], updated: [] }
 
-        for (const [key, existing] of existingByKey) {
-            const scrapedEv = scrapedByKey.get(key)
-            const relKey = existingRelationsKey(existing)
+        for (const key of new Set([...existingBySlot.keys(), ...scrapedBySlot.keys()])) {
+            const slot = matchSlot(existingBySlot.get(key) ?? [], scrapedBySlot.get(key) ?? [])
 
-            if (!scrapedEv) {
-                toRemove.push(existing.id)
-                diff.removed.push({
-                    title: existing.title,
-                    startDate: existing.startDate,
-                    endDate: existing.endDate,
-                    relKey,
-                })
-            } else if (relKey !== relationsKey(scrapedEv)) {
+            for (const { existing, scraped: scrapedEv } of slot.updated) {
                 toRemove.push(existing.id)
                 toUpdate.push(scrapedEv)
+                const before = existingRelations(existing)
                 diff.updated.push({
                     title: existing.title,
                     startDate: existing.startDate,
                     endDate: existing.endDate,
                     diff: {
                         before: {
-                            rooms: existing.eventLocations.map((el) => el.location.name),
+                            rooms: before.rooms,
                             teachers: existing.eventTeachers.map((et) => ({
                                 firstName: et.teacher.firstName,
                                 lastName: et.teacher.lastName,
                             })),
-                            groups: existing.eventStudentGroups.map(
-                                (eg) => eg.studentGroup.internalName,
-                            ),
+                            groups: before.groups,
                         },
                         after: {
                             rooms: scrapedEv.rooms.map((r) => r.name),
@@ -223,10 +314,18 @@ export async function applyWeekEvents(
                     },
                 })
             }
-        }
 
-        for (const [key, scrapedEv] of scrapedByKey) {
-            if (!existingByKey.has(key)) {
+            for (const existing of slot.removed) {
+                toRemove.push(existing.id)
+                diff.removed.push({
+                    title: existing.title,
+                    startDate: existing.startDate,
+                    endDate: existing.endDate,
+                    relKey: existingRelationsKey(existing),
+                })
+            }
+
+            for (const scrapedEv of slot.added) {
                 toAdd.push(scrapedEv)
                 diff.added.push({
                     title: scrapedEv.title,

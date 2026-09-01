@@ -99,6 +99,14 @@ For `moved`, `diff` JSON contains `{ newStart: ISO, newEnd: ISO }`.
 
 `EventSlot` carries `title`, `startDate`, `endDate`, and a pre-computed `relKey` (`sortedRooms|sortedTeachers|sortedGroups`), used for move matching.
 
+A slot (`title|start|end`) can hold **several** events — the same meeting runs in
+Montpellier and in Sète at the same hour — so both sides are bucketed per slot and
+`matchSlot` pairs them within the bucket: identical `relKey`s pair off first
+(untouched), leftovers pair greedily by shared groups, then teachers, then rooms
+(`updated`), and whatever is still unpaired is a real `removed` / `added`. Keying
+the scraped list on the slot alone silently dropped every event but the last one
+in it.
+
 **Pass 2** — after all weeks scraped, one batch:
 `insertAllChanges(db, diffs[])` — aggregates all `WeekDiff`s across the full run, matches `removed+added` pairs by `title|relKey` to detect moves (including **cross-week** moves). Inserts all `eventChanges` in a single `db.insert`.
 
@@ -165,10 +173,10 @@ Hono server on Bun, port 3000.
 | Method | Path                                        | Auth  | Description                                                        |
 | ------ | ------------------------------------------- | ----- | ------------------------------------------------------------------ |
 | GET    | `/api/health`                               | —     | Health check                                                       |
-| GET    | `/api/auth/discord`                             | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
-| GET    | `/api/auth/discord/callback`                    | —     | Exchange code, upsert user, issue JWT                              |
-| GET    | `/api/auth/discord/my-guilds`                   | user  | User's guilds + roles from stored Discord token                    |
-| GET    | `/api/auth/me`                                  | user  | Refresh JWT and return user DTO                                    |
+| GET    | `/api/auth/discord`                         | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
+| GET    | `/api/auth/discord/callback`                | —     | Exchange code, upsert user, issue JWT                              |
+| GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                    |
+| GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                    |
 | GET    | `/api/events/week`                          | —     | Events for a week (`?date=`)                                       |
 | GET    | `/api/events/day`                           | —     | Events for a day (`?date=`)                                        |
 | GET    | `/api/events/upcoming`                      | —     | Next N events (`?limit=`)                                          |
