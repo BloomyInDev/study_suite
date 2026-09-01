@@ -182,6 +182,7 @@ Hono server on Bun, port 3000.
 | GET    | `/api/events/upcoming`                      | —     | Next N events (`?limit=`)                                          |
 | GET    | `/api/events`                               | —     | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)         |
 | GET    | `/api/events/:id`                           | —     | Single event                                                       |
+| GET    | `/api/calendar.ics`                         | —     | iCal feed (`?groupId=&teacherId=&roomId=&from=&to=`)               |
 | GET    | `/api/teachers`                             | —     | All teachers                                                       |
 | GET    | `/api/rooms`                                | —     | All rooms                                                          |
 | GET    | `/api/groups`                               | —     | All groups with parent/child hierarchy                             |
@@ -196,6 +197,12 @@ Hono server on Bun, port 3000.
 | DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                       |
 | POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                             |
 | DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                     |
+
+### iCal feed
+
+`GET /api/calendar.ics` returns an RFC 5545 document for calendar clients to subscribe to. Same filters as `GET /api/events` (`groupId`, `teacherId`, `roomId`, `from`, `to`); without `from` it reaches 60 days back, so the payload does not grow forever. No auth — like the rest of the event routes.
+
+Event timestamps are Paris wall-clock stored as UTC (the scraper builds them with `Date.UTC` from what the page displays), so `lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` with the UTC components and ships a `VTIMEZONE`. Emitting them as `Z` instants would shift every course by one or two hours.
 
 **JWT**: HS256, 7-day expiry. Claims: `sub` (user UUID), `discordId`, `isAdmin`, `status`, `role`.
 

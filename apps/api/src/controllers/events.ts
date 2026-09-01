@@ -1,9 +1,10 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { events } from '@studysuite/db'
-import { eventLocations, eventStudentGroups, eventTeachers } from '@studysuite/db'
+import { eventStudentGroups } from '@studysuite/db'
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm'
 import { db } from '../db.js'
 import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
+import { eventFilterConditions } from '../lib/event-filters.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import {
     DateFormatSchema,
@@ -130,41 +131,8 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { from, to, teacherId, roomId, groupId, dateFormat } = c.req.valid('query')
-            const conditions = [gte(events.startDate, from), lt(events.startDate, to)]
-            if (teacherId) {
-                conditions.push(
-                    inArray(
-                        events.id,
-                        db
-                            .select({ id: eventTeachers.eventId })
-                            .from(eventTeachers)
-                            .where(eq(eventTeachers.teacherId, teacherId)),
-                    ),
-                )
-            }
-            if (roomId) {
-                conditions.push(
-                    inArray(
-                        events.id,
-                        db
-                            .select({ id: eventLocations.eventId })
-                            .from(eventLocations)
-                            .where(eq(eventLocations.locationId, roomId)),
-                    ),
-                )
-            }
-            if (groupId) {
-                conditions.push(
-                    inArray(
-                        events.id,
-                        db
-                            .select({ id: eventStudentGroups.eventId })
-                            .from(eventStudentGroups)
-                            .where(eq(eventStudentGroups.studentGroupId, groupId)),
-                    ),
-                )
-            }
+            const { dateFormat, ...filters } = c.req.valid('query')
+            const conditions = eventFilterConditions(filters)
             const rows = await db.query.events.findMany({
                 where: and(...conditions),
                 with: withEventRelations,

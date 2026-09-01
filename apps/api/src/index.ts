@@ -3,6 +3,7 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
 import authController from './controllers/auth.js'
+import calendarController from './controllers/calendar.js'
 import assignmentsController from './controllers/assignments.js'
 import eventsController from './controllers/events.js'
 import groupsController from './controllers/groups.js'
@@ -45,7 +46,9 @@ const app = _app
             .route('/teachers', teachersController)
             .route('/rooms', roomsController)
             .route('/groups', groupsController)
-            .route('/assignments', assignmentsController),
+            .route('/assignments', assignmentsController)
+            // Calendar clients key off the .ics suffix, so it is part of the path.
+            .route('/calendar.ics', calendarController),
     )
     // Transitional: Discord may still call back on the pre-/api path until the
     // developer portal entry is updated. Remove once that is done.
