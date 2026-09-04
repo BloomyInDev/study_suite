@@ -94,14 +94,13 @@ async function getDescendantGroupIds(rootId: string): Promise<Set<string>> {
 
 const StudentGroupBodySchema = z.object({ studentGroupId: z.string().uuid() })
 
-const GuildWithRolesSchema = z
+const MyGuildSchema = z
     .object({
         id: z.string(),
         name: z.string(),
         icon: z.string().nullable(),
-        myRoles: z.array(z.string()),
     })
-    .openapi('GuildWithRoles')
+    .openapi('MyGuild')
 
 const app = new OpenAPIHono<AuthEnv>()
 
@@ -284,14 +283,14 @@ app.openapi(
         method: 'get',
         path: '/discord/my-guilds',
         operationId: 'getMyGuilds',
-        summary: "List the caller's Discord guilds and roles",
+        summary: "List the caller's Discord guilds",
         description:
             'Read live from Discord with the token stored at login; answers 400 once that token is gone.',
         tags: ['Auth'],
         security: [{ Bearer: [] }],
         middleware: [requireAuth] as const,
         responses: {
-            200: dataResponse(z.array(GuildWithRolesSchema), "User's Discord guilds with roles"),
+            200: dataResponse(z.array(MyGuildSchema), "User's Discord guilds"),
             400: errorResponse('No token stored'),
             401: errorResponse('Unauthorized'),
             502: errorResponse('Discord error'),
@@ -326,20 +325,10 @@ app.openapi(
         }
         const guildList = (await guildsRes.json()) as DiscordGuild[]
 
-        const guildData = await Promise.all(
-            guildList.map(async (guild) => {
-                const memberRes = await fetch(
-                    `${DISCORD_API}/users/@me/guilds/${guild.id}/member`,
-                    { headers: { Authorization: `Bearer ${token}` } },
-                )
-                const roles: string[] = memberRes.ok
-                    ? (((await memberRes.json()) as { roles: string[] }).roles ?? [])
-                    : []
-                return { id: guild.id, name: guild.name, icon: guild.icon, myRoles: roles }
-            }),
+        return c.json(
+            { data: guildList.map(({ id, name, icon }) => ({ id, name, icon })) },
+            200,
         )
-
-        return c.json({ data: guildData }, 200)
     },
 )
 
