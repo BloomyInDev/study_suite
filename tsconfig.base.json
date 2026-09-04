@@ -12,6 +12,7 @@
         "paths": {
             "@studysuite/shared": ["./packages/shared/src/index.ts"],
             "@studysuite/shared/config": ["./packages/shared/src/config/index.ts"],
+            "@studysuite/shared/time": ["./packages/shared/src/time/index.ts"],
             "@studysuite/db": ["./packages/db/src/index.ts"]
         }
     }

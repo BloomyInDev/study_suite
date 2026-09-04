@@ -26,7 +26,10 @@ export default app
             operationId: 'getAvailableRooms',
             summary: 'List rooms free over a time range',
             description:
-                'A room counts as busy when any event overlaps the range, not merely starts inside it.',
+                'A room counts as busy when any event overlaps the range, not merely starts inside it. ' +
+                '`from` and `to` are Paris wall-clock labelled UTC, the same encoding the event ' +
+                'timestamps come back in — passing a real instant (`new Date().toISOString()`) ' +
+                'shifts the window by the Paris offset.',
             tags: ['Rooms'],
             request: { query: DateRangeSchema },
             responses: {

@@ -4,7 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
 import { useAuthStore } from '../stores/auth.js'
-import { mondayOfWeek } from '../lib/date.js'
+import { mondayOfWeek, toWallClock } from '../lib/date.js'
 import type { Event, Assignment } from '../lib/types.js'
 import NoGroupsCard from '../components/NoGroupsCard.vue'
 import NextEventCard from '../components/NextEventCard.vue'
@@ -19,10 +19,11 @@ const groupStore = useGroupsStore()
 const eventsStore = useEventsStore()
 const auth = useAuthStore()
 
-
 const events = ref<Event[]>([])
 const assignments = ref<Assignment[]>([])
 const loading = ref(true)
+// A real instant — assignment due dates are real instants too. Event times are
+// not, so anything compared against those goes through `wallNow`.
 const now = ref(new Date())
 const pickerOpen = ref(false)
 const detailOpen = ref(false)
@@ -72,10 +73,12 @@ onUnmounted(() => {
     if (intervalId) clearInterval(intervalId)
 })
 
+const wallNow = computed(() => toWallClock(now.value))
+
 /** The api hands back the next events whenever they fall, so out of term the
  *  card happily announced a course a fortnight away as what is coming up. */
 const endOfWeek = computed(() => {
-    const end = mondayOfWeek(now.value)
+    const end = mondayOfWeek(wallNow.value)
     end.setUTCDate(end.getUTCDate() + 7)
     return end
 })
@@ -84,9 +87,9 @@ const currentOrNextEvent = computed(() => {
     const sorted = [...events.value]
         .filter((e) => e.start < endOfWeek.value)
         .sort((a, b) => a.start.getTime() - b.start.getTime())
-    const current = sorted.find((e) => now.value >= e.start && now.value <= e.end)
+    const current = sorted.find((e) => wallNow.value >= e.start && wallNow.value <= e.end)
     if (current) return { event: current, isCurrent: true }
-    const next = sorted.find((e) => e.start > now.value)
+    const next = sorted.find((e) => e.start > wallNow.value)
     if (next) return { event: next, isCurrent: false }
     return null
 })
@@ -96,9 +99,7 @@ const upcomingAssignments = computed(() =>
 )
 
 /** The homepage lists what is left to do; the homework page shows everything. */
-const todoAssignments = computed(() =>
-    upcomingAssignments.value.filter((a) => !a.completedByMe),
-)
+const todoAssignments = computed(() => upcomingAssignments.value.filter((a) => !a.completedByMe))
 const doneCount = computed(() => upcomingAssignments.value.length - todoAssignments.value.length)
 
 // allGroups loads after mount, so the ancestors — and with them the promo's
@@ -147,7 +148,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                     <NextEventCard
                         :event="currentOrNextEvent.event"
                         :is-current="currentOrNextEvent.isCurrent"
-                        :now="now"
+                        :now="wallNow"
                     />
                 </template>
                 <template v-else>

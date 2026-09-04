@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { backend } from '../lib/api.js'
 import { useEventsStore } from '../stores/events.js'
 import type { Event, Room } from '../lib/types.js'
+import { wallClockNow } from '../lib/date.js'
 
 const eventsStore = useEventsStore()
 
 const rooms = ref<Room[]>([])
 const events = ref<Event[]>([])
 const loading = ref(true)
-const now = ref(new Date())
+// Wall-clock, so it can be compared with the event times; and ticking, so the
+// list does not keep showing rooms whose next class has since started.
+const now = ref(wallClockNow())
+let tick: ReturnType<typeof setInterval> | null = null
 
 // Online "rooms" are not somewhere you can go and sit.
 const isPhysical = (name: string) => !/en ligne|distanciel|\bCEL\b/i.test(name)
@@ -19,13 +23,20 @@ onMounted(async () => {
         const [roomsRes, dayEvents] = await Promise.all([
             backend.api.rooms.$get(),
             // Every group's events: occupancy is not about the user's own classes.
-            eventsStore.fetchDayEvents(new Date(), []),
+            eventsStore.fetchDayEvents(wallClockNow(), []),
         ])
         rooms.value = (await roomsRes.json()).data
         events.value = dayEvents
     } finally {
         loading.value = false
     }
+    tick = setInterval(() => {
+        now.value = wallClockNow()
+    }, 60_000)
+})
+
+onUnmounted(() => {
+    if (tick) clearInterval(tick)
 })
 
 interface FreeRoom {
@@ -55,8 +66,10 @@ const free = computed<FreeRoom[]>(() => {
     )
 })
 
+// UTC getters: both `now` and the event times carry the Paris hour as their UTC
+// components, so the local getters would add the offset a second time.
 const hhmm = (d: Date) =>
-    `${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}`
+    `${String(d.getUTCHours()).padStart(2, '0')}h${String(d.getUTCMinutes()).padStart(2, '0')}`
 </script>
 
 <template>

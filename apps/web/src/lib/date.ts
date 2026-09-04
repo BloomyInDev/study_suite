@@ -1,4 +1,15 @@
 import type { Ref } from 'vue'
+import { wallClockNow } from '@studysuite/shared/time'
+
+// Event timestamps are Paris wall-clock labelled UTC, which is why everything
+// below reads them through `timeZone: 'UTC'` and the UTC getters. A real
+// instant has to be converted before it can be compared with one.
+export {
+    toWallClock,
+    wallClockNow,
+    wallClockDayStart,
+    wallClockDayEnd,
+} from '@studysuite/shared/time'
 
 export const formatTime = (date: Date): string =>
     date.toLocaleTimeString('fr-FR', {
@@ -23,7 +34,7 @@ export const formatFullDate = (date: Date): string =>
 export const formatTimeUntil = (
     target: Date,
     textBefore = 'dans',
-    from: Date = new Date(),
+    from: Date = wallClockNow(),
 ): string => {
     const diffMins = Math.round((target.getTime() - from.getTime()) / 60000)
     if (diffMins < 0) return 'déjà commencé'

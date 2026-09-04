@@ -4,7 +4,8 @@
     "type": "module",
     "exports": {
         ".": "./src/index.ts",
-        "./config": "./src/config/index.ts"
+        "./config": "./src/config/index.ts",
+        "./time": "./src/time/index.ts"
     },
     "scripts": {
         "typecheck": "tsc --noEmit"

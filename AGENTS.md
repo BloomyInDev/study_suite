@@ -59,6 +59,42 @@ npm scope is `@studysuite`. When an app declares `"@studysuite/shared": "workspa
 
 ---
 
+## Time: Paris wall-clock labelled UTC
+
+Every event timestamp — `events.start_date`, `events.end_date`, and the `startDate` /
+`endDate` an api response carries — is a **label, not an instant**. The scraper builds
+them with `Date.UTC` from the hour the Prose Consult page displays, so a course at
+10h00 Paris is stored as `10:00:00Z`. Reading it back with the UTC getters gives the
+hour a student actually sees.
+
+The consequence: **`new Date()` cannot be compared with one of them.** Doing so is off
+by the Paris UTC offset — one hour in winter, two in summer. Every availability feature
+("Disponibles maintenant", free rooms, teacher busy/free, current-or-next event) was
+wrong by that amount because of exactly this.
+
+`@studysuite/shared/time` is the only correct way across that boundary:
+
+| Helper                                                      | Use                                         |
+| ----------------------------------------------------------- | ------------------------------------------- |
+| `wallClockNow()`                                            | "now", comparable with an event timestamp   |
+| `toWallClock(instant)`                                      | convert a real instant you already hold     |
+| `wallClockDayStart(instant?)` / `wallClockDayEnd(instant?)` | the Paris day's bounds; `…End` is exclusive |
+
+It resolves the offset through an explicit `Europe/Paris` `Intl.DateTimeFormat`, never
+the local getters. The predecessor (`dateToUTC`) read the process timezone, which is
+Europe/Paris on a laptop and **UTC in the api container** — so availability was right in
+dev and two hours out in production.
+
+Rules of thumb:
+
+- Query params `from` / `to` on the event routes are wall-clock too, matching the
+  responses. Sending `new Date().toISOString()` shifts the window.
+- Timestamps that are genuinely instants — `users.updated_at`, `discord_token_expires_at`,
+  `assignments.due_date`, iCal's `DTSTAMP` — stay real dates and compare with `new Date()`.
+  `HomeView` holds both and keeps them apart as `now` and `wallNow`.
+- Displaying an event time means UTC getters or `timeZone: 'UTC'`, which is what
+  `apps/web/src/lib/date.ts` does throughout.
+
 ## packages/shared
 
 Two entry points:
@@ -262,3 +298,4 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
 - pnpm 11 ignores the `pnpm` field of `package.json`: `allowBuilds` (esbuild's postinstall, without which vite cannot start) and `overrides` live in `pnpm-workspace.yaml`. The version is pinned by `packageManager` and by `npm install -g pnpm@11` in each Dockerfile.
 - `ALTER TYPE ... ADD VALUE` (Postgres enum extension) cannot run inside a transaction — drizzle-kit handles this via migration breakpoints.
 - Cross-week move detection works because `insertAllChanges` sees all weeks' diffs at once. Adding per-week change insertion would regress this.
+- Never compare `new Date()` with an event timestamp — see [Time](#time-paris-wall-clock-labelled-utc). Use `wallClockNow()` from `@studysuite/shared/time`.

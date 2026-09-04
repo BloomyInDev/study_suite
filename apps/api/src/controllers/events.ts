@@ -2,6 +2,7 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { events } from '@studysuite/db'
 import { eventStudentGroups } from '@studysuite/db'
 import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm'
+import { wallClockNow } from '@studysuite/shared/time'
 import { db } from '../db.js'
 import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
 import { eventFilterConditions } from '../lib/event-filters.js'
@@ -107,7 +108,10 @@ export default new OpenAPIHono()
             const { limit, dateFormat, groupIds } = c.req.valid('query')
             const rows = await db.query.events.findMany({
                 where: and(
-                    gte(events.startDate, new Date()),
+                    // On `endDate`, not `startDate`: the homepage asks this route for
+                    // "what is on now, or next", and a class already under way is
+                    // the honest answer to that.
+                    gte(events.endDate, wallClockNow()),
                     // Filter here, not client-side: limiting first would return
                     // other groups' events and leave the user with an empty list.
                     groupIds && groupIds.length > 0
