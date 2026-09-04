@@ -9,7 +9,8 @@ interface RoleMapping {
     id: string
     guildId: string
     discordRoleId: string
-    studentGroupId: string
+    userRole: 'student' | 'teacher'
+    studentGroupId: string | null
     studentGroupName: string | null
     createdAt: string
 }
@@ -26,7 +27,6 @@ interface DiscordGuild {
     id: string
     name: string
     icon: string | null
-    myRoles: string[]
 }
 
 const groups = useGroupsStore()
@@ -51,9 +51,11 @@ const guildForm = ref({ discordGuildId: '', name: '' })
 const mappingDialog = ref(false)
 const savingMapping = ref(false)
 const mappingTarget = ref<Guild | null>(null)
-const mappingForm = ref({ discordRoleId: '', studentGroupId: '' })
-// Roles to show as suggestions in mapping dialog
-const suggestedRoles = ref<string[]>([])
+const mappingForm = ref<{
+    discordRoleId: string
+    userRole: 'student' | 'teacher'
+    studentGroupId: string | null
+}>({ discordRoleId: '', userRole: 'student', studentGroupId: null })
 
 const deletingGuild = ref<string | null>(null)
 const deletingMapping = ref<string | null>(null)
@@ -142,23 +144,10 @@ async function deleteGuild(guild: Guild) {
     }
 }
 
-function openMappingDialog(guild: Guild, roleId?: string) {
+function openMappingDialog(guild: Guild) {
     mappingTarget.value = guild
-    mappingForm.value = { discordRoleId: roleId ?? '', studentGroupId: '' }
-    // Find roles from my Discord data for this guild
-    const dGuild = myDiscordGuilds.value.find((g) => g.id === guild.discordGuildId)
-    suggestedRoles.value = dGuild?.myRoles ?? []
+    mappingForm.value = { discordRoleId: '', userRole: 'student', studentGroupId: null }
     mappingDialog.value = true
-}
-
-function openMappingFromDiscord(dGuild: DiscordGuild, roleId: string) {
-    const configuredGuild = guilds.value.find((g) => g.discordGuildId === dGuild.id)
-    if (!configuredGuild) {
-        notifs.error("Ajoutez d'abord ce serveur à la liste.")
-        return
-    }
-    discordPanelOpen.value = false
-    openMappingDialog(configuredGuild, roleId)
 }
 
 async function addMapping() {
@@ -168,7 +157,18 @@ async function addMapping() {
         const res = await fetch(`${API_URL}/api/admin/guilds/${mappingTarget.value.id}/mappings`, {
             method: 'POST',
             headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-            body: JSON.stringify(mappingForm.value),
+            body: JSON.stringify(
+                mappingForm.value.userRole === 'student'
+                    ? {
+                          discordRoleId: mappingForm.value.discordRoleId,
+                          userRole: 'student',
+                          studentGroupId: mappingForm.value.studentGroupId,
+                      }
+                    : {
+                          discordRoleId: mappingForm.value.discordRoleId,
+                          userRole: 'teacher',
+                      },
+            ),
         })
         if (!res.ok) throw new Error()
         const body = (await res.json()) as { data: RoleMapping }
@@ -284,7 +284,11 @@ onMounted(fetchGuilds)
                         <code class="text-caption bg-surface-variant px-1 rounded">{{
                             mapping.discordRoleId
                         }}</code>
-                        → <strong>{{ mapping.studentGroupName ?? mapping.studentGroupId }}</strong>
+                        →
+                        <strong v-if="mapping.userRole === 'teacher'">Enseignant</strong>
+                        <strong v-else>{{
+                            mapping.studentGroupName ?? mapping.studentGroupId
+                        }}</strong>
                     </v-list-item-title>
                     <template #append>
                         <v-btn
@@ -312,7 +316,7 @@ onMounted(fetchGuilds)
                     Mes serveurs Discord
                 </v-card-title>
                 <v-card-subtitle class="px-4 pb-2">
-                    Cliquez sur un serveur pour l'ajouter, ou sur un rôle pour créer une liaison.
+                    Cliquez sur un serveur pour l'ajouter à la liste.
                 </v-card-subtitle>
 
                 <v-card-text class="pa-4">
@@ -353,33 +357,6 @@ onMounted(fetchGuilds)
                             <v-chip v-else size="x-small" color="success" label>Configuré</v-chip>
                         </div>
 
-                        <div v-if="dGuild.myRoles.length > 0" class="pl-9">
-                            <div class="text-caption text-medium-emphasis mb-1">Vos rôles :</div>
-                            <div class="d-flex flex-wrap ga-1">
-                                <v-chip
-                                    v-for="roleId in dGuild.myRoles"
-                                    :key="roleId"
-                                    size="x-small"
-                                    :variant="
-                                        configuredGuildIds.has(dGuild.id) ? 'tonal' : 'outlined'
-                                    "
-                                    :color="
-                                        configuredGuildIds.has(dGuild.id) ? 'primary' : undefined
-                                    "
-                                    :title="
-                                        configuredGuildIds.has(dGuild.id)
-                                            ? 'Cliquer pour créer une liaison'
-                                            : 'Ajoutez d\'abord ce serveur'
-                                    "
-                                    @click="openMappingFromDiscord(dGuild, roleId)"
-                                >
-                                    {{ roleId }}
-                                </v-chip>
-                            </div>
-                        </div>
-                        <div v-else class="pl-9 text-caption text-medium-emphasis">
-                            Aucun rôle dans ce serveur.
-                        </div>
                         <v-divider class="mt-3" />
                     </div>
                 </v-card-text>
@@ -442,35 +419,27 @@ onMounted(fetchGuilds)
                     </span>
                 </v-card-title>
                 <v-card-text class="pa-4">
-                    <div v-if="suggestedRoles.length > 0" class="mb-3">
-                        <div class="text-caption text-medium-emphasis mb-1">
-                            Vos rôles dans ce serveur :
-                        </div>
-                        <div class="d-flex flex-wrap ga-1">
-                            <v-chip
-                                v-for="roleId in suggestedRoles"
-                                :key="roleId"
-                                size="x-small"
-                                :color="
-                                    mappingForm.discordRoleId === roleId ? 'primary' : undefined
-                                "
-                                :variant="mappingForm.discordRoleId === roleId ? 'flat' : 'tonal'"
-                                @click="mappingForm.discordRoleId = roleId"
-                            >
-                                {{ roleId }}
-                            </v-chip>
-                        </div>
-                    </div>
                     <v-text-field
                         v-model="mappingForm.discordRoleId"
                         label="ID du rôle Discord"
                         variant="outlined"
                         density="compact"
-                        class="mb-3"
-                        hint="Ou cliquez sur un rôle ci-dessus"
+                        hint="Mode développeur Discord → clic droit sur le rôle → Copier l'identifiant"
                         persistent-hint
                     />
                     <v-select
+                        v-model="mappingForm.userRole"
+                        :items="[
+                            { title: 'Élève', value: 'student' },
+                            { title: 'Enseignant', value: 'teacher' },
+                        ]"
+                        label="Rôle attribué"
+                        variant="outlined"
+                        density="compact"
+                        class="mt-3"
+                    />
+                    <v-select
+                        v-if="mappingForm.userRole === 'student'"
                         v-model="mappingForm.studentGroupId"
                         :items="groups.visibleGroups"
                         :item-title="groupLabel"
@@ -478,7 +447,6 @@ onMounted(fetchGuilds)
                         label="Classe"
                         variant="outlined"
                         density="compact"
-                        class="mt-3"
                     />
                 </v-card-text>
                 <v-card-actions>
@@ -488,7 +456,10 @@ onMounted(fetchGuilds)
                         color="primary"
                         variant="flat"
                         :loading="savingMapping"
-                        :disabled="!mappingForm.discordRoleId || !mappingForm.studentGroupId"
+                        :disabled="
+                            !mappingForm.discordRoleId ||
+                            (mappingForm.userRole === 'student' && !mappingForm.studentGroupId)
+                        "
                         @click="addMapping"
                     >
                         Créer
