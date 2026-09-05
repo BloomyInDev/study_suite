@@ -1,60 +1,58 @@
 name: Build images
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
 
 concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
+    group: build-${{ github.ref }}
+    cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: api
-            dockerfile: apps/api/Dockerfile
-          - name: web
-            dockerfile: apps/web/Dockerfile
-            build-args: |
-              VITE_GIT_COMMIT_HASH=${{ github.sha }}
-              VITE_SITE_URL=${{ vars.SITE_URL || 'http://localhost' }}
-          - name: scraper
-            dockerfile: apps/scraper/Dockerfile
-          - name: migrate
-            dockerfile: packages/db/Dockerfile
+    build:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - name: api
+                      dockerfile: apps/api/Dockerfile
+                    - name: web
+                      dockerfile: apps/web/Dockerfile
+                      build-args: VITE_GIT_COMMIT_HASH=${{ github.sha }}
+                    - name: scraper
+                      dockerfile: apps/scraper/Dockerfile
+                    - name: migrate
+                      dockerfile: packages/db/Dockerfile
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+            - name: Login to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ghcr.io
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
 
-      - name: Build and push ${{ matrix.name }}
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          build-args: ${{ matrix.build-args }}
-          push: true
-          provenance: false
-          platforms: linux/amd64
-          tags: ghcr.io/bloomyindev/study_suite/${{ matrix.name }}:latest
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+            - name: Build and push ${{ matrix.name }}
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  file: ${{ matrix.dockerfile }}
+                  build-args: ${{ matrix.build-args }}
+                  push: true
+                  provenance: false
+                  platforms: linux/amd64
+                  tags: ghcr.io/bloomyindev/study_suite/${{ matrix.name }}:latest
+                  cache-from: type=gha,scope=${{ matrix.name }}
+                  cache-to: type=gha,mode=max,scope=${{ matrix.name }}

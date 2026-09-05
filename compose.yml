@@ -68,10 +68,12 @@ services:
             args:
                 # docker compose build GIT_COMMIT=$(git rev-parse HEAD) to stamp it
                 VITE_GIT_COMMIT_HASH: ${GIT_COMMIT:-unknown}
-                # Public origin of the site, used by the og: tags in index.html
-                VITE_SITE_URL: ${SITE_URL:-http://localhost}
             # Override VITE_API_URL here if the API is on a different public URL
             #   VITE_API_URL: https://api.example.com
+        environment:
+            # Public origin, substituted into the og: tags at container start.
+            # A restart is enough to change it — no rebuild.
+            SITE_URL: ${SITE_URL:-http://localhost}
         ports:
             - '80:80'
         depends_on:

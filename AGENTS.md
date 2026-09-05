@@ -313,10 +313,26 @@ Consequences to keep in mind:
 that are not `noindex`, robots disallows the ones that are. Both need the
 absolute origin, which is why they are built rather than kept in `public/`.
 
-`VITE_SITE_URL` (docker build arg, `SITE_URL` in compose) is the absolute origin
-the `og:` tags and the canonical link are built from — crawlers do not resolve
-relative URLs. It defaults to the dev server. `public/og-image.png` (1200×630) is
-generated from `public/og-image.svg` with
+`VITE_SITE_URL` is the absolute origin the `og:` tags, the canonical link and
+the sitemap are built from — crawlers do not resolve relative URLs. A local
+build takes it from the environment and falls back to the dev server.
+
+**The image does not bake it in.** The docker build sets it to the sentinel
+`__SITE_URL__`, and `docker-entrypoint.sh` (installed into nginx's
+`/docker-entrypoint.d/`) substitutes the real origin from `$SITE_URL` at
+container start, so one image serves any origin and a restart is enough to
+change it. `dist` is kept pristine at `/usr/share/nginx/template` and copied to
+`/usr/share/nginx/html` on every start — substituting in place would consume the
+sentinel on the first boot and leave nothing for the second to replace. Only
+text formats are rewritten; the icons and the og image are binary. This makes
+the served root mutable at boot, so it cannot be a read-only mount.
+
+nginx serves `$uri/index.html` rather than `$uri/`: matching the directory makes
+it 301 to `/planning/`, away from the URL the router and the canonical tag use,
+and it builds that redirect from its own scheme and host — behind a
+TLS-terminating proxy it would point back at `http://`.
+
+`public/og-image.png` (1200×630) is generated from `public/og-image.svg` with
 `rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png`.
 
 ---
