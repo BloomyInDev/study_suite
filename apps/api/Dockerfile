@@ -1,6 +1,6 @@
 # ── installer ────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS installer
-RUN npm install -g pnpm@11
+RUN npm install -g pnpm@11.21.0
 WORKDIR /app
 
 # Copy manifests for all workspace packages (needed by pnpm for graph resolution)

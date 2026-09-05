@@ -349,7 +349,13 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
 - The web app never imports `@studysuite/db` — DB access is server-side only.
 - `drizzle.config.ts` is excluded from `packages/db/tsconfig.json` (drizzle-kit bundles it itself; including it breaks `rootDir`).
 - `schema/index.ts` must always have at least `export {}` to be a valid TS module.
-- pnpm 11 ignores the `pnpm` field of `package.json`: `allowBuilds` (esbuild's postinstall, without which vite cannot start) and `overrides` live in `pnpm-workspace.yaml`. The version is pinned by `packageManager` and by `npm install -g pnpm@11` in each Dockerfile.
+- pnpm 11 ignores the `pnpm` field of `package.json`: `allowBuilds` (esbuild's postinstall, without which vite cannot start) and `overrides` live in `pnpm-workspace.yaml`. The version is pinned by `packageManager` and by `npm install -g pnpm@11.21.0` in
+  each Dockerfile — **the two must be the same exact version**. A range (`pnpm@11`)
+  drifts to whatever is latest at build time, and pnpm then honours `packageManager`
+  by fetching the pinned build over the network on _every_ invocation. The migrate
+  container sits on the `internal: true` `backend` network, so that fetch cannot
+  resolve and blocks ~86 s before falling back to the store copy — a 1.7 s job took
+  87 s. Bump both together.
 - `ALTER TYPE ... ADD VALUE` (Postgres enum extension) cannot run inside a transaction — drizzle-kit handles this via migration breakpoints.
 - Cross-week move detection works because `insertAllChanges` sees all weeks' diffs at once. Adding per-week change insertion would regress this.
 - Never compare `new Date()` with an event timestamp — see [Time](#time-paris-wall-clock-labelled-utc). Use `wallClockNow()` from `@studysuite/shared/time`.

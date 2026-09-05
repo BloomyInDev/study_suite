@@ -1,6 +1,6 @@
 # ── builder ───────────────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
-RUN npm install -g pnpm@11
+RUN npm install -g pnpm@11.21.0
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
