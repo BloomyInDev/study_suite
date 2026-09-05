@@ -20,7 +20,7 @@ services:
             retries: 10
 
     migrate:
-        image: forge.red.bloomyindev.me/bastien/study_suite_migrate:latest
+        image: ghcr.io/bloomyindev/study_suite/migrate:latest
         build:
             context: .
             dockerfile: packages/db/Dockerfile
@@ -34,7 +34,7 @@ services:
         restart: 'no'
 
     api:
-        image: forge.red.bloomyindev.me/bastien/study_suite_api:latest
+        image: ghcr.io/bloomyindev/study_suite/api:latest
         build:
             context: .
             dockerfile: apps/api/Dockerfile
@@ -61,7 +61,7 @@ services:
             - frontend
 
     web:
-        image: forge.red.bloomyindev.me/bastien/study_suite_web:latest
+        image: ghcr.io/bloomyindev/study_suite/web:latest
         build:
             context: .
             dockerfile: apps/web/Dockerfile
@@ -78,7 +78,7 @@ services:
             - frontend
 
     scraper:
-        image: forge.red.bloomyindev.me/bastien/study_suite_scraper:latest
+        image: ghcr.io/bloomyindev/study_suite/scraper:latest
         build:
             context: .
             dockerfile: apps/scraper/Dockerfile

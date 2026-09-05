@@ -165,7 +165,7 @@ const navItems = [
             <div class="text-caption text-medium-emphasis">
                 Commit Hash:
                 <a
-                    :href="`https://forge.red.bloomyindev.me/bastien/study_suite/commit/${commitHash}`"
+                    :href="`https://github.com/BloomyInDev/study_suite/commit/${commitHash}`"
                     class="text-medium-emphasis text-decoration-underline commit-hash"
                     target="_blank"
                     >{{ shortHash }}</a
