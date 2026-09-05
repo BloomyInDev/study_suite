@@ -281,6 +281,44 @@ Vue 3 + Vuetify 3 + Pinia SPA.
 
 **API client** (`src/lib/api.ts`): typed Hono client via `hono/client` using `AppType` exported from `apps/api`.
 
+### Head tags and static rendering
+
+Every page's title, description and Open Graph tags come from one table,
+`src/lib/pages.ts`. `usePageSeo()` — called once, in `App.vue` — feeds it to
+unhead, so the head follows the route; the views themselves carry no head code.
+
+`pnpm build` runs **vite-ssg**, which renders each route to its own HTML file
+(`dist/planning/index.html`, …) with those tags already in it, because a crawler
+does not run JavaScript and would otherwise see the same tags on every URL.
+nginx's `try_files $uri $uri/ /index.html` serves them before the SPA fallback.
+
+Consequences to keep in mind:
+
+- `main.ts` exports `createApp = ViteSSG(...)` instead of mounting: vite-ssg owns
+  the app, router and head instances. `router.ts` therefore exports `routes` and
+  `registerGuards` rather than a router.
+- The route guard is skipped under `import.meta.env.SSR` — it answers for a
+  visitor with no account, which would give every protected route the login
+  page's head.
+- The static render runs under jsdom (`ssgOptions.mock`), so Vuetify takes its
+  browser path and needs `ResizeObserver` & co.; `main.ts` stubs them for SSR.
+  Vuetify is also `ssr.noExternal`, as Node cannot import its `.css` files.
+- `@unhead/vue` is pinned to the major vite-ssg depends on. Two copies mean two
+  injection keys, and the tags silently never reach the rendered HTML.
+- A new route needs an entry in `pages.ts`; without one it is titled
+  `Study Suite` and marked `noindex`.
+
+`robots.txt` and `sitemap.xml` are generated from the same table by
+`ssgOptions.onFinished` (see `vite.config.ts`): the sitemap lists the entries
+that are not `noindex`, robots disallows the ones that are. Both need the
+absolute origin, which is why they are built rather than kept in `public/`.
+
+`VITE_SITE_URL` (docker build arg, `SITE_URL` in compose) is the absolute origin
+the `og:` tags and the canonical link are built from — crawlers do not resolve
+relative URLs. It defaults to the dev server. `public/og-image.png` (1200×630) is
+generated from `public/og-image.svg` with
+`rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png`.
+
 ---
 
 ## Commit convention

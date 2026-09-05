@@ -16,3 +16,4 @@ data/
 /scraper.config.yaml
 debug/
 apps/scraper/dump.*
+.vite-ssg-temp/

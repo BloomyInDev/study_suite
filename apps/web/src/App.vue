@@ -6,6 +6,7 @@ import { useGroupsStore } from './stores/groups.js'
 import { useNotificationsStore } from './stores/notifications.js'
 import { useAuthStore } from './stores/auth.js'
 import GroupPickerDialog from './components/GroupPickerDialog.vue'
+import { usePageSeo } from './lib/seo.js'
 
 const { mobile } = useDisplay()
 const theme = useTheme()
@@ -13,6 +14,10 @@ const router = useRouter()
 const groupsStore = useGroupsStore()
 const notifs = useNotificationsStore()
 const auth = useAuthStore()
+
+// The one place the head is wired up: every page's title and og: tags come from
+// lib/pages.ts and follow the route, so no view carries head code of its own.
+usePageSeo()
 
 const drawerOpen = ref(false)
 const pickerOpen = ref(false)
