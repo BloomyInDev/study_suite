@@ -1,3 +1,5 @@
+import { fromWallClock, wallClockToOffsetIso } from '@studysuite/shared/time'
+
 import type { DateFormat } from '../schemas/query.js'
 
 export const withEventRelations = {
@@ -6,14 +8,32 @@ export const withEventRelations = {
     eventStudentGroups: { with: { studentGroup: true as const } },
 }
 
+/**
+ * `d` is a Paris wall-clock label, not an instant (see `@studysuite/shared/time`).
+ *
+ * The formats split in two. `iso`, `unix` and `unix-ms` hand the label straight
+ * out: `iso` ends in `Z` without meaning UTC, and the numeric pair are the same
+ * label as an epoch, so they are off by the Paris offset with nothing in the
+ * value to hint at it. All three are wrong, and kept only because clients
+ * already read them.
+ *
+ * `iso-offset`, `unix-instant` and `unix-ms-instant` resolve the label to the
+ * instant it denotes and are what a new client should ask for.
+ */
 export function formatDate(d: Date, fmt: DateFormat): string | number {
     switch (fmt) {
         case 'iso':
             return d.toISOString()
+        case 'iso-offset':
+            return wallClockToOffsetIso(d)
         case 'unix':
             return Math.floor(d.getTime() / 1000)
         case 'unix-ms':
             return d.getTime()
+        case 'unix-instant':
+            return Math.floor(fromWallClock(d).getTime() / 1000)
+        case 'unix-ms-instant':
+            return fromWallClock(d).getTime()
     }
 }
 
@@ -25,7 +45,9 @@ export type EventRow = {
     source: string
     eventLocations: { location: { id: string; name: string } }[]
     eventTeachers: { teacher: { id: string; firstName: string; lastName: string } }[]
-    eventStudentGroups: { studentGroup: { id: string; internalName: string; displayName: string | null } }[]
+    eventStudentGroups: {
+        studentGroup: { id: string; internalName: string; displayName: string | null }
+    }[]
 }
 
 export function eventToDto(row: EventRow, fmt: DateFormat) {

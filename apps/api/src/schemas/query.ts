@@ -1,6 +1,21 @@
 import { z } from '@hono/zod-openapi'
 
-export const DateFormatSchema = z.enum(['iso', 'unix', 'unix-ms']).default('iso')
+/**
+ * How event timestamps are rendered on the wire.
+ *
+ * `iso`, `unix` and `unix-ms` all carry the Paris *wall-clock label* the
+ * planning is stored as, so `iso` ends in `Z` while denoting local time and the
+ * two numeric formats are the same label as an epoch — off by the Paris offset,
+ * with nothing in the value to signal it. They stay, `iso` as the default,
+ * because clients already depend on them.
+ *
+ * `iso-offset`, `unix-instant` and `unix-ms-instant` are the honest three: the
+ * real instant the label denotes, with `+01:00` / `+02:00` resolved per
+ * timestamp. Prefer them in any new client.
+ */
+export const DateFormatSchema = z
+    .enum(['iso', 'iso-offset', 'unix', 'unix-ms', 'unix-instant', 'unix-ms-instant'])
+    .default('iso')
 export type DateFormat = z.infer<typeof DateFormatSchema>
 
 export const DateParamSchema = z.object({

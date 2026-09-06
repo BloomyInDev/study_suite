@@ -68,11 +68,13 @@ export const EventDtoSchema = z
         id: uuid('2a7c9e1b-5d3f-4a8b-9c2e-6f0a1b3c5d7e'),
         title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
         startDate: z.union([z.string(), z.number()]).openapi({
-            description: 'ISO date string or unix timestamp (seconds/ms) based on the dateFormat param',
+            description:
+                'Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC** — it is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
             example: '2026-09-01T08:30:00.000Z',
         }),
         endDate: z.union([z.string(), z.number()]).openapi({
-            description: 'ISO date string or unix timestamp (seconds/ms) based on the dateFormat param',
+            description:
+                'Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC** — it is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
             example: '2026-09-01T10:30:00.000Z',
         }),
         source: z.string().openapi({ example: 'prose' }),
@@ -116,7 +118,9 @@ export const GroupSchema = z
             example: false,
         }),
         parents: z.array(GroupRefSchema).openapi({ description: 'Groups this one belongs to' }),
-        children: z.array(GroupRefSchema).openapi({ description: 'Groups that belong to this one' }),
+        children: z
+            .array(GroupRefSchema)
+            .openapi({ description: 'Groups that belong to this one' }),
     })
     .openapi('Group')
 
@@ -162,11 +166,15 @@ export const UserDtoSchema = z
         id: uuid('7b3d5f1a-9c2e-4b6d-8f0a-1c3e5a7b9d1f'),
         discordId: z.string().openapi({ example: '204255221017214977' }),
         discordUsername: z.string().openapi({ example: 'bastien' }),
-        discordAvatar: z.string().nullable().openapi({ example: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6' }),
+        discordAvatar: z
+            .string()
+            .nullable()
+            .openapi({ example: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6' }),
         role: z.enum(['student', 'teacher']).nullable().openapi({ example: 'student' }),
         isAdmin: z.boolean().openapi({ example: false }),
         status: z.enum(['pending', 'approved', 'rejected']).openapi({
-            description: 'A user stays pending until a Discord role matches, or an admin approves them',
+            description:
+                'A user stays pending until a Discord role matches, or an admin approves them',
             example: 'approved',
         }),
         studentGroupId: uuid('4d8b6a2c-7e1f-4a3b-9c5d-8e0f2a4b6c8d').nullable(),
@@ -184,7 +192,7 @@ export const EventChangeDtoSchema = z
         title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
         startDate: z.union([z.string(), z.number()]).openapi({
             description:
-                'The slot the event held when it was last seen — for a `moved` change, the old one',
+                'The slot the event held when it was last seen — for a `moved` change, the old one. Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC** — it is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
         }),
         endDate: z.union([z.string(), z.number()]),
         /** Present on `moved` only: where the event went. */
@@ -206,6 +214,9 @@ export const EventChangeDtoSchema = z
                 }),
             })
             .nullable(),
-        detectedAt: z.string().openapi({ example: '2026-09-05T18:02:11.000Z' }),
+        detectedAt: z.string().openapi({
+            description: 'A real UTC instant, unlike the wall-clock fields above',
+            example: '2026-09-05T18:02:11.000Z',
+        }),
     })
     .openapi('EventChangeDto')

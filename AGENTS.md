@@ -74,11 +74,13 @@ wrong by that amount because of exactly this.
 
 `@studysuite/shared/time` is the only correct way across that boundary:
 
-| Helper                                                      | Use                                         |
-| ----------------------------------------------------------- | ------------------------------------------- |
-| `wallClockNow()`                                            | "now", comparable with an event timestamp   |
-| `toWallClock(instant)`                                      | convert a real instant you already hold     |
-| `wallClockDayStart(instant?)` / `wallClockDayEnd(instant?)` | the Paris day's bounds; `…End` is exclusive |
+| Helper                                                      | Use                                                         |
+| ----------------------------------------------------------- | ----------------------------------------------------------- |
+| `wallClockNow()`                                            | "now", comparable with an event timestamp                   |
+| `toWallClock(instant)`                                      | convert a real instant you already hold                     |
+| `wallClockDayStart(instant?)` / `wallClockDayEnd(instant?)` | the Paris day's bounds; `…End` is exclusive                 |
+| `fromWallClock(label)`                                      | the real instant a label denotes (inverse of `toWallClock`) |
+| `wallClockToOffsetIso(label)`                               | that instant as `…+02:00`, for the wire                     |
 
 It resolves the offset through an explicit `Europe/Paris` `Intl.DateTimeFormat`, never
 the local getters. The predecessor (`dateToUTC`) read the process timezone, which is
@@ -94,6 +96,17 @@ Rules of thumb:
   `HomeView` holds both and keeps them apart as `now` and `wallNow`.
 - Displaying an event time means UTC getters or `timeZone: 'UTC'`, which is what
   `apps/web/src/lib/date.ts` does throughout.
+- **The api's JSON says `Z` while meaning Paris.** Every event route takes a
+  `dateFormat` param; `iso` (the default), `unix` and `unix-ms` all hand out the
+  raw wall-clock label, so `iso` carries a `Z` it does not mean and the numeric
+  pair are off by the Paris offset. An external consumer that does date
+  arithmetic on them lands one or two hours early — a transit lookup for an 08:00
+  class targeted a 06:00Z arrival. The numeric pair are the worse half: an epoch
+  has no label reading at all, so a consumer cannot compensate the way it can
+  once it knows about the `Z`. `iso-offset`, `unix-instant` and `unix-ms-instant`
+  emit the true instant and are what any client outside this repo should ask for.
+  The wrong three stay on purpose: `apps/web` and existing consumers already read
+  them that way, and correcting them in place would break those silently.
 
 ## packages/shared
 
@@ -369,7 +382,7 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
   and the only symptom is a column that never appears. Check the journal's last
   entry after generating, and never `git checkout --` that file to undo unrelated
   churn — it takes the new entry with it. `pnpm -F @studysuite/db exec drizzle-kit
-  check` verifies the chain.
+check` verifies the chain.
 - `pnpm format` reformats **the whole repo**, which is not prettier-clean: it
   rewrites files no one touched, `pnpm-lock.yaml` and the drizzle snapshots
   included. Run `pnpm exec prettier --write <the files you changed>` instead;
