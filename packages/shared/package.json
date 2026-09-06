@@ -8,7 +8,8 @@
         "./time": "./src/time/index.ts"
     },
     "scripts": {
-        "typecheck": "tsc --noEmit"
+        "typecheck": "tsc --noEmit",
+        "test": "vitest run"
     },
     "dependencies": {
         "yaml": "^2.6.1",
@@ -17,6 +18,7 @@
     "devDependencies": {
         "@studysuite/tsconfig": "workspace:*",
         "@types/node": "^22.15.18",
-        "typescript": "^5.8.3"
+        "typescript": "^5.8.3",
+        "vitest": "^5.0.0"
     }
 }

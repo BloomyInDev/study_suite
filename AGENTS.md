@@ -20,6 +20,10 @@ pnpm -F @studysuite/scraper dev   # Node scraper
 pnpm typecheck                    # all packages
 pnpm -F @studysuite/api typecheck # single package
 
+# Tests (vitest; packages/shared and apps/api carry them)
+pnpm test                         # all packages
+pnpm -F @studysuite/shared test   # single package
+
 # Lint / format
 pnpm lint
 pnpm format
@@ -107,6 +111,10 @@ Rules of thumb:
   emit the true instant and are what any client outside this repo should ask for.
   The wrong three stay on purpose: `apps/web` and existing consumers already read
   them that way, and correcting them in place would break those silently.
+  `packages/shared/src/time/index.test.ts` pins the offsets either side of both
+  DST transitions, and `apps/api/src/lib/serialize.test.ts` asserts the legacy
+  three stay wrong by exactly the offset — a regression guard, not an
+  aspiration. Both must pass under any `TZ`, which is the bug they exist for.
 
 ## packages/shared
 
