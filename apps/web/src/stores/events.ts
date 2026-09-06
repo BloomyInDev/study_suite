@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { backend } from '../lib/api.js'
-import { Duration, enhanceEvent, type Event } from '../lib/types.js'
+import {
+    Duration,
+    enhanceChange,
+    enhanceEvent,
+    type Event,
+    type EventChange,
+} from '../lib/types.js'
 import { mondayOfWeek, toIsoDateString } from '../lib/date.js'
 
 interface CachedEvents {
@@ -99,6 +105,18 @@ export const useEventsStore = defineStore('events', {
             })
             const body = await res.json()
             return (body.data ?? []).map(enhanceEvent)
+        },
+
+        /**
+         * The scraper's audit log for the given groups. Not cached: the point of
+         * the page is to show what changed since the last look.
+         */
+        async fetchChanges(groupIds: string[], days = 14): Promise<EventChange[]> {
+            const res = await backend.api.events.changes.$get({
+                query: groupIds.length > 0 ? { days, groupIds: groupIds.join(',') } : { days },
+            })
+            const body = await res.json()
+            return (body.data ?? []).map(enhanceChange)
         },
 
         clearCache() {

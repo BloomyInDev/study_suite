@@ -1,19 +1,21 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { events } from '@studysuite/db'
+import { eventChanges, events, studentGroups } from '@studysuite/db'
 import { eventStudentGroups } from '@studysuite/db'
-import { and, asc, eq, gte, inArray, lt } from 'drizzle-orm'
+import { and, arrayOverlaps, asc, desc, eq, gte, inArray, lt } from 'drizzle-orm'
 import { wallClockNow } from '@studysuite/shared/time'
 import { db } from '../db.js'
 import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
 import { eventFilterConditions } from '../lib/event-filters.js'
-import { eventToDto, withEventRelations } from '../lib/serialize.js'
+import { eventChangeToDto, eventToDto, withEventRelations } from '../lib/serialize.js'
 import {
     DateFormatSchema,
     DateParamSchema,
+    EventChangesSchema,
     FilteredEventsSchema,
     LimitSchema,
 } from '../schemas/query.js'
 import {
+    EventChangeDtoSchema,
     EventDtoSchema,
     IdParamSchema,
     dataResponse,
@@ -129,6 +131,52 @@ export default new OpenAPIHono()
                 limit,
             })
             return c.json({ data: rows.map((r) => eventToDto(r, dateFormat)) }, 200)
+        },
+    )
+    .openapi(
+        createRoute({
+            method: 'get',
+            path: '/changes',
+            operationId: 'listEventChanges',
+            summary: 'List recent planning changes',
+            description:
+                'The scraper’s audit log: what was added, removed, moved or edited on the planning, newest first. `groupIds` keeps only the changes touching those groups.',
+            tags: ['Events'],
+            request: { query: EventChangesSchema },
+            responses: {
+                200: dataResponse(z.array(EventChangeDtoSchema), 'Recent changes'),
+            },
+        }),
+        async (c) => {
+            const { groupIds, days, limit, dateFormat } = c.req.valid('query')
+
+            // The log stores group names, not ids: the event row a `removed`
+            // change refers to is gone, so nothing could be joined back to.
+            let groupNames: string[] | undefined
+            if (groupIds && groupIds.length > 0) {
+                const rows = await db
+                    .select({ internalName: studentGroups.internalName })
+                    .from(studentGroups)
+                    .where(inArray(studentGroups.id, groupIds))
+                groupNames = rows.map((r) => r.internalName)
+                // Ids that match nothing must not widen the feed to every group.
+                if (groupNames.length === 0) return c.json({ data: [] }, 200)
+            }
+
+            // `detectedAt` is a real instant, not a wall-clock label, so it
+            // compares with `new Date()` — unlike the event timestamps below.
+            const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+
+            const rows = await db.query.eventChanges.findMany({
+                where: and(
+                    gte(eventChanges.detectedAt, since),
+                    groupNames ? arrayOverlaps(eventChanges.groups, groupNames) : undefined,
+                ),
+                orderBy: desc(eventChanges.detectedAt),
+                limit,
+            })
+
+            return c.json({ data: rows.map((r) => eventChangeToDto(r, dateFormat)) }, 200)
         },
     )
     .openapi(

@@ -31,6 +31,11 @@ export const PAGES: PageSeo[] = [
         description: "L'emploi du temps de ton groupe, semaine par semaine.",
     },
     {
+        path: '/planning/changes',
+        title: 'Changements du planning',
+        description: 'Les cours ajoutés, supprimés, déplacés ou modifiés ces derniers jours.',
+    },
+    {
         path: '/planning/compare',
         title: 'Comparer les plannings',
         description: 'Les emplois du temps de plusieurs groupes, côte à côte.',

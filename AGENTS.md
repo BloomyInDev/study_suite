@@ -346,6 +346,12 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
 
 ## Key constraints
 
+- **The app is in production and the database holds real data.** Migrations must be
+  additive and backward compatible: a new column is nullable or carries a `DEFAULT`,
+  and a `DROP`/`RENAME` needs a backfill plan. A change to what identifies an event
+  (its title, the timestamp format) makes the next reconcile emit a wave of bogus
+  `removed`+`added` rows into `event_changes`, which users now see on
+  `/planning/changes` — say so before making one.
 - The web app never imports `@studysuite/db` — DB access is server-side only.
 - `drizzle.config.ts` is excluded from `packages/db/tsconfig.json` (drizzle-kit bundles it itself; including it breaks `rootDir`).
 - `schema/index.ts` must always have at least `export {}` to be a valid TS module.

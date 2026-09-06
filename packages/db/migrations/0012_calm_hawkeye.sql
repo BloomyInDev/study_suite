@@ -1,0 +1,1 @@
+ALTER TABLE "event_changes" ADD COLUMN "groups" text[] DEFAULT '{}' NOT NULL;

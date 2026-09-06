@@ -10,6 +10,10 @@ export const routes: RouteRecordRaw[] = [
     { path: '/', component: () => import('./views/HomeView.vue') },
     { path: '/planning', component: () => import('./views/PlanningView.vue') },
     {
+        path: '/planning/changes',
+        component: () => import('./views/PlanningChangesView.vue'),
+    },
+    {
         path: '/planning/compare',
         component: () => import('./views/PlanningComparisonView.vue'),
     },

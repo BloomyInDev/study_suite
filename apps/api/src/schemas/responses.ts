@@ -176,3 +176,36 @@ export const UserDtoSchema = z
         teacherId: uuid('1c9e3f8a-2b4d-4e6f-9a1b-3c5d7e9f1a2b').nullable(),
     })
     .openapi('User')
+
+export const EventChangeDtoSchema = z
+    .object({
+        id: uuid('8e2f4a6b-1c3d-4e5f-8a9b-0c1d2e3f4a5b'),
+        changeType: z.enum(['added', 'removed', 'updated', 'moved']),
+        title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
+        startDate: z.union([z.string(), z.number()]).openapi({
+            description:
+                'The slot the event held when it was last seen — for a `moved` change, the old one',
+        }),
+        endDate: z.union([z.string(), z.number()]),
+        /** Present on `moved` only: where the event went. */
+        newStartDate: z.union([z.string(), z.number()]).nullable(),
+        newEndDate: z.union([z.string(), z.number()]).nullable(),
+        groups: z.array(z.string()).openapi({ example: ['BUT3-A'] }),
+        /** Present on `updated` only: the rooms, teachers and groups before and after. */
+        diff: z
+            .object({
+                before: z.object({
+                    rooms: z.array(z.string()),
+                    teachers: z.array(z.object({ firstName: z.string(), lastName: z.string() })),
+                    groups: z.array(z.string()),
+                }),
+                after: z.object({
+                    rooms: z.array(z.string()),
+                    teachers: z.array(z.object({ firstName: z.string(), lastName: z.string() })),
+                    groups: z.array(z.string()),
+                }),
+            })
+            .nullable(),
+        detectedAt: z.string().openapi({ example: '2026-09-05T18:02:11.000Z' }),
+    })
+    .openapi('EventChangeDto')

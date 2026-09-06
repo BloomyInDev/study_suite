@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
@@ -16,6 +17,8 @@ import {
 } from '../lib/date.js'
 
 const { mobile } = useDisplay()
+// Carried onto the changes page so `?group=` survives the jump.
+const route = useRoute()
 const groups = useGroupsStore()
 const override = useGroupOverride()
 
@@ -152,6 +155,17 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                 />
             </v-col>
             <v-col cols="auto" md="4" class="d-flex justify-end ga-2">
+                <v-tooltip text="Changements récents" location="start">
+                    <template #activator="{ props }">
+                        <v-btn
+                            v-bind="props"
+                            variant="tonal"
+                            :to="{ path: '/planning/changes', query: route.query }"
+                            icon="mdi-history"
+                            :size="mobile ? 'small' : undefined"
+                        />
+                    </template>
+                </v-tooltip>
                 <v-tooltip text="Comparer" location="start">
                     <template #activator="{ props }">
                         <v-btn

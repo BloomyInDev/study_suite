@@ -19,6 +19,8 @@ export interface EventSlot {
     startDate: Date
     endDate: Date
     relKey: string
+    /** Internal names of the groups concerned, kept for the changes feed. */
+    groups: string[]
 }
 
 export interface UpdatedEventChange {
@@ -322,6 +324,7 @@ export async function applyWeekEvents(
                     startDate: existing.startDate,
                     endDate: existing.endDate,
                     relKey: existingRelationsKey(existing),
+                    groups: existingRelations(existing).groups,
                 })
             }
 
@@ -332,6 +335,7 @@ export async function applyWeekEvents(
                     startDate: scrapedEv.startDate,
                     endDate: scrapedEv.endDate,
                     relKey: relationsKey(scrapedEv),
+                    groups: scrapedEv.groups.map((g) => g.internalName),
                 })
             }
         }
@@ -374,6 +378,8 @@ export async function insertAllChanges(
             eventTitle: change.title,
             startDate: change.startDate,
             endDate: change.endDate,
+            // Both sides: a group losing the course still wants to hear about it.
+            groups: [...new Set([...change.diff.before.groups, ...change.diff.after.groups])],
             diff: change.diff,
         })
     }
@@ -388,6 +394,7 @@ export async function insertAllChanges(
                 eventTitle: removed.title,
                 startDate: removed.startDate,
                 endDate: removed.endDate,
+                groups: removed.groups,
                 diff: {
                     newStart: addedSlot.startDate.toISOString(),
                     newEnd: addedSlot.endDate.toISOString(),
@@ -399,6 +406,7 @@ export async function insertAllChanges(
                 eventTitle: removed.title,
                 startDate: removed.startDate,
                 endDate: removed.endDate,
+                groups: removed.groups,
                 diff: null,
             })
         }
@@ -411,6 +419,7 @@ export async function insertAllChanges(
                 eventTitle: added.title,
                 startDate: added.startDate,
                 endDate: added.endDate,
+                groups: added.groups,
                 diff: null,
             })
         }

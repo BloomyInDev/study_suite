@@ -1,0 +1,944 @@
+{
+    "id": "796a63dd-4368-46e7-81d0-6d79823bc10c",
+    "prevId": "24d738f6-cc35-4848-a976-8ff0230e24c8",
+    "version": "7",
+    "dialect": "postgresql",
+    "tables": {
+        "public.events": {
+            "name": "events",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "title": {
+                    "name": "title",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "start_date": {
+                    "name": "start_date",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "end_date": {
+                    "name": "end_date",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "source": {
+                    "name": "source",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'prose'"
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.locations": {
+            "name": "locations",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "locations_name_unique": {
+                    "name": "locations_name_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["name"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.teachers": {
+            "name": "teachers",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "first_name": {
+                    "name": "first_name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "last_name": {
+                    "name": "last_name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "teachers_name_unique": {
+                    "name": "teachers_name_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["first_name", "last_name"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.student_groups": {
+            "name": "student_groups",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "internal_name": {
+                    "name": "internal_name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "display_name": {
+                    "name": "display_name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "hidden": {
+                    "name": "hidden",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "student_groups_internal_name_unique": {
+                    "name": "student_groups_internal_name_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["internal_name"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.student_group_memberships": {
+            "name": "student_group_memberships",
+            "schema": "",
+            "columns": {
+                "parent_id": {
+                    "name": "parent_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "child_id": {
+                    "name": "child_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "student_group_memberships_parent_id_student_groups_id_fk": {
+                    "name": "student_group_memberships_parent_id_student_groups_id_fk",
+                    "tableFrom": "student_group_memberships",
+                    "tableTo": "student_groups",
+                    "columnsFrom": ["parent_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "student_group_memberships_child_id_student_groups_id_fk": {
+                    "name": "student_group_memberships_child_id_student_groups_id_fk",
+                    "tableFrom": "student_group_memberships",
+                    "tableTo": "student_groups",
+                    "columnsFrom": ["child_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "student_group_memberships_parent_id_child_id_pk": {
+                    "name": "student_group_memberships_parent_id_child_id_pk",
+                    "columns": ["parent_id", "child_id"]
+                }
+            },
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.event_locations": {
+            "name": "event_locations",
+            "schema": "",
+            "columns": {
+                "event_id": {
+                    "name": "event_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "location_id": {
+                    "name": "location_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "event_locations_event_id_events_id_fk": {
+                    "name": "event_locations_event_id_events_id_fk",
+                    "tableFrom": "event_locations",
+                    "tableTo": "events",
+                    "columnsFrom": ["event_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "event_locations_location_id_locations_id_fk": {
+                    "name": "event_locations_location_id_locations_id_fk",
+                    "tableFrom": "event_locations",
+                    "tableTo": "locations",
+                    "columnsFrom": ["location_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "event_locations_event_id_location_id_pk": {
+                    "name": "event_locations_event_id_location_id_pk",
+                    "columns": ["event_id", "location_id"]
+                }
+            },
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.event_student_groups": {
+            "name": "event_student_groups",
+            "schema": "",
+            "columns": {
+                "event_id": {
+                    "name": "event_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "student_group_id": {
+                    "name": "student_group_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "event_student_groups_event_id_events_id_fk": {
+                    "name": "event_student_groups_event_id_events_id_fk",
+                    "tableFrom": "event_student_groups",
+                    "tableTo": "events",
+                    "columnsFrom": ["event_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "event_student_groups_student_group_id_student_groups_id_fk": {
+                    "name": "event_student_groups_student_group_id_student_groups_id_fk",
+                    "tableFrom": "event_student_groups",
+                    "tableTo": "student_groups",
+                    "columnsFrom": ["student_group_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "event_student_groups_event_id_student_group_id_pk": {
+                    "name": "event_student_groups_event_id_student_group_id_pk",
+                    "columns": ["event_id", "student_group_id"]
+                }
+            },
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.event_teachers": {
+            "name": "event_teachers",
+            "schema": "",
+            "columns": {
+                "event_id": {
+                    "name": "event_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "teacher_id": {
+                    "name": "teacher_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "event_teachers_event_id_events_id_fk": {
+                    "name": "event_teachers_event_id_events_id_fk",
+                    "tableFrom": "event_teachers",
+                    "tableTo": "events",
+                    "columnsFrom": ["event_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "event_teachers_teacher_id_teachers_id_fk": {
+                    "name": "event_teachers_teacher_id_teachers_id_fk",
+                    "tableFrom": "event_teachers",
+                    "tableTo": "teachers",
+                    "columnsFrom": ["teacher_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "event_teachers_event_id_teacher_id_pk": {
+                    "name": "event_teachers_event_id_teacher_id_pk",
+                    "columns": ["event_id", "teacher_id"]
+                }
+            },
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.event_changes": {
+            "name": "event_changes",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "change_type": {
+                    "name": "change_type",
+                    "type": "change_type",
+                    "typeSchema": "public",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "event_title": {
+                    "name": "event_title",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "start_date": {
+                    "name": "start_date",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "end_date": {
+                    "name": "end_date",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "groups": {
+                    "name": "groups",
+                    "type": "text[]",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'{}'"
+                },
+                "diff": {
+                    "name": "diff",
+                    "type": "jsonb",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "detected_at": {
+                    "name": "detected_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.users": {
+            "name": "users",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "discord_id": {
+                    "name": "discord_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "discord_username": {
+                    "name": "discord_username",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "discord_avatar": {
+                    "name": "discord_avatar",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "is_admin": {
+                    "name": "is_admin",
+                    "type": "boolean",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": false
+                },
+                "status": {
+                    "name": "status",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'pending'"
+                },
+                "discord_access_token": {
+                    "name": "discord_access_token",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "discord_token_expires_at": {
+                    "name": "discord_token_expires_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "users_discord_id_unique": {
+                    "name": "users_discord_id_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["discord_id"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.user_students": {
+            "name": "user_students",
+            "schema": "",
+            "columns": {
+                "user_id": {
+                    "name": "user_id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "student_group_id": {
+                    "name": "student_group_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "assigned_group_id": {
+                    "name": "assigned_group_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "user_students_user_id_users_id_fk": {
+                    "name": "user_students_user_id_users_id_fk",
+                    "tableFrom": "user_students",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "user_students_student_group_id_student_groups_id_fk": {
+                    "name": "user_students_student_group_id_student_groups_id_fk",
+                    "tableFrom": "user_students",
+                    "tableTo": "student_groups",
+                    "columnsFrom": ["student_group_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                },
+                "user_students_assigned_group_id_student_groups_id_fk": {
+                    "name": "user_students_assigned_group_id_student_groups_id_fk",
+                    "tableFrom": "user_students",
+                    "tableTo": "student_groups",
+                    "columnsFrom": ["assigned_group_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.user_teachers": {
+            "name": "user_teachers",
+            "schema": "",
+            "columns": {
+                "user_id": {
+                    "name": "user_id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true
+                },
+                "teacher_id": {
+                    "name": "teacher_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "user_teachers_user_id_users_id_fk": {
+                    "name": "user_teachers_user_id_users_id_fk",
+                    "tableFrom": "user_teachers",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "user_teachers_teacher_id_teachers_id_fk": {
+                    "name": "user_teachers_teacher_id_teachers_id_fk",
+                    "tableFrom": "user_teachers",
+                    "tableTo": "teachers",
+                    "columnsFrom": ["teacher_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.discord_guilds": {
+            "name": "discord_guilds",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "discord_guild_id": {
+                    "name": "discord_guild_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "name": {
+                    "name": "name",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {},
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "discord_guilds_discord_guild_id_unique": {
+                    "name": "discord_guilds_discord_guild_id_unique",
+                    "nullsNotDistinct": false,
+                    "columns": ["discord_guild_id"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.discord_role_mappings": {
+            "name": "discord_role_mappings",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "guild_id": {
+                    "name": "guild_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "discord_role_id": {
+                    "name": "discord_role_id",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "user_role": {
+                    "name": "user_role",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "'student'"
+                },
+                "student_group_id": {
+                    "name": "student_group_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "discord_role_mappings_guild_id_discord_guilds_id_fk": {
+                    "name": "discord_role_mappings_guild_id_discord_guilds_id_fk",
+                    "tableFrom": "discord_role_mappings",
+                    "tableTo": "discord_guilds",
+                    "columnsFrom": ["guild_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "discord_role_mappings_student_group_id_student_groups_id_fk": {
+                    "name": "discord_role_mappings_student_group_id_student_groups_id_fk",
+                    "tableFrom": "discord_role_mappings",
+                    "tableTo": "student_groups",
+                    "columnsFrom": ["student_group_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {
+                "discord_role_mappings_guild_role_uniq": {
+                    "name": "discord_role_mappings_guild_role_uniq",
+                    "nullsNotDistinct": false,
+                    "columns": ["guild_id", "discord_role_id"]
+                }
+            },
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.assignments": {
+            "name": "assignments",
+            "schema": "",
+            "columns": {
+                "id": {
+                    "name": "id",
+                    "type": "uuid",
+                    "primaryKey": true,
+                    "notNull": true,
+                    "default": "gen_random_uuid()"
+                },
+                "title": {
+                    "name": "title",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "subject": {
+                    "name": "subject",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "description": {
+                    "name": "description",
+                    "type": "text",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "due_date": {
+                    "name": "due_date",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "student_group_id": {
+                    "name": "student_group_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "event_id": {
+                    "name": "event_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_by_id": {
+                    "name": "created_by_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "updated_by_id": {
+                    "name": "updated_by_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": false
+                },
+                "created_at": {
+                    "name": "created_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                },
+                "updated_at": {
+                    "name": "updated_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "assignments_student_group_id_student_groups_id_fk": {
+                    "name": "assignments_student_group_id_student_groups_id_fk",
+                    "tableFrom": "assignments",
+                    "tableTo": "student_groups",
+                    "columnsFrom": ["student_group_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "assignments_event_id_events_id_fk": {
+                    "name": "assignments_event_id_events_id_fk",
+                    "tableFrom": "assignments",
+                    "tableTo": "events",
+                    "columnsFrom": ["event_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                },
+                "assignments_created_by_id_users_id_fk": {
+                    "name": "assignments_created_by_id_users_id_fk",
+                    "tableFrom": "assignments",
+                    "tableTo": "users",
+                    "columnsFrom": ["created_by_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                },
+                "assignments_updated_by_id_users_id_fk": {
+                    "name": "assignments_updated_by_id_users_id_fk",
+                    "tableFrom": "assignments",
+                    "tableTo": "users",
+                    "columnsFrom": ["updated_by_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "set null",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {},
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        },
+        "public.assignment_completions": {
+            "name": "assignment_completions",
+            "schema": "",
+            "columns": {
+                "assignment_id": {
+                    "name": "assignment_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "user_id": {
+                    "name": "user_id",
+                    "type": "uuid",
+                    "primaryKey": false,
+                    "notNull": true
+                },
+                "completed_at": {
+                    "name": "completed_at",
+                    "type": "timestamp with time zone",
+                    "primaryKey": false,
+                    "notNull": true,
+                    "default": "now()"
+                }
+            },
+            "indexes": {},
+            "foreignKeys": {
+                "assignment_completions_assignment_id_assignments_id_fk": {
+                    "name": "assignment_completions_assignment_id_assignments_id_fk",
+                    "tableFrom": "assignment_completions",
+                    "tableTo": "assignments",
+                    "columnsFrom": ["assignment_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                },
+                "assignment_completions_user_id_users_id_fk": {
+                    "name": "assignment_completions_user_id_users_id_fk",
+                    "tableFrom": "assignment_completions",
+                    "tableTo": "users",
+                    "columnsFrom": ["user_id"],
+                    "columnsTo": ["id"],
+                    "onDelete": "cascade",
+                    "onUpdate": "no action"
+                }
+            },
+            "compositePrimaryKeys": {
+                "assignment_completions_assignment_id_user_id_pk": {
+                    "name": "assignment_completions_assignment_id_user_id_pk",
+                    "columns": ["assignment_id", "user_id"]
+                }
+            },
+            "uniqueConstraints": {},
+            "policies": {},
+            "checkConstraints": {},
+            "isRLSEnabled": false
+        }
+    },
+    "enums": {
+        "public.change_type": {
+            "name": "change_type",
+            "schema": "public",
+            "values": ["added", "removed", "updated", "moved"]
+        }
+    },
+    "schemas": {},
+    "sequences": {},
+    "roles": {},
+    "policies": {},
+    "views": {},
+    "_meta": {
+        "columns": {},
+        "schemas": {},
+        "tables": {}
+    }
+}

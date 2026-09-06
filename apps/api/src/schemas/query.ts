@@ -50,3 +50,16 @@ export const SearchSchema = z.object({
     q: z.string().min(1),
     dateFormat: DateFormatSchema,
 })
+
+export const EventChangesSchema = z.object({
+    /** Comma-separated group ids; only changes touching those groups come back. */
+    groupIds: z
+        .string()
+        .optional()
+        .transform((v) => (v ? v.split(',').filter(Boolean) : undefined))
+        .openapi({ param: { name: 'groupIds', in: 'query' } }),
+    /** How far back to look, in days, on the detection date. */
+    days: z.coerce.number().int().positive().max(90).default(14),
+    limit: z.coerce.number().int().positive().max(200).default(100),
+    dateFormat: DateFormatSchema,
+})

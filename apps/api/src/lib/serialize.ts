@@ -40,3 +40,51 @@ export function eventToDto(row: EventRow, fmt: DateFormat) {
         groups: row.eventStudentGroups.map((eg) => eg.studentGroup),
     }
 }
+
+/** The `diff` column of an `updated` change, as the reconciler writes it. */
+interface UpdatedDiff {
+    before: {
+        rooms: string[]
+        teachers: { firstName: string; lastName: string }[]
+        groups: string[]
+    }
+    after: {
+        rooms: string[]
+        teachers: { firstName: string; lastName: string }[]
+        groups: string[]
+    }
+}
+
+export type EventChangeRow = {
+    id: string
+    changeType: 'added' | 'removed' | 'updated' | 'moved'
+    eventTitle: string
+    startDate: Date
+    endDate: Date
+    groups: string[]
+    diff: unknown
+    detectedAt: Date
+}
+
+export function eventChangeToDto(row: EventChangeRow, fmt: DateFormat) {
+    // `moved` and `updated` both live in the `diff` column but hold different
+    // shapes; splitting them here keeps the client from having to know that.
+    const moved =
+        row.changeType === 'moved'
+            ? (row.diff as { newStart: string; newEnd: string } | null)
+            : null
+
+    return {
+        id: row.id,
+        changeType: row.changeType,
+        title: row.eventTitle,
+        startDate: formatDate(row.startDate, fmt),
+        endDate: formatDate(row.endDate, fmt),
+        newStartDate: moved ? formatDate(new Date(moved.newStart), fmt) : null,
+        newEndDate: moved ? formatDate(new Date(moved.newEnd), fmt) : null,
+        groups: row.groups,
+        diff: row.changeType === 'updated' ? (row.diff as UpdatedDiff | null) : null,
+        // A real instant, unlike the wall-clock labels above.
+        detectedAt: row.detectedAt.toISOString(),
+    }
+}

@@ -76,3 +76,45 @@ export enum Duration {
     DAY = 'day',
     WEEK = 'week',
 }
+
+export type ChangeType = 'added' | 'removed' | 'updated' | 'moved'
+
+export interface ChangeRelations {
+    rooms: string[]
+    teachers: { firstName: string; lastName: string }[]
+    groups: string[]
+}
+
+export interface ApiEventChange {
+    id: string
+    changeType: ChangeType
+    title: string
+    startDate: string | number
+    endDate: string | number
+    newStartDate: string | number | null
+    newEndDate: string | number | null
+    groups: string[]
+    diff: { before: ChangeRelations; after: ChangeRelations } | null
+    detectedAt: string
+}
+
+export interface EventChange extends Omit<
+    ApiEventChange,
+    'startDate' | 'endDate' | 'newStartDate' | 'newEndDate'
+> {
+    /** Wall-clock, like every event timestamp — display with the UTC getters. */
+    start: Date
+    end: Date
+    newStart: Date | null
+    newEnd: Date | null
+}
+
+export function enhanceChange(c: ApiEventChange): EventChange {
+    return {
+        ...c,
+        start: new Date(c.startDate),
+        end: new Date(c.endDate),
+        newStart: c.newStartDate === null ? null : new Date(c.newStartDate),
+        newEnd: c.newEndDate === null ? null : new Date(c.newEndDate),
+    }
+}
