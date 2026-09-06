@@ -5,12 +5,19 @@ import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
 import { Duration, type Event } from '../lib/types.js'
 import CalendarEvent from '../components/CalendarEvent.vue'
-import { nextDay, previousDay, toCalendarLocalDate, weekdayFormat } from '../lib/date.js'
+import {
+    nextDay,
+    previousDay,
+    toCalendarLocalDate,
+    wallClockNow,
+    weekdayFormat,
+} from '../lib/date.js'
 
 const groupsStore = useGroupsStore()
 const eventsStore = useEventsStore()
 
-const date = ref(new Date())
+// See PlanningView: a real instant lands on the previous day before 02h Paris.
+const date = ref(wallClockNow())
 const comparisonGroupIds = ref<string[]>([])
 const myEvents = ref<Event[]>([])
 const otherEventsMap = ref<Record<string, Event[]>>({})
@@ -52,7 +59,9 @@ const allCalendarEvents = computed(() => {
     comparisonGroupIds.value.forEach((id, idx) => {
         const g = groupsStore.allGroups.find((g) => g.id === id)
         const color = COMPARISON_COLORS[idx % COMPARISON_COLORS.length]
-        result.push(...transformEvents(otherEventsMap.value[id] ?? [], g ? groupLabel(g) : 'Autre', color))
+        result.push(
+            ...transformEvents(otherEventsMap.value[id] ?? [], g ? groupLabel(g) : 'Autre', color),
+        )
     })
     return result
 })
@@ -143,7 +152,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                 <v-btn icon variant="text" @click="previous"
                     ><v-icon>mdi-chevron-left</v-icon></v-btn
                 >
-                <v-btn variant="outlined" class="mx-2" @click="date = new Date()"
+                <v-btn variant="outlined" class="mx-2" @click="date = wallClockNow()"
                     >Aujourd'hui</v-btn
                 >
                 <v-btn icon variant="text" @click="next"><v-icon>mdi-chevron-right</v-icon></v-btn>

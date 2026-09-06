@@ -13,6 +13,7 @@ import {
     nextDay,
     previousDay,
     toCalendarLocalDate,
+    wallClockNow,
     weekdayFormat,
 } from '../lib/date.js'
 
@@ -30,7 +31,10 @@ const pickedGroupIds = computed({
 })
 const eventsStore = useEventsStore()
 const events = ref<Event[]>([])
-const date = ref(new Date())
+// Wall-clock, not `new Date()`: `mondayOfWeek` reads the UTC getters, so a real
+// instant between midnight and 02h Paris still falls on the previous day and the
+// view opened on last week.
+const date = ref(wallClockNow())
 const loading = ref(false)
 
 const onKeydown = (e: KeyboardEvent) => {
@@ -144,7 +148,11 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                     @click="previous"
                     icon="mdi-chevron-left"
                 />
-                <v-btn variant="outlined" :class="mobile ? '' : 'mx-4'" @click="date = new Date()">
+                <v-btn
+                    variant="outlined"
+                    :class="mobile ? '' : 'mx-4'"
+                    @click="date = wallClockNow()"
+                >
                     Aujourd'hui
                 </v-btn>
                 <v-btn
