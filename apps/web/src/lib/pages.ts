@@ -79,6 +79,7 @@ export const PAGES: PageSeo[] = [
     { path: '/auth/callback', title: 'Connexion en cours', noindex: true },
     { path: '/admin/groups', title: 'Groupes · Administration', noindex: true },
     { path: '/admin/users', title: 'Utilisateurs · Administration', noindex: true },
+    { path: '/admin/changes', title: 'Changements · Administration', noindex: true },
     { path: '/admin/discord-mappings', title: 'Rôles Discord · Administration', noindex: true },
 ]
 

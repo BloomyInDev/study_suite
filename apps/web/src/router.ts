@@ -43,6 +43,7 @@ export const routes: RouteRecordRaw[] = [
         children: [
             { path: 'groups', component: () => import('./views/GroupAdminView.vue') },
             { path: 'users', component: () => import('./views/admin/UsersAdminView.vue') },
+            { path: 'changes', component: () => import('./views/admin/ChangesAdminView.vue') },
             {
                 path: 'discord-mappings',
                 component: () => import('./views/admin/DiscordMappingsAdminView.vue'),

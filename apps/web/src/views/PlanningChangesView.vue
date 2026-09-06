@@ -2,8 +2,15 @@
 import { computed, ref, watch } from 'vue'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupOverride } from '../lib/group-override.js'
-import { formatFullDate, formatTime } from '../lib/date.js'
-import type { ChangeRelations, ChangeType, EventChange } from '../lib/types.js'
+import {
+    CHANGE_TYPES,
+    changeTypeItems,
+    formatDetected,
+    formatSlot,
+    groupByRun,
+    relationDiff,
+} from '../lib/event-changes.js'
+import type { ChangeType, EventChange } from '../lib/types.js'
 
 const eventsStore = useEventsStore()
 const override = useGroupOverride()
@@ -12,18 +19,6 @@ const changes = ref<EventChange[]>([])
 const loading = ref(false)
 const days = ref(14)
 const typeFilter = ref<ChangeType[]>([])
-
-const TYPES: Record<ChangeType, { label: string; color: string; icon: string }> = {
-    added: { label: 'Ajouté', color: 'success', icon: 'mdi-plus-circle-outline' },
-    removed: { label: 'Supprimé', color: 'error', icon: 'mdi-minus-circle-outline' },
-    moved: { label: 'Déplacé', color: 'warning', icon: 'mdi-calendar-arrow-right' },
-    updated: { label: 'Modifié', color: 'info', icon: 'mdi-pencil-outline' },
-}
-
-const typeItems = (Object.keys(TYPES) as ChangeType[]).map((value) => ({
-    value,
-    title: TYPES[value].label,
-}))
 
 watch(
     [() => override.groupIds.value, days],
@@ -40,51 +35,13 @@ watch(
     { immediate: true, deep: true },
 )
 
-const visible = computed(() =>
-    typeFilter.value.length === 0
-        ? changes.value
-        : changes.value.filter((c) => typeFilter.value.includes(c.changeType)),
+const batches = computed(() =>
+    groupByRun(
+        typeFilter.value.length === 0
+            ? changes.value
+            : changes.value.filter((c) => typeFilter.value.includes(c.changeType)),
+    ),
 )
-
-/** One heading per scraper run: the log is only legible batch by batch. */
-const batches = computed(() => {
-    const byRun = new Map<string, EventChange[]>()
-    for (const change of visible.value) {
-        const key = change.detectedAt
-        byRun.set(key, [...(byRun.get(key) ?? []), change])
-    }
-    return [...byRun.entries()].map(([detectedAt, items]) => ({ detectedAt, items }))
-})
-
-/** `detectedAt` is a real instant, so it is the local clock that formats it. */
-const formatDetected = (iso: string) =>
-    new Date(iso).toLocaleString('fr-FR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-    })
-
-const slot = (start: Date, end: Date) => `${formatFullDate(start)} – ${formatTime(end)}`
-
-const teacherNames = (rel: ChangeRelations) =>
-    rel.teachers.map((t) => `${t.firstName} ${t.lastName}`)
-
-/** The three relation lists, kept only where the two sides actually differ. */
-const relationDiff = (change: EventChange) => {
-    if (!change.diff) return []
-    const rows: { label: string; before: string; after: string }[] = []
-    const push = (label: string, before: string[], after: string[]) => {
-        const b = before.join(', ') || '—'
-        const a = after.join(', ') || '—'
-        if (b !== a) rows.push({ label, before: b, after: a })
-    }
-    push('Salles', change.diff.before.rooms, change.diff.after.rooms)
-    push('Enseignants', teacherNames(change.diff.before), teacherNames(change.diff.after))
-    push('Groupes', change.diff.before.groups, change.diff.after.groups)
-    return rows
-}
 </script>
 
 <template>
@@ -119,7 +76,7 @@ const relationDiff = (change: EventChange) => {
                 />
                 <v-select
                     v-model="typeFilter"
-                    :items="typeItems"
+                    :items="changeTypeItems"
                     label="Type"
                     multiple
                     chips
@@ -155,15 +112,15 @@ const relationDiff = (change: EventChange) => {
                     v-for="change in batch.items"
                     :key="change.id"
                     variant="tonal"
-                    :color="TYPES[change.changeType].color"
+                    :color="CHANGE_TYPES[change.changeType].color"
                     class="mb-2"
                 >
                     <v-card-text class="py-2">
                         <div class="d-flex align-center ga-2 flex-wrap">
-                            <v-icon :icon="TYPES[change.changeType].icon" size="small" />
+                            <v-icon :icon="CHANGE_TYPES[change.changeType].icon" size="small" />
                             <strong>{{ change.title }}</strong>
                             <v-chip size="x-small" variant="flat">
-                                {{ TYPES[change.changeType].label }}
+                                {{ CHANGE_TYPES[change.changeType].label }}
                             </v-chip>
                             <v-spacer />
                             <span v-if="change.groups.length > 0" class="text-caption">
@@ -179,11 +136,11 @@ const relationDiff = (change: EventChange) => {
                                         : ''
                                 "
                             >
-                                {{ slot(change.start, change.end) }}
+                                {{ formatSlot(change.start, change.end) }}
                             </span>
                             <template v-if="change.newStart && change.newEnd">
                                 <v-icon icon="mdi-arrow-right" size="x-small" class="mx-1" />
-                                <strong>{{ slot(change.newStart, change.newEnd) }}</strong>
+                                <strong>{{ formatSlot(change.newStart, change.newEnd) }}</strong>
                             </template>
                         </div>
 

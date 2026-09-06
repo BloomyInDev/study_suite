@@ -9,6 +9,7 @@ const adminNav = [
     { title: 'Groupes', icon: 'mdi-sitemap', to: '/admin/groups' },
     { title: 'Utilisateurs', icon: 'mdi-account-multiple', to: '/admin/users' },
     { title: 'Liaisons Discord', icon: 'fa:fab fa-discord', to: '/admin/discord-mappings' },
+    { title: 'Changements', icon: 'mdi-history', to: '/admin/changes' },
 ]
 </script>
 

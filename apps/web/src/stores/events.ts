@@ -111,9 +111,13 @@ export const useEventsStore = defineStore('events', {
          * The scraper's audit log for the given groups. Not cached: the point of
          * the page is to show what changed since the last look.
          */
-        async fetchChanges(groupIds: string[], days = 14): Promise<EventChange[]> {
+        async fetchChanges(groupIds: string[], days = 14, limit?: number): Promise<EventChange[]> {
             const res = await backend.api.events.changes.$get({
-                query: groupIds.length > 0 ? { days, groupIds: groupIds.join(',') } : { days },
+                query: {
+                    days,
+                    ...(groupIds.length > 0 ? { groupIds: groupIds.join(',') } : {}),
+                    ...(limit === undefined ? {} : { limit }),
+                },
             })
             const body = await res.json()
             return (body.data ?? []).map(enhanceChange)
