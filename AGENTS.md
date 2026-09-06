@@ -363,5 +363,16 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
   resolve and blocks ~86 s before falling back to the store copy — a 1.7 s job took
   87 s. Bump both together.
 - `ALTER TYPE ... ADD VALUE` (Postgres enum extension) cannot run inside a transaction — drizzle-kit handles this via migration breakpoints.
+- **A migration is the `.sql` file, its snapshot _and_ its entry in
+  `migrations/meta/_journal.json`.** `drizzle-kit migrate` reads the journal, not
+  the directory: a migration missing from it is silently skipped, the run exits 0,
+  and the only symptom is a column that never appears. Check the journal's last
+  entry after generating, and never `git checkout --` that file to undo unrelated
+  churn — it takes the new entry with it. `pnpm -F @studysuite/db exec drizzle-kit
+  check` verifies the chain.
+- `pnpm format` reformats **the whole repo**, which is not prettier-clean: it
+  rewrites files no one touched, `pnpm-lock.yaml` and the drizzle snapshots
+  included. Run `pnpm exec prettier --write <the files you changed>` instead;
+  reverting the collateral afterwards is what loses generated content.
 - Cross-week move detection works because `insertAllChanges` sees all weeks' diffs at once. Adding per-week change insertion would regress this.
 - Never compare `new Date()` with an event timestamp — see [Time](#time-paris-wall-clock-labelled-utc). Use `wallClockNow()` from `@studysuite/shared/time`.
