@@ -37,6 +37,14 @@ const events = ref<Event[]>([])
 const date = ref(wallClockNow())
 const loading = ref(false)
 
+// The calendar reads `model-value` with the *local* getters, while `date` is a
+// wall-clock label — so handing it over raw applies the Paris offset a second
+// time and the grid runs 2h ahead of the events, which go through
+// `toCalendarLocalDate`. Past 22h wall-clock that rolled the view onto the next
+// day, and on a Sunday night onto next week, while the fetch stayed on the
+// current one.
+const calendarDate = computed(() => toCalendarLocalDate(date.value))
+
 const onKeydown = (e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft') previous()
     else if (e.key === 'ArrowRight') next()
@@ -192,7 +200,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
             <v-calendar
                 class="flex-grow-1"
                 :events="calendarEvents"
-                :model-value="date"
+                :model-value="calendarDate"
                 color="primary"
                 :type="mobile ? 'day' : 'week'"
                 :weekday-format="weekdayFormat"

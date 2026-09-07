@@ -21,6 +21,14 @@ const date = ref(wallClockNow())
 const comparisonGroupIds = ref<string[]>([])
 const myEvents = ref<Event[]>([])
 const otherEventsMap = ref<Record<string, Event[]>>({})
+
+// The calendar reads `model-value` with the *local* getters, while `date` is a
+// wall-clock label — so handing it over raw applies the Paris offset a second
+// time and the grid runs 2h ahead of the events, which go through
+// `toCalendarLocalDate`. Past 22h wall-clock that rolled the view onto the next
+// day, and on a Sunday night onto next week, while the fetch stayed on the
+// current one.
+const calendarDate = computed(() => toCalendarLocalDate(date.value))
 const loadingMy = ref(false)
 const loadingOther = ref(false)
 
@@ -193,7 +201,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                     <v-calendar
                         class="flex-grow-1"
                         :events="allCalendarEvents"
-                        :model-value="date"
+                        :model-value="calendarDate"
                         type="category"
                         :categories="categories"
                         category-show-all
