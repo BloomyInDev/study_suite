@@ -6,18 +6,16 @@ import type { AuthUser } from '../../stores/auth.js'
 import { useAuthStore } from '../../stores/auth.js'
 import { useGroupsStore } from '../../stores/groups.js'
 import { useNotificationsStore } from '../../stores/notifications.js'
+import { useProvidersStore } from '../../stores/providers.js'
 
 const auth = useAuthStore()
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
-
-const PROVIDER_LABEL: Record<string, string> = { discord: 'Discord', iut: 'Dép. Info.' }
+const providers = useProvidersStore()
 
 /** Which accounts the user signs in with — `Discord bastien · Dép. Info. lubenb`. */
 function identityLabel(user: AuthUser) {
-    return user.identities
-        .map((i) => `${PROVIDER_LABEL[i.provider] ?? i.provider} ${i.subject}`)
-        .join(' · ')
+    return user.identities.map((i) => `${providers.label(i.provider)} ${i.subject}`).join(' · ')
 }
 
 const users = ref<AuthUser[]>([])

@@ -19,6 +19,8 @@ discord:
 # The department LDAP<->OIDC bridge. Leave the whole block out to disable the
 # "Connexion avec l'IUT" button; the api boots fine without it.
 iut:
+    # Shown on the login button and the admin pages. Defaults to "IUT".
+    # displayName: "Dép. Info."
     # issuerUrl: https://webinfo.iutmontp.univ-montp2.fr/~loynetr/ldap-gateway/public
     # clientId: "your_bridge_client_id"
     # clientSecret: "your_bridge_client_secret"

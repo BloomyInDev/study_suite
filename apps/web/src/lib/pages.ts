@@ -81,7 +81,7 @@ export const PAGES: PageSeo[] = [
     { path: '/admin/users', title: 'Utilisateurs · Administration', noindex: true },
     { path: '/admin/changes', title: 'Changements · Administration', noindex: true },
     { path: '/admin/discord-mappings', title: 'Rôles Discord · Administration', noindex: true },
-    { path: '/admin/iut-mappings', title: 'Liaisons Dép. Info. · Administration', noindex: true },
+    { path: '/admin/iut-mappings', title: 'Liaisons annuaire · Administration', noindex: true },
 ]
 
 /** An unlisted path is a route that does not exist: name it, index nothing. */

@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
 import authController from './controllers/auth.js'
+import configController from './controllers/config.js'
 import calendarController from './controllers/calendar.js'
 import assignmentsController from './controllers/assignments.js'
 import eventsController from './controllers/events.js'
@@ -47,6 +48,7 @@ const app = _app
         '/api',
         new OpenAPIHono()
             .get('/health', (c) => c.json({ status: 'ok' }))
+            .route('/config', configController)
             .route('/auth', authController)
             .route('/events', eventsController)
             .route('/teachers', teachersController)

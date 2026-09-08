@@ -6,7 +6,7 @@ export type AuthProvider = 'discord' | 'iut'
 
 export interface AuthIdentity {
     provider: AuthProvider
-    /** Discord snowflake, or the LDAP uid the Dép. Info. account is keyed on. */
+    /** Discord snowflake, or the LDAP uid the directory account is keyed on. */
     subject: string
     username: string | null
     avatarUrl: string | null

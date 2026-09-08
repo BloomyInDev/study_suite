@@ -22,6 +22,8 @@ const schema = z.object({
      */
     iut: z
         .object({
+            /** What the login button and the admin pages call it. */
+            displayName: z.string().min(1).default('IUT'),
             issuerUrl: z.string().url(),
             clientId: z.string().min(1),
             clientSecret: z.string().min(1),
@@ -46,6 +48,7 @@ export const config = loadConfig({
         DISCORD_CLIENT_ID: 'discord.clientId',
         DISCORD_CLIENT_SECRET: 'discord.clientSecret',
         DISCORD_REDIRECT_URI: 'discord.redirectUri',
+        IUT_DISPLAY_NAME: 'iut.displayName',
         IUT_ISSUER_URL: 'iut.issuerUrl',
         IUT_CLIENT_ID: 'iut.clientId',
         IUT_CLIENT_SECRET: 'iut.clientSecret',

@@ -6,10 +6,12 @@ import { API_URL } from '../lib/api-url'
 import { useAuthStore } from '../stores/auth.js'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
+import { useProvidersStore } from '../stores/providers.js'
 
 const groups = useGroupsStore()
 const auth = useAuthStore()
 const notifs = useNotificationsStore()
+const providers = useProvidersStore()
 const pickerOpen = ref(false)
 const savingGroup = ref(false)
 const classDraft = ref<string | null>(auth.user?.studentGroupId ?? null)
@@ -46,15 +48,14 @@ const classChoices = computed(() => {
     return out.map((g) => ({ title: groupLabel(g), value: g.id }))
 })
 
-const PROVIDERS = [
-    { key: 'discord' as const, label: 'Discord', icon: 'fa:fab fa-discord' },
-    { key: 'iut' as const, label: 'Dép. Info.', icon: 'mdi-school' },
-]
+const ICONS: Record<string, string> = { discord: 'fa:fab fa-discord', iut: 'mdi-school' }
 
 const linkedAccounts = computed(() =>
-    PROVIDERS.map((p) => ({
-        ...p,
-        identity: auth.user?.identities.find((i) => i.provider === p.key) ?? null,
+    providers.providers.map((p) => ({
+        key: p.id,
+        label: p.label,
+        icon: ICONS[p.id] ?? 'mdi-account',
+        identity: auth.user?.identities.find((i) => i.provider === p.id) ?? null,
     })),
 )
 
@@ -159,8 +160,8 @@ async function saveClass() {
                             </v-btn>
                         </div>
                         <div class="text-caption text-medium-emphasis mt-3">
-                            Lier votre compte Dép. Info. vous permet de vous connecter avec l'un ou
-                            l'autre, sans créer un second compte.
+                            Lier votre compte {{ providers.iutLabel }} vous permet de vous connecter
+                            avec l'un ou l'autre, sans créer un second compte.
                         </div>
                     </v-card-text>
                 </v-card>

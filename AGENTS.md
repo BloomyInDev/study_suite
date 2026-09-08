@@ -225,13 +225,14 @@ on. It is ignored while the table is empty, so a fresh database still bootstraps
 
 Hono server on Bun, port 3000.
 
-**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional — leave it out and the api boots with the IUT routes answering 503.
+**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional — leave it out and the api boots with the IUT routes answering 503.
 
 ### Route table
 
 | Method | Path                                        | Auth  | Description                                                        |
 | ------ | ------------------------------------------- | ----- | ------------------------------------------------------------------ |
 | GET    | `/api/health`                               | —     | Health check                                                       |
+| GET    | `/api/config`                               | —     | Which login providers exist and what they are called               |
 | GET    | `/api/auth/discord`                         | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
 | GET    | `/api/auth/discord/callback`                | —     | Exchange code, upsert user, issue JWT                              |
 | GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                    |
@@ -326,6 +327,15 @@ the TD group, so a mapping's class is an anchor: the student narrows it down
 through `PATCH /api/auth/me/student-group`, the same path a Discord role already
 takes. The access token is discarded — 900 s, no refresh, and userinfo returns
 nothing the ID token does not.
+
+**Naming it.** `iut` is an internal identifier — the provider enum, the table,
+the routes — and stays that way. What a _user_ sees comes from
+`iut.displayName` (default `IUT`) via `GET /api/config`, which lists the
+providers this deployment actually has. The login page renders one button per
+entry, so an instance with no `iut` block shows no button rather than one that
+answers 503, and another department sets its own name without rebuilding the
+image. `stores/providers.ts` seeds the defaults the static build bakes into
+`login/index.html` — it cannot fetch — and replaces them on hydration.
 
 **Linking.** A Discord account and an IUT account are two accounts unless the
 user links them, and there is no email to match on (the Discord flow only asks

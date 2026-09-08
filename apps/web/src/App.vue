@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useGroupsStore } from './stores/groups.js'
 import { useNotificationsStore } from './stores/notifications.js'
 import { useAuthStore } from './stores/auth.js'
+import { useProvidersStore } from './stores/providers.js'
 import GroupPickerDialog from './components/GroupPickerDialog.vue'
 import { usePageSeo } from './lib/seo.js'
 
@@ -12,6 +13,7 @@ const { mobile } = useDisplay()
 const theme = useTheme()
 const router = useRouter()
 const groupsStore = useGroupsStore()
+const providersStore = useProvidersStore()
 const notifs = useNotificationsStore()
 const auth = useAuthStore()
 
@@ -42,6 +44,9 @@ function toggleTheme() {
 }
 
 onMounted(async () => {
+    // Which login providers exist, and what this deployment calls them. Not
+    // awaited: nothing below branches on it, and the defaults render fine.
+    void providersStore.fetchProviders()
     // auth.user is restored from localStorage, so it still holds whatever was
     // true at the last login: a class an admin has since changed, a status that
     // has since been approved. Re-read it before anything branches on it.
@@ -126,11 +131,7 @@ const navItems = [
                     <v-icon>mdi-shield-crown</v-icon>
                     <v-tooltip activator="parent" location="bottom">Admin</v-tooltip>
                 </v-btn>
-                <v-btn
-                    v-if="auth.isAuthenticated"
-                    icon
-                    @click="logout"
-                >
+                <v-btn v-if="auth.isAuthenticated" icon @click="logout">
                     <v-icon>mdi-logout</v-icon>
                     <v-tooltip activator="parent" location="bottom">Se déconnecter</v-tooltip>
                 </v-btn>

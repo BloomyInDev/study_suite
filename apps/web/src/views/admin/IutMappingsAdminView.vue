@@ -4,6 +4,7 @@ import { API_URL } from '../../lib/api-url'
 import { groupLabel } from '../../lib/group-label.js'
 import { useGroupsStore } from '../../stores/groups.js'
 import { useNotificationsStore } from '../../stores/notifications.js'
+import { useProvidersStore } from '../../stores/providers.js'
 
 interface IutMapping {
     id: string
@@ -16,6 +17,7 @@ interface IutMapping {
 
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
+const providers = useProvidersStore()
 
 const mappings = ref<IutMapping[]>([])
 const loading = ref(false)
@@ -107,10 +109,9 @@ onMounted(() => {
 
 <template>
     <v-container>
-        <div class="text-h6 mb-1">Liaisons Dép. Info.</div>
+        <div class="text-h6 mb-1">Liaisons {{ providers.iutLabel }}</div>
         <div class="text-body-2 text-medium-emphasis mb-4">
-            L'annuaire LDAP du département informatique renvoie la population et l'année
-            (<code>etudiants</code>,
+            L'annuaire LDAP renvoie la population et l'année (<code>etudiants</code>,
             <code>ann3</code>), pas le groupe de TD. La classe indiquée ici sert de point de
             départ&nbsp;: l'étudiant précise ensuite son sous-groupe depuis son profil.
         </div>
@@ -163,8 +164,8 @@ onMounted(() => {
         <v-progress-linear v-if="loading" indeterminate class="mb-3" />
 
         <div v-if="!loading && mappings.length === 0" class="text-medium-emphasis">
-            Aucune liaison. Sans liaison, une connexion Dép. Info. crée un compte en attente de
-            validation.
+            Aucune liaison. Sans liaison, une connexion {{ providers.iutLabel }} crée un compte en
+            attente de validation.
         </div>
 
         <v-table v-else-if="mappings.length > 0" density="compact">

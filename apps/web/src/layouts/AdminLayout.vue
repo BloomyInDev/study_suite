@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useDisplay } from 'vuetify'
+import { useProvidersStore } from '../stores/providers.js'
 
 const { mobile } = useDisplay()
 const drawerOpen = ref(false)
+const providers = useProvidersStore()
 
-const adminNav = [
+const adminNav = computed(() => [
     { title: 'Groupes', icon: 'mdi-sitemap', to: '/admin/groups' },
     { title: 'Utilisateurs', icon: 'mdi-account-multiple', to: '/admin/users' },
     { title: 'Liaisons Discord', icon: 'fa:fab fa-discord', to: '/admin/discord-mappings' },
-    { title: 'Liaisons Dép. Info.', icon: 'mdi-school', to: '/admin/iut-mappings' },
+    { title: `Liaisons ${providers.iutLabel}`, icon: 'mdi-school', to: '/admin/iut-mappings' },
     { title: 'Changements', icon: 'mdi-history', to: '/admin/changes' },
-]
+])
 </script>
 
 <template>
