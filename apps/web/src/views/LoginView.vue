@@ -9,12 +9,12 @@ const errorMessages: Record<string, string> = {
     discord_auth_failed: "Échec de l'authentification Discord.",
     discord_user_failed: 'Impossible de récupérer les informations Discord.',
     missing_code: "Code d'autorisation manquant.",
-    iut_auth_failed: "Échec de l'authentification IUT.",
-    iut_unreachable: "Le service d'authentification de l'IUT est injoignable.",
+    iut_auth_failed: "Échec de l'authentification Dép. Info.",
+    iut_unreachable: "Le service d'authentification du Dép. Info. est injoignable.",
     iut_state_expired: 'La connexion a expiré, merci de réessayer.',
     iut_state_mismatch: 'La connexion a expiré, merci de réessayer.',
     iut_no_subject: "L'annuaire n'a pas renvoyé d'identifiant utilisable.",
-    iut_already_linked: 'Ce compte IUT est déjà lié à un autre utilisateur.',
+    iut_already_linked: 'Ce compte Dép. Info. est déjà lié à un autre utilisateur.',
 }
 
 const callbackUri = encodeURIComponent(window.location.origin + '/auth/callback')
@@ -53,7 +53,7 @@ const iutLoginUrl = `${API_URL}/api/auth/iut?redirect_uri=${callbackUri}`
                     class="mt-3"
                     prepend-icon="mdi-school"
                 >
-                    Connexion avec l'IUT
+                    Se connecter avec les identifiants Dép. Info.
                 </v-btn>
             </v-card-text>
         </v-card>

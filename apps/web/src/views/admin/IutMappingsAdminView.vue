@@ -107,9 +107,10 @@ onMounted(() => {
 
 <template>
     <v-container>
-        <div class="text-h6 mb-1">Liaisons IUT</div>
+        <div class="text-h6 mb-1">Liaisons Dép. Info.</div>
         <div class="text-body-2 text-medium-emphasis mb-4">
-            L'annuaire renvoie la population et l'année (<code>etudiants</code>,
+            L'annuaire LDAP du département informatique renvoie la population et l'année
+            (<code>etudiants</code>,
             <code>ann3</code>), pas le groupe de TD. La classe indiquée ici sert de point de
             départ&nbsp;: l'étudiant précise ensuite son sous-groupe depuis son profil.
         </div>
@@ -162,7 +163,8 @@ onMounted(() => {
         <v-progress-linear v-if="loading" indeterminate class="mb-3" />
 
         <div v-if="!loading && mappings.length === 0" class="text-medium-emphasis">
-            Aucune liaison. Sans liaison, une connexion IUT crée un compte en attente de validation.
+            Aucune liaison. Sans liaison, une connexion Dép. Info. crée un compte en attente de
+            validation.
         </div>
 
         <v-table v-else-if="mappings.length > 0" density="compact">

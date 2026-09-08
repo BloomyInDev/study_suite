@@ -48,7 +48,7 @@ const classChoices = computed(() => {
 
 const PROVIDERS = [
     { key: 'discord' as const, label: 'Discord', icon: 'fa:fab fa-discord' },
-    { key: 'iut' as const, label: 'IUT', icon: 'mdi-school' },
+    { key: 'iut' as const, label: 'Dép. Info.', icon: 'mdi-school' },
 ]
 
 const linkedAccounts = computed(() =>
@@ -159,7 +159,7 @@ async function saveClass() {
                             </v-btn>
                         </div>
                         <div class="text-caption text-medium-emphasis mt-3">
-                            Lier votre compte IUT vous permet de vous connecter avec l'un ou
+                            Lier votre compte Dép. Info. vous permet de vous connecter avec l'un ou
                             l'autre, sans créer un second compte.
                         </div>
                     </v-card-text>

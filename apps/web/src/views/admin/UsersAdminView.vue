@@ -11,9 +11,9 @@ const auth = useAuthStore()
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 
-const PROVIDER_LABEL: Record<string, string> = { discord: 'Discord', iut: 'IUT' }
+const PROVIDER_LABEL: Record<string, string> = { discord: 'Discord', iut: 'Dép. Info.' }
 
-/** Which accounts the user signs in with — `Discord bastien · IUT lubenb`. */
+/** Which accounts the user signs in with — `Discord bastien · Dép. Info. lubenb`. */
 function identityLabel(user: AuthUser) {
     return user.identities
         .map((i) => `${PROVIDER_LABEL[i.provider] ?? i.provider} ${i.subject}`)
