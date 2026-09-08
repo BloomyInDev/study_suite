@@ -48,6 +48,10 @@ export const routes: RouteRecordRaw[] = [
                 path: 'discord-mappings',
                 component: () => import('./views/admin/DiscordMappingsAdminView.vue'),
             },
+            {
+                path: 'iut-mappings',
+                component: () => import('./views/admin/IutMappingsAdminView.vue'),
+            },
         ],
     },
 ]

@@ -2,11 +2,21 @@ import { API_URL } from '../lib/api-url'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
+export type AuthProvider = 'discord' | 'iut'
+
+export interface AuthIdentity {
+    provider: AuthProvider
+    /** Discord snowflake, or the LDAP uid the IUT account is keyed on. */
+    subject: string
+    username: string | null
+    avatarUrl: string | null
+}
+
 export interface AuthUser {
     id: string
-    discordId: string
-    discordUsername: string
-    discordAvatar: string | null
+    displayName: string
+    avatarUrl: string | null
+    identities: AuthIdentity[]
     role: 'student' | 'teacher' | null
     isAdmin: boolean
     status: 'pending' | 'approved' | 'rejected'
@@ -15,15 +25,27 @@ export interface AuthUser {
     teacherId: string | null
 }
 
+/**
+ * A user cached before identities existed carries Discord fields and no
+ * `displayName`; dropping it makes `refresh()` fetch the current shape rather
+ * than rendering `undefined` until it lands.
+ */
+function readStoredUser(): AuthUser | null {
+    const stored = JSON.parse(localStorage.getItem('auth_user') ?? 'null')
+    return stored && Array.isArray(stored.identities) ? (stored as AuthUser) : null
+}
+
 export const useAuthStore = defineStore('auth', () => {
     const token = ref<string | null>(localStorage.getItem('auth_token'))
-    const user = ref<AuthUser | null>(JSON.parse(localStorage.getItem('auth_user') ?? 'null'))
+    const user = ref<AuthUser | null>(readStoredUser())
 
     const isAuthenticated = computed(() => !!token.value && !!user.value)
     const isAdmin = computed(() => user.value?.isAdmin ?? false)
     const isPending = computed(() => user.value?.status === 'pending')
     const isApproved = computed(() => user.value?.status === 'approved')
     const isRejected = computed(() => user.value?.status === 'rejected')
+    const hasProvider = (provider: AuthProvider) =>
+        user.value?.identities.some((i) => i.provider === provider) ?? false
 
     function setAuth(newToken: string, newUser: AuthUser) {
         token.value = newToken
@@ -57,6 +79,7 @@ export const useAuthStore = defineStore('auth', () => {
         isPending,
         isApproved,
         isRejected,
+        hasProvider,
         setAuth,
         refresh,
         logout,

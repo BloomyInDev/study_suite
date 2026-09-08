@@ -11,6 +11,14 @@ const auth = useAuthStore()
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 
+const PROVIDER_LABEL: Record<string, string> = { discord: 'Discord', iut: 'IUT' }
+
+/** Which accounts the user signs in with — `Discord bastien · IUT lubenb`. */
+function identityLabel(user: AuthUser) {
+    return user.identities
+        .map((i) => `${PROVIDER_LABEL[i.provider] ?? i.provider} ${i.subject}`)
+        .join(' · ')
+}
 
 const users = ref<AuthUser[]>([])
 const loading = ref(false)
@@ -56,7 +64,7 @@ async function updateUser(id: string, patch: Partial<AuthUser>) {
             const body = await res.json().catch(() => null)
             const code = body?.error?.code
             if (code === 'SELF_DEMOTE') {
-                notifs.error("Impossible de vous retirer vos propres droits admin")
+                notifs.error('Impossible de vous retirer vos propres droits admin')
                 return
             }
             throw new Error('update failed')
@@ -139,19 +147,14 @@ onMounted(fetchUsers)
             </div>
             <v-card v-for="user in pending" :key="user.id" variant="outlined" class="mb-2">
                 <v-card-text class="d-flex align-center ga-3 flex-wrap pa-3">
-                    <v-avatar
-                        size="36"
-                        :image="
-                            user.discordAvatar
-                                ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.discordAvatar}.png`
-                                : undefined
-                        "
-                    >
-                        <v-icon v-if="!user.discordAvatar">mdi-account</v-icon>
+                    <v-avatar size="36" :image="user.avatarUrl ?? undefined">
+                        <v-icon v-if="!user.avatarUrl">mdi-account</v-icon>
                     </v-avatar>
                     <div class="flex-grow-1">
-                        <div class="font-weight-medium">{{ user.discordUsername }}</div>
-                        <div class="text-caption text-medium-emphasis">{{ user.discordId }}</div>
+                        <div class="font-weight-medium">{{ user.displayName }}</div>
+                        <div class="text-caption text-medium-emphasis">
+                            {{ identityLabel(user) }}
+                        </div>
                     </div>
                     <v-btn
                         size="small"
@@ -199,17 +202,15 @@ onMounted(fetchUsers)
                 <tr v-for="user in others" :key="user.id">
                     <td>
                         <div class="d-flex align-center ga-2 py-1">
-                            <v-avatar
-                                size="28"
-                                :image="
-                                    user.discordAvatar
-                                        ? `https://cdn.discordapp.com/avatars/${user.discordId}/${user.discordAvatar}.png`
-                                        : undefined
-                                "
-                            >
-                                <v-icon v-if="!user.discordAvatar" size="16">mdi-account</v-icon>
+                            <v-avatar size="28" :image="user.avatarUrl ?? undefined">
+                                <v-icon v-if="!user.avatarUrl" size="16">mdi-account</v-icon>
                             </v-avatar>
-                            {{ user.discordUsername }}
+                            <div>
+                                <div>{{ user.displayName }}</div>
+                                <div class="text-caption text-medium-emphasis">
+                                    {{ identityLabel(user) }}
+                                </div>
+                            </div>
                         </div>
                     </td>
                     <td>{{ user.role ?? '—' }}</td>
@@ -244,7 +245,7 @@ onMounted(fetchUsers)
         <v-dialog v-model="editDialog" max-width="480">
             <v-card v-if="editingUser">
                 <v-card-title class="pt-4 px-4">
-                    Modifier — {{ editingUser.discordUsername }}
+                    Modifier — {{ editingUser.displayName }}
                 </v-card-title>
                 <v-card-text class="d-flex flex-column ga-3 px-4">
                     <v-select
@@ -276,7 +277,9 @@ onMounted(fetchUsers)
                         density="compact"
                         variant="outlined"
                         clearable
-                        :items="groups.visibleGroups.map((g) => ({ title: groupLabel(g), value: g.id }))"
+                        :items="
+                            groups.visibleGroups.map((g) => ({ title: groupLabel(g), value: g.id }))
+                        "
                     />
                     <v-checkbox
                         v-model="editForm.isAdmin"

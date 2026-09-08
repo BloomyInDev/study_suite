@@ -142,9 +142,11 @@ Two entry points:
 | `event_teachers`            | event ↔ teacher junction                          |
 | `event_student_groups`      | event ↔ studentGroup junction                     |
 | `event_changes`             | Audit log of scraper diffs                        |
-| `users`                     | Discord-authenticated users                       |
+| `users`                     | Accounts; identity lives in `user_identities`     |
+| `user_identities`           | One row per external account a user signs in with |
 | `discord_guilds`            | Configured Discord servers                        |
 | `discord_role_mappings`     | Discord role → student group mapping              |
+| `iut_group_mappings`        | IUT directory group → student group mapping       |
 
 `event_changes.change_type` enum: `added`, `removed`, `updated`, `moved`.
 For `moved`, `diff` JSON contains `{ newStart: ISO, newEnd: ISO }`.
@@ -223,7 +225,7 @@ on. It is ignored while the table is empty, so a fresh database still bootstraps
 
 Hono server on Bun, port 3000.
 
-**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars).
+**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional — leave it out and the api boots with the IUT routes answering 503.
 
 ### Route table
 
@@ -233,6 +235,8 @@ Hono server on Bun, port 3000.
 | GET    | `/api/auth/discord`                         | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
 | GET    | `/api/auth/discord/callback`                | —     | Exchange code, upsert user, issue JWT                              |
 | GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                    |
+| GET    | `/api/auth/iut`                             | —     | Redirect to the IUT bridge (PKCE); `?token=` links instead         |
+| GET    | `/api/auth/iut/callback`                    | —     | Verify the ID token, upsert or link the identity, issue JWT        |
 | GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                    |
 | GET    | `/api/events/week`                          | —     | Events for a week (`?date=`)                                       |
 | GET    | `/api/events/day`                           | —     | Events for a day (`?date=`)                                        |
@@ -254,6 +258,9 @@ Hono server on Bun, port 3000.
 | DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                       |
 | POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                             |
 | DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                     |
+| GET    | `/api/admin/iut-mappings`                   | admin | List IUT directory group mappings                                  |
+| POST   | `/api/admin/iut-mappings`                   | admin | Map an IUT group to a role and a class                             |
+| DELETE | `/api/admin/iut-mappings/:id`               | admin | Remove an IUT group mapping                                        |
 
 ### iCal feed
 
@@ -261,7 +268,7 @@ Hono server on Bun, port 3000.
 
 Event timestamps are Paris wall-clock stored as UTC (the scraper builds them with `Date.UTC` from what the page displays), so `lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` with the UTC components and ships a `VTIMEZONE`. Emitting them as `Z` instants would shift every course by one or two hours.
 
-**JWT**: HS256, 7-day expiry. Claims: `sub` (user UUID), `discordId`, `isAdmin`, `status`, `role`.
+**JWT**: HS256, 7-day expiry. Claims: `sub` (user UUID), `isAdmin`, `status`, `role`. `requireAuth` re-reads `status` and `isAdmin` from the database on every request, so a rejection takes effect before the token expires.
 
 **Discord OAuth flow**:
 
@@ -269,6 +276,63 @@ Event timestamps are Paris wall-clock stored as UTC (the scraper builds them wit
 2. `/api/auth/discord/callback` → exchanges code, fetches `@me` + member roles across all configured guilds in parallel
 3. If any guild role matches a `discord_role_mappings` entry → auto-approve user, assign `studentGroupId`
 4. Issues JWT; redirects to `clientRedirectUri?token=...` if provided
+
+---
+
+## Identity: two providers, one account
+
+`users` used to **be** the Discord identity — `discord_id NOT NULL UNIQUE` — which
+left no room for a second provider. `user_identities` holds one row per external
+account instead, unique on `(provider, subject)`; `users` keeps only status, role
+and admin flag. The `users.discord_*` columns are still written on every Discord
+login so a rollback works, and migration `0013` backfilled an identity row for
+every existing user. **Drop those columns in a separate change once that has
+baked** — nothing reads them any more except the transitional lookup in the
+Discord callback.
+
+The display name is no longer a column: `pickDisplay()` (`lib/identity-display.ts`)
+picks the Discord name first, then the IUT one, and the DTO hands out
+`displayName` / `avatarUrl` / `identities` where it used to hand out
+`discordUsername` / `discordAvatar` / `discordId`.
+
+### IUT — the department's LDAP↔OIDC bridge
+
+Authorization Code + PKCE against a bridge a classmate runs on `webinfo`, which
+fronts the department's LDAP directory. `/api/auth/iut` → `/api/auth/iut/callback`,
+mirroring the Discord pair, with `groups` claims matched against
+`iut_group_mappings` for auto-approval.
+
+Three things about it are not obvious:
+
+- **`sub` is the raw LDAP DN** (`uid=lubenb,ou=Ann3,…`), so it carries the year
+  and changes at every rollover. Keying accounts on it would orphan most of them
+  each September. `iutSubject()` keys on `preferred_username` instead and parks
+  the DN in `provider_sub_raw` for diagnostics. Swap it back only if the bridge
+  ever emits a genuinely stable `sub`.
+- **PKCE is not stateless.** Discord's `state` is a plain base64 blob, but the
+  code verifier must never reach the browser's URL, so it rides in a signed
+  HttpOnly `SameSite=Lax` cookie (`iut_oidc`, 10 min) along with the nonce, the
+  state and the client redirect. Lax is enough: the bridge returns the user with
+  a top-level GET.
+- **Its TLS chain does not validate.** The server sends the wrong intermediate
+  for its leaf, so `curl`, Node and Bun all fail with
+  `unable to get local issuer certificate`. `apps/api/certs/` carries the
+  intermediate the leaf's AIA extension points at, and the Dockerfile sets
+  `NODE_EXTRA_CA_CERTS`. Never reach for `NODE_TLS_REJECT_UNAUTHORIZED=0` — that
+  disables verification process-wide, Discord and Postgres included.
+
+The directory carries the population and the year (`etudiants`, `ann3`) but not
+the TD group, so a mapping's class is an anchor: the student narrows it down
+through `PATCH /api/auth/me/student-group`, the same path a Discord role already
+takes. The access token is discarded — 900 s, no refresh, and userinfo returns
+nothing the ID token does not.
+
+**Linking.** A Discord account and an IUT account are two accounts unless the
+user links them, and there is no email to match on (the Discord flow only asks
+for `identify`). `/api/auth/iut?token=<app jwt>` attaches the identity to the
+session that started the flow instead of creating a user; the profile page
+exposes it. The token travels in the query because a redirect cannot carry an
+Authorization header — the same reason it comes back that way.
 
 ---
 
@@ -290,7 +354,7 @@ Vue 3 + Vuetify 3 + Pinia SPA.
 | `/teachers` | — | TeachersView |
 | `/rooms` | — | RoomsView |
 | `/profile` | user | ProfileView |
-| `/admin/*` | admin | AdminLayout → groups / users / discord-mappings |
+| `/admin/*` | admin | AdminLayout → groups / users / discord-mappings / iut-mappings / changes |
 
 **Route guard logic**:
 

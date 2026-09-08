@@ -113,8 +113,8 @@ services:
 networks:
     # Lets nginx resolve and reach `api` for its /api/ and /auth/ proxy_pass.
     # Not internal: the reverse proxy lives on another host and reaches web
-    # through the published :80, and api needs egress for the Discord OAuth
-    # token exchange. (A container only on an internal network cannot serve a
+    # through the published :80, and api needs egress for the Discord and IUT
+    # OAuth token exchanges. (A container only on an internal network cannot serve a
     # published port.)
     frontend:
 

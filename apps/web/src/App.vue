@@ -97,7 +97,7 @@ const navItems = [
                         v-if="auth.isAuthenticated"
                         prepend-icon="mdi-logout"
                         title="Se déconnecter"
-                        :subtitle="auth.user?.discordUsername"
+                        :subtitle="auth.user?.displayName"
                         @click="logoutFromDrawer"
                     />
                     <v-list-item

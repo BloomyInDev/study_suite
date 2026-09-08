@@ -38,9 +38,9 @@ function formatAbsolute(iso: string) {
     return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })
 }
 
-function formatAuthor(user: { discordUsername: string } | null, dateIso: string) {
+function formatAuthor(user: { displayName: string } | null, dateIso: string) {
     if (!user) return null
-    return `${user.discordUsername} — ${formatAbsolute(dateIso)}`
+    return `${user.displayName} — ${formatAbsolute(dateIso)}`
 }
 </script>
 

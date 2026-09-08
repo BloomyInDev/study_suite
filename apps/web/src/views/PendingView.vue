@@ -41,7 +41,7 @@ async function checkApproval() {
                 </div>
                 <div class="text-caption text-medium-emphasis mb-6">
                     Connecté en tant que
-                    <strong>{{ auth.user?.discordUsername }}</strong>
+                    <strong>{{ auth.user?.displayName }}</strong>
                 </div>
                 <div class="d-flex flex-column gap-2">
                     <v-btn

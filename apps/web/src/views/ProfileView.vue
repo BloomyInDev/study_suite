@@ -19,14 +19,11 @@ function groupLabelById(id: string): string {
     return g ? groupLabel(g) : id
 }
 
-const myClass = computed(() =>
-    groups.allGroups.find((g) => g.id === auth.user?.studentGroupId),
-)
+const myClass = computed(() => groups.allGroups.find((g) => g.id === auth.user?.studentGroupId))
 
 /** What staff assigned; the student may pick this or anything under it. */
 const assignedClass = computed(
-    () =>
-        groups.allGroups.find((g) => g.id === auth.user?.assignedGroupId) ?? myClass.value,
+    () => groups.allGroups.find((g) => g.id === auth.user?.assignedGroupId) ?? myClass.value,
 )
 
 /** The assigned class plus everything under it: a role can only grant S1, so
@@ -48,6 +45,28 @@ const classChoices = computed(() => {
     walk(root.id)
     return out.map((g) => ({ title: groupLabel(g), value: g.id }))
 })
+
+const PROVIDERS = [
+    { key: 'discord' as const, label: 'Discord', icon: 'fa:fab fa-discord' },
+    { key: 'iut' as const, label: 'IUT', icon: 'mdi-school' },
+]
+
+const linkedAccounts = computed(() =>
+    PROVIDERS.map((p) => ({
+        ...p,
+        identity: auth.user?.identities.find((i) => i.provider === p.key) ?? null,
+    })),
+)
+
+/**
+ * The link flow is a redirect, so the app token cannot ride in a header — it
+ * goes in the query the way it already does on the way back from a login.
+ */
+function linkIutUrl(): string {
+    const callback = encodeURIComponent(window.location.origin + '/auth/callback')
+    const token = encodeURIComponent(localStorage.getItem('auth_token') ?? '')
+    return `${API_URL}/api/auth/iut?redirect_uri=${callback}&token=${token}`
+}
 
 async function saveClass() {
     if (!classDraft.value) return
@@ -105,6 +124,44 @@ async function saveClass() {
                             @click="saveClass"
                             >Enregistrer</v-btn
                         >
+                    </v-card-text>
+                </v-card>
+            </v-col>
+
+            <v-col v-if="auth.isAuthenticated" cols="12" md="6">
+                <v-card>
+                    <v-card-title>Mes comptes</v-card-title>
+                    <v-card-subtitle>Façons de se connecter</v-card-subtitle>
+                    <v-card-text>
+                        <div
+                            v-for="account in linkedAccounts"
+                            :key="account.key"
+                            class="d-flex align-center ga-3 mb-2"
+                        >
+                            <v-icon :icon="account.icon" size="20" />
+                            <div class="flex-grow-1">
+                                <div>{{ account.label }}</div>
+                                <div class="text-caption text-medium-emphasis">
+                                    {{ account.identity?.subject ?? 'Non lié' }}
+                                </div>
+                            </div>
+                            <v-icon v-if="account.identity" color="success" size="20">
+                                mdi-check-circle
+                            </v-icon>
+                            <v-btn
+                                v-else-if="account.key === 'iut'"
+                                :href="linkIutUrl()"
+                                color="primary"
+                                variant="tonal"
+                                size="small"
+                            >
+                                Lier
+                            </v-btn>
+                        </div>
+                        <div class="text-caption text-medium-emphasis mt-3">
+                            Lier votre compte IUT vous permet de vous connecter avec l'un ou
+                            l'autre, sans créer un second compte.
+                        </div>
                     </v-card-text>
                 </v-card>
             </v-col>
