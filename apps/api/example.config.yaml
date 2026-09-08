@@ -16,5 +16,13 @@ discord:
     # guildId: "your_discord_server_id"
     # redirectUri: http://localhost:3000/api/auth/discord/callback
 
+# The department LDAP<->OIDC bridge. Leave the whole block out to disable the
+# "Connexion avec l'IUT" button; the api boots fine without it.
+iut:
+    # issuerUrl: https://webinfo.iutmontp.univ-montp2.fr/~loynetr/ldap-gateway/public
+    # clientId: "your_bridge_client_id"
+    # clientSecret: "your_bridge_client_secret"
+    # redirectUri: http://localhost:3000/api/auth/iut/callback
+
 jwt:
     # secret: "a_random_secret_at_least_32_characters_long"

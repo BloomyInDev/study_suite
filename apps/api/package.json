@@ -19,6 +19,7 @@
         "@studysuite/shared": "workspace:*",
         "drizzle-orm": "^0.43.1",
         "hono": "^4.7.10",
+        "jose": "^6.2.12",
         "zod": "^3.24.4"
     },
     "devDependencies": {

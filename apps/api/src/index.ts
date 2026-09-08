@@ -12,6 +12,7 @@ import roomsController from './controllers/rooms.js'
 import teachersController from './controllers/teachers.js'
 import adminUsersController from './controllers/admin/users.js'
 import adminGuildsController from './controllers/admin/guilds.js'
+import adminIutMappingsController from './controllers/admin/iut-mappings.js'
 
 const _app = new OpenAPIHono()
 
@@ -23,7 +24,11 @@ _app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
 
 _app.doc('/api/docs/openapi.json', (c) => ({
     openapi: '3.0.0',
-    info: { title: 'StudySuite API', version: '1.0.0', description: 'API for the StudySuite application' },
+    info: {
+        title: 'StudySuite API',
+        version: '1.0.0',
+        description: 'API for the StudySuite application',
+    },
     servers: [{ url: new URL(c.req.url).origin }],
 }))
 
@@ -61,7 +66,8 @@ const app = _app
         '/api/admin',
         new OpenAPIHono()
             .route('/users', adminUsersController)
-            .route('/guilds', adminGuildsController),
+            .route('/guilds', adminGuildsController)
+            .route('/iut-mappings', adminIutMappingsController),
     )
 
 export type AppType = typeof app

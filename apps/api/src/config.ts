@@ -16,6 +16,18 @@ const schema = z.object({
         clientSecret: z.string().min(1),
         redirectUri: z.string().default('http://localhost:3000/api/auth/discord/callback'),
     }),
+    /**
+     * The department's LDAP↔OIDC bridge. Optional: the api boots without it and
+     * the /auth/iut routes answer 503 until it is configured.
+     */
+    iut: z
+        .object({
+            issuerUrl: z.string().url(),
+            clientId: z.string().min(1),
+            clientSecret: z.string().min(1),
+            redirectUri: z.string().default('http://localhost:3000/api/auth/iut/callback'),
+        })
+        .optional(),
     jwt: z.object({
         secret: z.string().min(32),
     }),
@@ -34,6 +46,10 @@ export const config = loadConfig({
         DISCORD_CLIENT_ID: 'discord.clientId',
         DISCORD_CLIENT_SECRET: 'discord.clientSecret',
         DISCORD_REDIRECT_URI: 'discord.redirectUri',
+        IUT_ISSUER_URL: 'iut.issuerUrl',
+        IUT_CLIENT_ID: 'iut.clientId',
+        IUT_CLIENT_SECRET: 'iut.clientSecret',
+        IUT_REDIRECT_URI: 'iut.redirectUri',
         JWT_SECRET: 'jwt.secret',
     },
 })

@@ -10,6 +10,7 @@ import {
 } from '@studysuite/db'
 import { and, asc, count, eq, inArray } from 'drizzle-orm'
 import { db } from '../db.js'
+import { pickDisplay, type IdentitySummary } from '../lib/identities.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 import {
     AssignmentDtoSchema,
@@ -61,9 +62,14 @@ const CompletionStatusSchema = z.object({
 const withRelations = {
     studentGroup: true as const,
     event: true as const,
-    createdBy: true as const,
-    updatedBy: true as const,
+    // The display name lives in user_identities now, not on the user row.
+    createdBy: { with: { identities: true as const } },
+    updatedBy: { with: { identities: true as const } },
     completions: true as const,
+}
+
+function authorRef(user: { id: string; identities: IdentitySummary[] } | null) {
+    return user ? { id: user.id, displayName: pickDisplay(user.identities).displayName } : null
 }
 
 type AssignmentRow = Awaited<ReturnType<typeof fetchAssignment>>
@@ -88,12 +94,8 @@ function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: string) {
             displayName: row.studentGroup.displayName,
         },
         event: row.event ? { id: row.event.id, title: row.event.title } : null,
-        createdBy: row.createdBy
-            ? { id: row.createdBy.id, discordUsername: row.createdBy.discordUsername }
-            : null,
-        updatedBy: row.updatedBy
-            ? { id: row.updatedBy.id, discordUsername: row.updatedBy.discordUsername }
-            : null,
+        createdBy: authorRef(row.createdBy),
+        updatedBy: authorRef(row.updatedBy),
         completedByMe: row.completions.some((c) => c.userId === myUserId),
         completionCount: row.completions.length,
         createdAt: row.createdAt.toISOString(),

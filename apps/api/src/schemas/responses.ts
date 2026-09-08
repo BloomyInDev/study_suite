@@ -142,13 +142,13 @@ export const AssignmentDtoSchema = z
         createdBy: z
             .object({
                 id: uuid('7b3d5f1a-9c2e-4b6d-8f0a-1c3e5a7b9d1f'),
-                discordUsername: z.string().openapi({ example: 'bastien' }),
+                displayName: z.string().openapi({ example: 'bastien' }),
             })
             .nullable(),
         updatedBy: z
             .object({
                 id: uuid('7b3d5f1a-9c2e-4b6d-8f0a-1c3e5a7b9d1f'),
-                discordUsername: z.string().openapi({ example: 'bastien' }),
+                displayName: z.string().openapi({ example: 'bastien' }),
             })
             .nullable(),
         completedByMe: z.boolean().openapi({ example: false }),
@@ -164,17 +164,26 @@ export const AssignmentDtoSchema = z
 export const UserDtoSchema = z
     .object({
         id: uuid('7b3d5f1a-9c2e-4b6d-8f0a-1c3e5a7b9d1f'),
-        discordId: z.string().openapi({ example: '204255221017214977' }),
-        discordUsername: z.string().openapi({ example: 'bastien' }),
-        discordAvatar: z
+        displayName: z.string().openapi({ example: 'bastien' }),
+        avatarUrl: z
             .string()
             .nullable()
-            .openapi({ example: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6' }),
+            .openapi({ example: 'https://cdn.discordapp.com/avatars/204255221017214977/a1b2.png' }),
+        identities: z
+            .array(
+                z.object({
+                    provider: z.enum(['discord', 'iut']),
+                    subject: z.string().openapi({ example: 'lubenb' }),
+                    username: z.string().nullable().openapi({ example: 'Luben Bastien' }),
+                    avatarUrl: z.string().nullable(),
+                }),
+            )
+            .openapi({ description: 'Every account this user signs in with' }),
         role: z.enum(['student', 'teacher']).nullable().openapi({ example: 'student' }),
         isAdmin: z.boolean().openapi({ example: false }),
         status: z.enum(['pending', 'approved', 'rejected']).openapi({
             description:
-                'A user stays pending until a Discord role matches, or an admin approves them',
+                'A user stays pending until a Discord role or an IUT directory group matches, or an admin approves them',
             example: 'approved',
         }),
         studentGroupId: uuid('4d8b6a2c-7e1f-4a3b-9c5d-8e0f2a4b6c8d').nullable(),

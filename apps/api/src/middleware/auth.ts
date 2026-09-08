@@ -7,7 +7,6 @@ import { db } from '../db.js'
 
 export type JwtPayload = {
     sub: string
-    discordId: string
     isAdmin: boolean
     status: 'pending' | 'approved' | 'rejected'
     role: 'student' | 'teacher' | null

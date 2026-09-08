@@ -50,6 +50,9 @@ importers:
       hono:
         specifier: ^4.12.21
         version: 4.12.21
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
       zod:
         specifier: ^3.24.4
         version: 3.25.76
@@ -1717,6 +1720,9 @@ packages:
 
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
+
+  jose@6.2.12:
+    resolution: {integrity: sha512-9NiFmJEex0sy2Dk58j2UGBSHgUs2ypF9eZSu4L6vjOX3Dp96Sw1F3uL+H+D1sx02jZZdzUT0HgvCy59CuvXcWw==}
 
   js-yaml@4.1.1:
     resolution: {integrity: sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==}
@@ -3596,6 +3602,8 @@ snapshots:
   is-what@5.5.0: {}
 
   isexe@2.0.0: {}
+
+  jose@6.2.12: {}
 
   js-yaml@4.1.1:
     dependencies:

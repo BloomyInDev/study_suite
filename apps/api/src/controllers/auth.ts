@@ -1,13 +1,24 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eq, inArray } from 'drizzle-orm'
-import { sign } from 'hono/jwt'
+import type { Context } from 'hono'
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
+import { sign, verify } from 'hono/jwt'
 import { db } from '../db.js'
-import { users, discordGuilds, discordRoleMappings } from '@studysuite/db'
+import { users, discordGuilds, discordRoleMappings, iutGroupMappings } from '@studysuite/db'
 import { studentGroupMemberships, studentGroups, userStudents, userTeachers } from '@studysuite/db'
 import { config } from '../config.js'
-import { requireAuth, type AuthEnv } from '../middleware/auth.js'
+import { requireAuth, type AuthEnv, type JwtPayload } from '../middleware/auth.js'
 import { UserDtoSchema, dataResponse, errorResponse, jsonResponse } from '../schemas/responses.js'
 import { fetchEnrichedUser, userToDto, type EnrichedUser } from '../lib/users.js'
+import { findUserIdByIdentity, upsertIdentity } from '../lib/identities.js'
+import {
+    buildAuthorizationUrl,
+    createPkce,
+    exchangeCode,
+    iutSubject,
+    OidcError,
+    type IutClaims,
+} from '../lib/oidc.js'
 
 export type { EnrichedUser }
 
@@ -47,7 +58,6 @@ async function issueToken(user: EnrichedUser): Promise<string> {
     return sign(
         {
             sub: user.id,
-            discordId: user.discordId,
             isAdmin: user.isAdmin,
             status: user.status,
             role: user.role,
@@ -179,7 +189,8 @@ app.openapi(
                 redirect_uri: config.discord.redirectUri,
             }),
         })
-        if (!tokenRes.ok) return errorResponse('discord_auth_failed', 'Discord token exchange failed')
+        if (!tokenRes.ok)
+            return errorResponse('discord_auth_failed', 'Discord token exchange failed')
         const { access_token, expires_in } = (await tokenRes.json()) as DiscordTokenResponse
         const tokenExpiresAt = new Date(Date.now() + expires_in * 1000)
 
@@ -220,13 +231,24 @@ app.openapi(
         const autoApproved = validMappings.length > 0
         const firstMapping = validMappings[0]
         const mappedRole = autoApproved ? (firstMapping.userRole as 'student' | 'teacher') : null
-        const mappedGroupId = mappedRole === 'student' ? (firstMapping.studentGroupId ?? null) : null
+        const mappedGroupId =
+            mappedRole === 'student' ? (firstMapping.studentGroupId ?? null) : null
 
-        const existing = await db
-            .select()
-            .from(users)
-            .where(eq(users.discordId, discordUser.id))
-            .limit(1)
+        // A user created by the previous revision, between the migration and
+        // this deploy, has no identity row yet; discord_id still finds them.
+        const existingId =
+            (await findUserIdByIdentity('discord', discordUser.id)) ??
+            (
+                await db
+                    .select({ id: users.id })
+                    .from(users)
+                    .where(eq(users.discordId, discordUser.id))
+                    .limit(1)
+            )[0]?.id ??
+            null
+        const existing = existingId
+            ? await db.select().from(users).where(eq(users.id, existingId)).limit(1)
+            : []
 
         let userId: string
         const wasAlreadyApproved = existing.length > 0 && existing[0].status === 'approved'
@@ -245,7 +267,7 @@ app.openapi(
                     ...(shouldApprove ? { status: 'approved' as const } : {}),
                     updatedAt: new Date(),
                 })
-                .where(eq(users.discordId, discordUser.id))
+                .where(eq(users.id, existing[0].id))
             userId = existing[0].id
         } else {
             const [created] = await db
@@ -261,6 +283,17 @@ app.openapi(
                 .returning({ id: users.id })
             userId = created.id
         }
+
+        await upsertIdentity(userId, {
+            provider: 'discord',
+            subject: discordUser.id,
+            username: discordUser.global_name ?? discordUser.username,
+            avatarUrl: discordUser.avatar
+                ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`
+                : null,
+            accessToken: access_token,
+            tokenExpiresAt: tokenExpiresAt,
+        })
 
         if (shouldApprove && mappedRole) {
             await upsertProfile(userId, mappedRole, mappedGroupId)
@@ -301,13 +334,23 @@ app.openapi(
         const [user] = await db.select().from(users).where(eq(users.id, payload.sub)).limit(1)
         if (!user?.discordAccessToken) {
             return c.json(
-                { error: { code: 'NO_TOKEN', message: 'No Discord token stored. Please re-login.' } },
+                {
+                    error: {
+                        code: 'NO_TOKEN',
+                        message: 'No Discord token stored. Please re-login.',
+                    },
+                },
                 400,
             )
         }
         if (user.discordTokenExpiresAt && user.discordTokenExpiresAt < new Date()) {
             return c.json(
-                { error: { code: 'TOKEN_EXPIRED', message: 'Discord token expired. Please re-login.' } },
+                {
+                    error: {
+                        code: 'TOKEN_EXPIRED',
+                        message: 'Discord token expired. Please re-login.',
+                    },
+                },
                 401,
             )
         }
@@ -325,10 +368,7 @@ app.openapi(
         }
         const guildList = (await guildsRes.json()) as DiscordGuild[]
 
-        return c.json(
-            { data: guildList.map(({ id, name, icon }) => ({ id, name, icon })) },
-            200,
-        )
+        return c.json({ data: guildList.map(({ id, name, icon }) => ({ id, name, icon })) }, 200)
     },
 )
 
@@ -434,6 +474,267 @@ app.openapi(
 
         const enriched = await fetchEnrichedUser(eq(users.id, payload.sub))
         return c.json({ data: userToDto(enriched!) }, 200)
+    },
+)
+
+// ---------------------------------------------------------------------------
+// IUT — the department's LDAP↔OIDC bridge
+// ---------------------------------------------------------------------------
+
+const IUT_COOKIE = 'iut_oidc'
+const IUT_FLOW_TTL_S = 600
+
+type IutFlow = {
+    /** PKCE verifier, nonce and state — all three have to survive the redirect. */
+    v: string
+    n: string
+    s: string
+    /** Where to hand the app token back, when the flow started from the SPA. */
+    r?: string
+    /** Set when an already-signed-in user is linking, rather than logging in. */
+    u?: string
+    exp: number
+}
+
+/**
+ * The Discord flow is stateless — its `state` is a plain base64 blob — but PKCE
+ * is not: the verifier must never reach the browser's URL. It rides in a signed,
+ * HttpOnly cookie instead. `SameSite=Lax` is enough because the bridge sends the
+ * user back with a top-level GET.
+ */
+async function setFlowCookie(c: Context, flow: Omit<IutFlow, 'exp'>): Promise<void> {
+    const token = await sign(
+        { ...flow, exp: Math.floor(Date.now() / 1000) + IUT_FLOW_TTL_S },
+        config.jwt.secret,
+        'HS256',
+    )
+    setCookie(c, IUT_COOKIE, token, {
+        httpOnly: true,
+        sameSite: 'Lax',
+        secure: config.iut?.redirectUri.startsWith('https://') ?? true,
+        path: '/',
+        maxAge: IUT_FLOW_TTL_S,
+    })
+}
+
+async function readFlowCookie(c: Context): Promise<IutFlow | null> {
+    const raw = getCookie(c, IUT_COOKIE)
+    if (!raw) return null
+    deleteCookie(c, IUT_COOKIE, { path: '/' })
+    try {
+        return (await verify(raw, config.jwt.secret, 'HS256')) as IutFlow
+    } catch {
+        return null
+    }
+}
+
+/** Role and anchor class for the `groups` the directory reports. */
+async function resolveIutMapping(groups: string[]) {
+    const wanted = [...new Set(groups.map((g) => g.toLowerCase()))]
+    if (wanted.length === 0) return null
+    const mappings = await db
+        .select()
+        .from(iutGroupMappings)
+        .where(inArray(iutGroupMappings.claimValue, wanted))
+    if (mappings.length === 0) return null
+
+    // A teacher mapping wins: it is the narrower statement about the person.
+    const teacher = mappings.find((m) => m.userRole === 'teacher')
+    if (teacher) return { role: 'teacher' as const, groupId: null }
+    const withGroup = mappings.find((m) => m.studentGroupId) ?? mappings[0]
+    return { role: 'student' as const, groupId: withGroup.studentGroupId ?? null }
+}
+
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/iut',
+        operationId: 'iutLogin',
+        summary: 'Start the IUT OIDC flow',
+        description:
+            'Redirects to the department bridge with PKCE. Pass `token` to link the IUT account to the session it belongs to instead of signing in — the browser cannot send an Authorization header through a redirect, so the app token travels as a query parameter here, the way it already does on the way back.',
+        tags: ['Auth'],
+        request: {
+            query: z.object({
+                redirect_uri: z.string().url().optional(),
+                token: z.string().optional(),
+            }),
+        },
+        responses: {
+            302: { description: 'Redirect to the IUT authorization endpoint' },
+            401: errorResponse('Invalid link token'),
+            503: errorResponse('IUT login is not configured'),
+        },
+    }),
+    async (c) => {
+        if (!config.iut) {
+            return c.json(
+                { error: { code: 'IUT_DISABLED', message: 'IUT login is not configured' } },
+                503,
+            )
+        }
+
+        let linkUserId: string | undefined
+        const linkToken = c.req.query('token')
+        if (linkToken) {
+            try {
+                const payload = (await verify(linkToken, config.jwt.secret, 'HS256')) as JwtPayload
+                linkUserId = payload.sub
+            } catch {
+                return c.json(
+                    { error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } },
+                    401,
+                )
+            }
+        }
+
+        const { codeVerifier, codeChallenge, state, nonce } = createPkce()
+        await setFlowCookie(c, {
+            v: codeVerifier,
+            n: nonce,
+            s: state,
+            r: safeRedirectUri(c.req.query('redirect_uri')),
+            u: linkUserId,
+        })
+        return c.redirect(await buildAuthorizationUrl({ codeChallenge, state, nonce }))
+    },
+)
+
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/iut/callback',
+        operationId: 'iutCallback',
+        summary: 'Finish the IUT OIDC flow',
+        description:
+            'Verifies the ID token, then either links the identity to the session that started the flow or upserts an account keyed on `preferred_username`. A `groups` claim matching an `iut_group_mappings` row auto-approves the user, exactly as a Discord role does.',
+        tags: ['Auth'],
+        request: {
+            query: z.object({
+                code: z.string().optional(),
+                state: z.string().optional(),
+                error: z.string().optional(),
+            }),
+        },
+        responses: {
+            302: { description: 'Redirect back to the client with the token' },
+            200: jsonResponse(
+                z.object({ data: UserDtoSchema, token: z.string() }),
+                'Auth result (when no clientRedirectUri)',
+            ),
+            400: errorResponse('Auth error'),
+            503: errorResponse('IUT login is not configured'),
+        },
+    }),
+    async (c) => {
+        if (!config.iut) {
+            return c.json(
+                { error: { code: 'IUT_DISABLED', message: 'IUT login is not configured' } },
+                503,
+            )
+        }
+
+        const flow = await readFlowCookie(c)
+        const clientRedirectUri = flow?.r
+
+        const fail = (code: string, message: string) => {
+            if (clientRedirectUri) {
+                const url = new URL(clientRedirectUri)
+                url.searchParams.set('error', code)
+                return c.redirect(url.toString())
+            }
+            return c.json({ error: { code, message } }, 400)
+        }
+
+        if (c.req.query('error')) return fail('iut_auth_failed', 'The bridge refused the request')
+        if (!flow) return fail('iut_state_expired', 'Login took too long, please try again')
+        const code = c.req.query('code')
+        if (!code) return fail('missing_code', 'Missing authorization code')
+        if (c.req.query('state') !== flow.s) return fail('iut_state_mismatch', 'State mismatch')
+
+        let claims: IutClaims
+        try {
+            claims = await exchangeCode(code, flow.v, flow.n)
+        } catch (err) {
+            console.error('IUT token exchange failed', err)
+            return fail(
+                err instanceof OidcError ? 'iut_auth_failed' : 'iut_unreachable',
+                'Could not verify the IUT login',
+            )
+        }
+
+        const subject = iutSubject(claims)
+        if (!subject) return fail('iut_no_subject', 'The bridge returned no usable identifier')
+
+        const identity = {
+            provider: 'iut' as const,
+            subject,
+            providerSubRaw: claims.sub ?? null,
+            username: claims.name ?? subject,
+            email: claims.email ?? null,
+        }
+
+        // Linking: attach the identity to the session that started the flow.
+        if (flow.u) {
+            const owner = await findUserIdByIdentity('iut', subject)
+            if (owner && owner !== flow.u) {
+                return fail('iut_already_linked', 'That IUT account belongs to another user')
+            }
+            await upsertIdentity(flow.u, identity)
+            const linked = await fetchEnrichedUser(eq(users.id, flow.u))
+            if (!linked) return fail('unknown_user', 'Unknown user')
+            const token = await issueToken(linked)
+            if (clientRedirectUri) {
+                const url = new URL(clientRedirectUri)
+                url.searchParams.set('token', token)
+                return c.redirect(url.toString())
+            }
+            return c.json({ data: userToDto(linked), token }, 200)
+        }
+
+        const mapping = await resolveIutMapping(claims.groups ?? [])
+        const existingId = await findUserIdByIdentity('iut', subject)
+        const existing = existingId
+            ? await db.select().from(users).where(eq(users.id, existingId)).limit(1)
+            : []
+
+        const wasAlreadyApproved = existing.length > 0 && existing[0].status === 'approved'
+        // A directory group must never undo an admin's decision to reject someone.
+        const wasRejected = existing.length > 0 && existing[0].status === 'rejected'
+        const shouldApprove = !!mapping && !wasAlreadyApproved && !wasRejected
+
+        let userId: string
+        if (existing.length > 0) {
+            await db
+                .update(users)
+                .set({
+                    ...(shouldApprove ? { status: 'approved' as const } : {}),
+                    updatedAt: new Date(),
+                })
+                .where(eq(users.id, existing[0].id))
+            userId = existing[0].id
+        } else {
+            const [created] = await db
+                .insert(users)
+                .values({ status: mapping ? 'approved' : 'pending' })
+                .returning({ id: users.id })
+            userId = created.id
+        }
+
+        await upsertIdentity(userId, identity)
+        if (shouldApprove && mapping) {
+            await upsertProfile(userId, mapping.role, mapping.groupId)
+        }
+
+        const enriched = await fetchEnrichedUser(eq(users.id, userId))
+        const token = await issueToken(enriched!)
+
+        if (clientRedirectUri) {
+            const url = new URL(clientRedirectUri)
+            url.searchParams.set('token', token)
+            return c.redirect(url.toString())
+        }
+        return c.json({ data: userToDto(enriched!), token }, 200)
     },
 )
 
