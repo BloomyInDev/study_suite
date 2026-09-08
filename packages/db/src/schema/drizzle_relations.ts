@@ -6,10 +6,12 @@ import { studentGroupMemberships } from './student_group_memberships.js'
 import { studentGroups } from './student_groups.js'
 import { teachers } from './teachers.js'
 import { users } from './users.js'
+import { userIdentities } from './user_identities.js'
 import { userStudents } from './user_students.js'
 import { userTeachers } from './user_teachers.js'
 import { discordGuilds } from './discord_guilds.js'
 import { discordRoleMappings } from './discord_role_mappings.js'
+import { iutGroupMappings } from './iut_group_mappings.js'
 import { assignments } from './assignments.js'
 import { assignmentCompletions } from './assignment_completions.js'
 
@@ -41,6 +43,7 @@ export const studentGroupsRelations = relations(studentGroups, ({ many }) => ({
     parentMemberships: many(studentGroupMemberships, { relationName: 'children' }),
     childMemberships: many(studentGroupMemberships, { relationName: 'parents' }),
     discordRoleMappings: many(discordRoleMappings),
+    iutGroupMappings: many(iutGroupMappings),
     userStudents: many(userStudents),
     assignments: many(assignments),
 }))
@@ -67,8 +70,13 @@ export const usersRelations = relations(users, ({ one, many }) => ({
         fields: [users.id],
         references: [userTeachers.userId],
     }),
+    identities: many(userIdentities),
     createdAssignments: many(assignments, { relationName: 'assignment_creator' }),
     updatedAssignments: many(assignments, { relationName: 'assignment_updater' }),
+}))
+
+export const userIdentitiesRelations = relations(userIdentities, ({ one }) => ({
+    user: one(users, { fields: [userIdentities.userId], references: [users.id] }),
 }))
 
 export const userStudentsRelations = relations(userStudents, ({ one }) => ({
@@ -95,6 +103,13 @@ export const discordRoleMappingsRelations = relations(discordRoleMappings, ({ on
     }),
     studentGroup: one(studentGroups, {
         fields: [discordRoleMappings.studentGroupId],
+        references: [studentGroups.id],
+    }),
+}))
+
+export const iutGroupMappingsRelations = relations(iutGroupMappings, ({ one }) => ({
+    studentGroup: one(studentGroups, {
+        fields: [iutGroupMappings.studentGroupId],
         references: [studentGroups.id],
     }),
 }))
