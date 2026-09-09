@@ -147,6 +147,8 @@ Two entry points:
 | `discord_guilds`            | Configured Discord servers                        |
 | `discord_role_mappings`     | Discord role → student group mapping              |
 | `iut_group_mappings`        | IUT directory group → student group mapping       |
+| `push_subscriptions`        | One row per browser that wants course reminders   |
+| `push_reminder_sends`       | Which reminder has already gone out               |
 
 `event_changes.change_type` enum: `added`, `removed`, `updated`, `moved`.
 For `moved`, `diff` JSON contains `{ newStart: ISO, newEnd: ISO }`.
@@ -225,14 +227,14 @@ on. It is ignored while the table is empty, so a fresh database still bootstraps
 
 Hono server on Bun, port 3000.
 
-**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional — leave it out and the api boots with the IUT routes answering 503.
+**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional — leave it out and the api boots with the IUT routes answering 503. The `push` block (`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`) is optional the same way.
 
 ### Route table
 
 | Method | Path                                        | Auth  | Description                                                        |
 | ------ | ------------------------------------------- | ----- | ------------------------------------------------------------------ |
 | GET    | `/api/health`                               | —     | Health check                                                       |
-| GET    | `/api/config`                               | —     | Which login providers exist and what they are called               |
+| GET    | `/api/config`                               | —     | Login providers, their labels, and the push public key             |
 | GET    | `/api/auth/discord`                         | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
 | GET    | `/api/auth/discord/callback`                | —     | Exchange code, upsert user, issue JWT                              |
 | GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                    |
@@ -245,6 +247,10 @@ Hono server on Bun, port 3000.
 | GET    | `/api/events`                               | —     | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)         |
 | GET    | `/api/events/:id`                           | —     | Single event                                                       |
 | GET    | `/api/calendar.ics`                         | —     | iCal feed (`?groupId=&teacherId=&roomId=&from=&to=`)               |
+| PUT    | `/api/push/subscriptions`                   | opt.  | Register this browser for course reminders                         |
+| GET    | `/api/push/subscriptions`                   | opt.  | Read back what a browser is registered for (`?endpoint=`)          |
+| DELETE | `/api/push/subscriptions`                   | opt.  | Unregister a browser (`?endpoint=`)                                |
+| POST   | `/api/push/test`                            | opt.  | Push a notification to a browser now (`?endpoint=`)                |
 | GET    | `/api/teachers`                             | —     | All teachers                                                       |
 | GET    | `/api/rooms`                                | —     | All rooms                                                          |
 | GET    | `/api/groups`                               | —     | All groups with parent/child hierarchy                             |
@@ -268,6 +274,68 @@ Hono server on Bun, port 3000.
 `GET /api/calendar.ics` returns an RFC 5545 document for calendar clients to subscribe to. Same filters as `GET /api/events` (`groupId`, `teacherId`, `roomId`, `from`, `to`); without `from` it reaches 60 days back, so the payload does not grow forever. No auth — like the rest of the event routes.
 
 Event timestamps are Paris wall-clock stored as UTC (the scraper builds them with `Date.UTC` from what the page displays), so `lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` with the UTC components and ships a `VTIMEZONE`. Emitting them as `Z` instants would shift every course by one or two hours.
+
+### Course reminders — Web Push
+
+A student who opts in gets a notification a configurable number of minutes
+before each of their courses, whether or not the app is open.
+
+**Why it needs a server at all.** The browser has no way to schedule a
+notification for later on its own: Notification Triggers (`showTrigger`) was an
+origin trial that Chrome removed, and Periodic Background Sync fires when the
+browser feels like it — roughly twice a day — never at a time you ask for. Push
+is the only mechanism that hits T-15 minutes with the tab closed, and push
+requires something to send it.
+
+`web-push` does the two parts worth not hand-rolling: the RFC 8292 VAPID header
+(an ES256 JWT per push service origin) and the RFC 8291 payload encryption
+(aes128gcm, keyed by the subscription's own P-256 key). The payload is opaque to
+Google, Apple and Mozilla — they route a blob they cannot read. It runs fine
+under Bun.
+
+**Where the sender lives.** `lib/reminder-tick.ts`, on a 60-second
+`setInterval` started from `index.ts`. In the api rather than a service of its
+own because it needs exactly what the api already has: the database, and a route
+off the host — the `frontend` network is deliberately not `internal`, which is
+what lets the Discord and IUT token exchanges work.
+
+Three things about it are not obvious:
+
+- **The tick claims before it sends.** `push_reminder_sends` has a unique
+  `(subscription_id, event_id)`, and the tick inserts with
+  `ON CONFLICT DO NOTHING … RETURNING`, pushing only the rows it actually
+  created. That is what makes it idempotent: an api restart mid-minute, or a
+  second replica, claims nothing and sends nothing. Without it, "notify once"
+  would depend on the process never being interrupted.
+- **The window is one-sided.** A course is due when `start - lead <= now < start`
+  — never early, and still true if a tick was missed, so a restart or a slow
+  query delays a reminder instead of losing it. The claim table is what makes
+  that safe to repeat.
+- **`now` is `wallClockNow()`.** Event timestamps are Paris wall-clock labels
+  (see [Time](#time-paris-wall-clock-labelled-utc)), so the comparison, the
+  minute count and the hour in the notification body all stay in label space,
+  where the offset cancels. `formatHour` reads the label with `timeZone: 'UTC'`;
+  formatting it in `Europe/Paris` would apply the offset twice and announce a
+  10h00 course at 12h00. `lib/reminder-match.ts` holds that logic free of the
+  database and the config so it can be tested — `reminder-match.test.ts` pins
+  both DST seasons.
+
+**Configuration.** Optional, like `iut`: with no keypair the routes answer 503,
+the ticker never starts, and `GET /api/config` reports `push.enabled: false` so
+the web app hides the toggle entirely. Generate one with
+`pnpm -F @studysuite/api exec web-push generate-vapid-keys`. The pair is an
+identity, not a rotating secret — every subscription is bound to the public key
+it was created with, so replacing it silently stops delivery to everyone already
+subscribed. The block is `.nullish()` rather than `.optional()` because a
+`config.yaml` copied from the example has `push:` present with every key
+commented out, and YAML parses that as null.
+
+**No account required.** `push_subscriptions.user_id` is nullable. The event
+routes are public and `/profile` already serves visitors who picked their groups
+locally, so reminders would otherwise be the one feature that demands an
+account. A subscription belongs to a _browser_, not a user: a phone and a laptop
+are two rows, and `POST`ing with a token merely links one to the account so it
+dies with it.
 
 **JWT**: HS256, 7-day expiry. Claims: `sub` (user UUID), `isAdmin`, `status`, `role`. `requireAuth` re-reads `status` and `isAdmin` from the database on every request, so a rejection takes effect before the token expires.
 
@@ -372,9 +440,38 @@ Vue 3 + Vuetify 3 + Pinia SPA.
 - Pending (non-admin) → redirect to `/pending` on any non-exempt route
 - `requiresAdmin` → redirect to `/` if not admin
 
-**Stores**: `auth` (JWT decode + login/logout), `events`, `groups`, `notifications`.
+**Stores**: `auth` (JWT decode + login/logout), `events`, `groups`, `notifications`
+(the Vuetify snackbars — _not_ push), `providers`, `reminders`.
 
 **API client** (`src/lib/api.ts`): typed Hono client via `hono/client` using `AppType` exported from `apps/api`.
+
+### The push service worker
+
+`public/sw.js` handles `push` and `notificationclick`, and nothing else. It is
+**not** a caching worker and must not become one: nginx substitutes the real
+origin into a fresh copy of `dist` at every container start (see below), and a
+Workbox-style precache would keep serving the previous one. It registers no
+`fetch` handler at all, which is the cheapest way to guarantee that.
+
+It lives in `public/` and is therefore copied verbatim, never bundled — so it is
+plain JS and cannot import from `src/`. eslint needs the `self` global declared
+for it explicitly (`eslint.config.js`), since typescript-eslint's blanket
+`no-undef` suppression only covers TS files.
+
+`lib/push.ts` owns the browser side: registration, `pushManager.subscribe`, and
+keeping the api's row in step. Two things it has to get right — the permission
+prompt must be driven by a real click, or every browser drops it; and
+`applicationServerKey` gets the decoded 65 bytes rather than the base64url
+string, which browsers accept less uniformly than the spec suggests.
+
+`stores/reminders.ts` drives the settings card on `/profile`. The subscription
+belongs to the browser, so the toggle is per-install, and `App.vue` re-syncs the
+group ids whenever they change — a student moved to another class would
+otherwise keep being reminded of their old timetable.
+
+Safari grants push only to a PWA installed on the home screen, so the card says
+so on iOS when it is not running standalone. That single fact accounts for most
+"it does nothing on my iPhone" reports.
 
 ### Head tags and static rendering
 
@@ -470,4 +567,5 @@ check` verifies the chain.
   included. Run `pnpm exec prettier --write <the files you changed>` instead;
   reverting the collateral afterwards is what loses generated content.
 - Cross-week move detection works because `insertAllChanges` sees all weeks' diffs at once. Adding per-week change insertion would regress this.
+- The push service worker must stay cache-free — see [The push service worker](#the-push-service-worker). Adding Workbox precaching would serve the pre-substitution `__SITE_URL__` build.
 - Never compare `new Date()` with an event timestamp — see [Time](#time-paris-wall-clock-labelled-utc). Use `wallClockNow()` from `@studysuite/shared/time`.
