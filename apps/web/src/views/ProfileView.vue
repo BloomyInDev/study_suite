@@ -6,11 +6,13 @@ import ReminderSettingsCard from '../components/ReminderSettingsCard.vue'
 import { API_URL } from '../lib/api-url'
 import { useAuthStore } from '../stores/auth.js'
 import { useGroupsStore } from '../stores/groups.js'
+import { useRemindersStore } from '../stores/reminders.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import { useProvidersStore } from '../stores/providers.js'
 
 const groups = useGroupsStore()
 const auth = useAuthStore()
+const reminders = useRemindersStore()
 const notifs = useNotificationsStore()
 const providers = useProvidersStore()
 const pickerOpen = ref(false)
@@ -168,7 +170,10 @@ async function saveClass() {
                 </v-card>
             </v-col>
 
-            <v-col cols="12" md="6">
+            <!-- Hidden outright where the toggle could not work: a browser
+                 without push, a deployment with no keypair, an iPhone that has
+                 not been added to the home screen. -->
+            <v-col v-if="reminders.visible" cols="12" md="6">
                 <ReminderSettingsCard />
             </v-col>
 

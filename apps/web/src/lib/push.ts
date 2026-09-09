@@ -21,6 +21,24 @@ export function pushSupported(): boolean {
     )
 }
 
+/**
+ * Whether push would work here *if* the app were installed to the home screen.
+ *
+ * iOS grants push only to a standalone PWA: in a plain Safari tab `PushManager`
+ * is not even defined, so `pushSupported()` is already false there. This only
+ * separates "install it and it will work" from "this browser cannot", which is
+ * what lets the settings card disappear rather than offer a toggle that would
+ * do nothing.
+ */
+export function installRequired(): boolean {
+    if (import.meta.env.SSR || typeof window === 'undefined') return false
+    const isIos = /iP(hone|ad|od)/.test(navigator.userAgent)
+    const standalone =
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (navigator as { standalone?: boolean }).standalone === true
+    return isIos && !standalone
+}
+
 export function permission(): NotificationPermission {
     return pushSupported() ? Notification.permission : 'denied'
 }

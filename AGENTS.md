@@ -469,9 +469,17 @@ belongs to the browser, so the toggle is per-install, and `App.vue` re-syncs the
 group ids whenever they change — a student moved to another class would
 otherwise keep being reminded of their old timetable.
 
-Safari grants push only to a PWA installed on the home screen, so the card says
-so on iOS when it is not running standalone. That single fact accounts for most
-"it does nothing on my iPhone" reports.
+**`reminders.visible` decides whether the card exists at all**, and `/profile`
+gates the whole `v-col` on it. It is false where nothing on that screen could
+make the toggle work: a browser without push, a deployment with no keypair, or
+an iPhone where the app is not on the home screen (Safari grants push only to a
+standalone PWA — in a plain tab `PushManager` is not even defined). What _is_
+actionable stays inside the card instead: a permission blocked in site
+settings, and no group picked.
+
+`visible` starts false and is settled by `init()` after mount, so the static
+render and the first client frame agree — the card is client-only by
+construction, which is fine on a `noindex` page.
 
 ### Head tags and static rendering
 

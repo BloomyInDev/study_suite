@@ -5,6 +5,7 @@ import {
     disablePush,
     enablePush,
     fetchStored,
+    installRequired,
     permission,
     pushSupported,
     sendTestPush,
@@ -40,11 +41,24 @@ export const useRemindersStore = defineStore('reminders', () => {
     const busy = ref(false)
     const error = ref<string | null>(null)
     const perm = ref<NotificationPermission>('default')
+    const needsInstall = ref(false)
 
     const providers = useProvidersStore()
 
-    /** The deployment has keys, and this browser can act on them. */
-    const available = computed(() => supported.value && providers.push.enabled)
+    /**
+     * Whether to show the settings card at all.
+     *
+     * Everything gating it here is something the student cannot act on from
+     * this screen — a browser without push, a deployment with no keypair, an
+     * iPhone where the app is not on the home screen. A toggle that cannot
+     * work is worse than no toggle, so the whole card goes rather than
+     * explaining itself. What *is* actionable — a blocked permission, no group
+     * picked — stays visible inside it.
+     *
+     * Starts false and is settled by `init()` after mount, so the static render
+     * and the first client frame agree.
+     */
+    const visible = computed(() => supported.value && providers.push.enabled && !needsInstall.value)
 
     /** Nothing the app can do about this one — it has to be undone in the
      *  browser's own site settings. */
@@ -56,6 +70,7 @@ export const useRemindersStore = defineStore('reminders', () => {
 
     async function init(): Promise<void> {
         supported.value = pushSupported()
+        needsInstall.value = installRequired()
         if (!supported.value) return
 
         perm.value = permission()
@@ -140,7 +155,8 @@ export const useRemindersStore = defineStore('reminders', () => {
         busy,
         error,
         perm,
-        available,
+        needsInstall,
+        visible,
         blocked,
         init,
         enable,
