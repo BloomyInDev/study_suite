@@ -3,12 +3,14 @@ import { OpenAPIHono } from '@hono/zod-openapi'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
+import { startReminderTick } from './lib/reminder-tick.js'
 import authController from './controllers/auth.js'
 import configController from './controllers/config.js'
 import calendarController from './controllers/calendar.js'
 import assignmentsController from './controllers/assignments.js'
 import eventsController from './controllers/events.js'
 import groupsController from './controllers/groups.js'
+import pushController from './controllers/push.js'
 import roomsController from './controllers/rooms.js'
 import teachersController from './controllers/teachers.js'
 import adminUsersController from './controllers/admin/users.js'
@@ -55,6 +57,7 @@ const app = _app
             .route('/rooms', roomsController)
             .route('/groups', groupsController)
             .route('/assignments', assignmentsController)
+            .route('/push', pushController)
             // Calendar clients key off the .ics suffix, so it is part of the path.
             .route('/calendar.ics', calendarController),
     )
@@ -71,6 +74,12 @@ const app = _app
             .route('/guilds', adminGuildsController)
             .route('/iut-mappings', adminIutMappingsController),
     )
+
+// The course-reminder ticker. Lives in the api rather than a service of its
+// own because it needs exactly what the api already has: the database and a
+// route off the host (the `frontend` network is not internal, which is what
+// lets the Discord and IUT token exchanges work). A no-op without VAPID keys.
+startReminderTick()
 
 export type AppType = typeof app
 

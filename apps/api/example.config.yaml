@@ -28,3 +28,19 @@ iut:
 
 jwt:
     # secret: "a_random_secret_at_least_32_characters_long"
+
+# Web Push, for the course reminders. Leave the whole block out and the
+# /api/push routes answer 503, the reminder ticker never starts, and the web app
+# hides the toggle — the api boots fine without it.
+#
+# Generate a keypair once, then keep it:
+#   pnpm -F @studysuite/api exec web-push generate-vapid-keys
+#
+# The pair is an identity, not a rotating secret. Every browser subscription is
+# bound to the public key it was created with, so replacing it silently stops
+# delivery to everyone already subscribed.
+push:
+    # publicKey: "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkTuk1cCLEQ"
+    # privateKey: "your_vapid_private_key"
+    # Where a push service can reach you about a misbehaving sender.
+    # subject: "mailto:admin@example.com"

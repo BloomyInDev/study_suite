@@ -33,6 +33,30 @@ const schema = z.object({
     jwt: z.object({
         secret: z.string().min(32),
     }),
+    /**
+     * Web Push (VAPID). Optional, like `iut`: leave the block out and the
+     * /api/push routes answer 503, the reminder tick never starts, and
+     * `GET /api/config` tells the frontend not to offer the toggle.
+     *
+     * Generate a keypair with:
+     *   pnpm -F @studysuite/api exec web-push generate-vapid-keys
+     *
+     * The pair is an identity, not a secret to rotate casually: every existing
+     * subscription is bound to the public key it was created with, so changing
+     * it silently stops delivery to every browser already subscribed.
+     */
+    push: z
+        .object({
+            publicKey: z.string().min(1),
+            privateKey: z.string().min(1),
+            /** RFC 8292 contact the push service can reach you at. */
+            subject: z.string().regex(/^(mailto:|https:)/, 'must be a mailto: or https: URI'),
+        })
+        // `nullish`, not `optional`: a config.yaml copied from the example has
+        // `push:` present with every key commented out, which YAML parses as
+        // null — and `.optional()` rejects null, so the api would refuse to
+        // boot on the most likely starting file.
+        .nullish(),
 })
 
 export const config = loadConfig({
@@ -54,6 +78,9 @@ export const config = loadConfig({
         IUT_CLIENT_SECRET: 'iut.clientSecret',
         IUT_REDIRECT_URI: 'iut.redirectUri',
         JWT_SECRET: 'jwt.secret',
+        PUSH_VAPID_PUBLIC_KEY: 'push.publicKey',
+        PUSH_VAPID_PRIVATE_KEY: 'push.privateKey',
+        PUSH_VAPID_SUBJECT: 'push.subject',
     },
 })
 

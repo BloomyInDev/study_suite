@@ -1,5 +1,6 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { config } from '../config.js'
+import { vapidPublicKey } from '../lib/push.js'
 import { dataResponse } from '../schemas/responses.js'
 
 const ProviderSchema = z
@@ -8,6 +9,18 @@ const ProviderSchema = z
         label: z.string().openapi({ example: 'Dép. Info.' }),
     })
     .openapi('AuthProvider')
+
+/**
+ * `publicKey` is not a secret — the browser has to pass it to
+ * `pushManager.subscribe()` — and it is null when the deployment configured no
+ * keypair, which is how the frontend knows not to offer the toggle at all.
+ */
+const PushConfigSchema = z
+    .object({
+        enabled: z.boolean().openapi({ example: true }),
+        publicKey: z.string().nullable().openapi({ example: 'BEl62iUYgUivxIkv69yViEuiBIa…' }),
+    })
+    .openapi('PushConfig')
 
 const app = new OpenAPIHono()
 
@@ -22,7 +35,10 @@ app.openapi(
         tags: ['Config'],
         responses: {
             200: dataResponse(
-                z.object({ providers: z.array(ProviderSchema) }),
+                z.object({
+                        providers: z.array(ProviderSchema),
+                        push: PushConfigSchema,
+                    }),
                 'Public configuration',
             ),
         },
@@ -32,7 +48,15 @@ app.openapi(
             { id: 'discord' as const, label: 'Discord' },
             ...(config.iut ? [{ id: 'iut' as const, label: config.iut.displayName }] : []),
         ]
-        return c.json({ data: { providers } }, 200)
+        return c.json(
+            {
+                data: {
+                    providers,
+                    push: { enabled: vapidPublicKey !== null, publicKey: vapidPublicKey },
+                },
+            },
+            200,
+        )
     },
 )
 

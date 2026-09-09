@@ -50,3 +50,36 @@ export const requireAdmin = createMiddleware<AuthEnv>(async (c, next) => {
     }
     await next()
 })
+
+/**
+ * Attaches the user when a valid token is present, and lets the request through
+ * when it is not.
+ *
+ * For routes that serve visitors and account holders alike — push
+ * subscriptions, like the event routes they feed on, work without an account.
+ * A bad or expired token is treated as no token: the caller gets the
+ * anonymous behaviour rather than a 401 they cannot act on.
+ */
+export const optionalAuth = createMiddleware<{ Variables: { user?: JwtPayload } }>(
+    async (c, next) => {
+        const authHeader = c.req.header('Authorization')
+        if (authHeader?.startsWith('Bearer ')) {
+            try {
+                const payload = (await verify(
+                    authHeader.slice(7),
+                    config.jwt.secret,
+                    'HS256',
+                )) as JwtPayload
+                const [current] = await db
+                    .select({ id: users.id })
+                    .from(users)
+                    .where(eq(users.id, payload.sub))
+                    .limit(1)
+                if (current) c.set('user', payload)
+            } catch {
+                // Anonymous it is.
+            }
+        }
+        await next()
+    },
+)
