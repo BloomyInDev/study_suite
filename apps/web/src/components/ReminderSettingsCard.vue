@@ -48,7 +48,23 @@ async function runTest() {
         <v-card-title>Rappels de cours</v-card-title>
         <v-card-subtitle>Une notification avant chaque cours</v-card-subtitle>
 
-        <v-card-text>
+        <!-- iOS: the feature exists, it just needs the app on the home screen.
+             Rendering the toggle here would be a lie — Safari does not even
+             define PushManager in a plain tab. -->
+        <v-card-text v-if="reminders.installPrompt">
+            <p class="mb-3">
+                Study Suite peut te prévenir avant chaque cours. Sur iPhone et iPad, il faut d'abord
+                ajouter l'app à l'écran d'accueil : c'est la seule façon dont Safari autorise les
+                notifications.
+            </p>
+            <ol class="text-body-2 ms-4">
+                <li>Touche le bouton <strong>Partager</strong> dans la barre de Safari.</li>
+                <li>Choisis <strong>Sur l'écran d'accueil</strong>.</li>
+                <li>Ouvre Study Suite depuis l'icône, puis reviens sur cette page.</li>
+            </ol>
+        </v-card-text>
+
+        <v-card-text v-else>
             <v-alert
                 v-if="reminders.blocked"
                 type="warning"
@@ -100,7 +116,7 @@ async function runTest() {
             </div>
         </v-card-text>
 
-        <v-card-actions v-if="reminders.subscribed">
+        <v-card-actions v-if="reminders.subscribed && !reminders.installPrompt">
             <v-btn
                 :loading="testing"
                 variant="tonal"

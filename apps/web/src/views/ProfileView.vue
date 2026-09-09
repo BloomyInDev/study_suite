@@ -170,10 +170,10 @@ async function saveClass() {
                 </v-card>
             </v-col>
 
-            <!-- Hidden outright where the toggle could not work: a browser
-                 without push, a deployment with no keypair, an iPhone that has
-                 not been added to the home screen. -->
-            <v-col v-if="reminders.visible" cols="12" md="6">
+            <!-- Hidden outright only where nothing would help: a browser
+                 without push, or a deployment with no keypair. On iOS the card
+                 still renders, as an invitation to install. -->
+            <v-col v-if="reminders.shown" cols="12" md="6">
                 <ReminderSettingsCard />
             </v-col>
 

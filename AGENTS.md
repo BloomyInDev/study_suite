@@ -469,17 +469,27 @@ belongs to the browser, so the toggle is per-install, and `App.vue` re-syncs the
 group ids whenever they change — a student moved to another class would
 otherwise keep being reminded of their old timetable.
 
-**`reminders.visible` decides whether the card exists at all**, and `/profile`
-gates the whole `v-col` on it. It is false where nothing on that screen could
-make the toggle work: a browser without push, a deployment with no keypair, or
-an iPhone where the app is not on the home screen (Safari grants push only to a
-standalone PWA — in a plain tab `PushManager` is not even defined). What _is_
-actionable stays inside the card instead: a permission blocked in site
+**The card has three states, and `/profile` gates its whole `v-col` on
+`reminders.shown`:**
+
+- `visible` — the working toggle. Everywhere push works in an ordinary tab.
+- `installPrompt` — the feature, pitched, with no toggle and the three steps to
+  add the app to the home screen. **iOS only**, and it is why the iOS case is
+  not simply hidden: Safari grants push to a standalone PWA alone, so a plain
+  tab has no `PushManager` at all, and hiding the card there would tell an
+  iPhone student the app has no reminders when they are one "Sur l'écran
+  d'accueil" away. Nowhere else needs installing, so nowhere else sees this.
+- neither — nothing rendered, because nothing on that screen would help: a
+  browser without push, or a deployment with no keypair.
+
+What _is_ actionable stays inside the card: a permission blocked in site
 settings, and no group picked.
 
-`visible` starts false and is settled by `init()` after mount, so the static
-render and the first client frame agree — the card is client-only by
-construction, which is fine on a `noindex` page.
+`needsInstall` is set in `init()` **before** the `!supported` early return —
+on iOS `supported` is false, so setting it after would leave the prompt dead.
+Both flags start false and settle after mount, so the static render and the
+first client frame agree; the card is client-only by construction, which is
+fine on a `noindex` page.
 
 ### Head tags and static rendering
 

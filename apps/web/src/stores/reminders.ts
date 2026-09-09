@@ -46,19 +46,32 @@ export const useRemindersStore = defineStore('reminders', () => {
     const providers = useProvidersStore()
 
     /**
-     * Whether to show the settings card at all.
+     * Whether the card renders as a working toggle.
      *
-     * Everything gating it here is something the student cannot act on from
-     * this screen — a browser without push, a deployment with no keypair, an
-     * iPhone where the app is not on the home screen. A toggle that cannot
-     * work is worse than no toggle, so the whole card goes rather than
-     * explaining itself. What *is* actionable — a blocked permission, no group
-     * picked — stays visible inside it.
+     * False where nothing on this screen could make it work: a browser without
+     * push, or a deployment with no keypair. A toggle that cannot work is worse
+     * than no toggle. What *is* actionable — a blocked permission, no group
+     * picked — stays visible inside the card.
      *
      * Starts false and is settled by `init()` after mount, so the static render
      * and the first client frame agree.
      */
     const visible = computed(() => supported.value && providers.push.enabled && !needsInstall.value)
+
+    /**
+     * Show the feature, but as an invitation to install rather than a toggle.
+     *
+     * Only iOS lands here: Safari grants push to a standalone PWA alone, so a
+     * plain tab has no `PushManager` and `supported` is false — which is
+     * exactly the case where hiding the card would tell an iPhone student the
+     * app has no reminders at all, when they are one "Sur l'écran d'accueil"
+     * away. Everywhere else push works in an ordinary tab and nothing needs
+     * installing, so this stays false and the real card renders.
+     */
+    const installPrompt = computed(() => providers.push.enabled && needsInstall.value)
+
+    /** Whether `/profile` renders the card in either of its two forms. */
+    const shown = computed(() => visible.value || installPrompt.value)
 
     /** Nothing the app can do about this one — it has to be undone in the
      *  browser's own site settings. */
@@ -157,6 +170,8 @@ export const useRemindersStore = defineStore('reminders', () => {
         perm,
         needsInstall,
         visible,
+        installPrompt,
+        shown,
         blocked,
         init,
         enable,
