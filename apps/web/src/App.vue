@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useDisplay, useTheme } from 'vuetify'
 import { useRouter } from 'vue-router'
 import { useGroupsStore } from './stores/groups.js'
 import { useNotificationsStore } from './stores/notifications.js'
 import { useAuthStore } from './stores/auth.js'
 import { useProvidersStore } from './stores/providers.js'
+import { useRemindersStore } from './stores/reminders.js'
 import GroupPickerDialog from './components/GroupPickerDialog.vue'
 import { usePageSeo } from './lib/seo.js'
 
@@ -16,6 +17,7 @@ const groupsStore = useGroupsStore()
 const providersStore = useProvidersStore()
 const notifs = useNotificationsStore()
 const auth = useAuthStore()
+const reminders = useRemindersStore()
 
 // The one place the head is wired up: every page's title and og: tags come from
 // lib/pages.ts and follow the route, so no view carries head code of its own.
@@ -56,7 +58,19 @@ onMounted(async () => {
     if (!groupsStore.usesAccountGroup && groupsStore.selectedGroupIds.length === 0) {
         pickerOpen.value = true
     }
+
+    // A browser that subscribed to course reminders sends its groups to the api
+    // once, at subscribe time. Re-sync them here, and on every later change: an
+    // admin moving a student to another class, or the visitor picking different
+    // groups, would otherwise keep being reminded of their old timetable.
+    await reminders.init()
 })
+
+watch(
+    () => groupsStore.effectiveGroupIds,
+    () => void reminders.syncGroups(),
+    { deep: true },
+)
 
 const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH
 const shortHash = commitHash?.slice(0, 7) ?? 'unknown'

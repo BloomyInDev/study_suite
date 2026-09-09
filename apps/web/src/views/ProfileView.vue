@@ -2,6 +2,7 @@
 import { groupLabel } from '../lib/group-label.js'
 import { computed, ref } from 'vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
+import ReminderSettingsCard from '../components/ReminderSettingsCard.vue'
 import { API_URL } from '../lib/api-url'
 import { useAuthStore } from '../stores/auth.js'
 import { useGroupsStore } from '../stores/groups.js'
@@ -165,6 +166,10 @@ async function saveClass() {
                         </div>
                     </v-card-text>
                 </v-card>
+            </v-col>
+
+            <v-col cols="12" md="6">
+                <ReminderSettingsCard />
             </v-col>
 
             <v-col v-if="!groups.usesAccountGroup" cols="12" md="6">
