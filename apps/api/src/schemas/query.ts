@@ -75,6 +75,15 @@ export const EventChangesSchema = z.object({
         .openapi({ param: { name: 'groupIds', in: 'query' } }),
     /** How far back to look, in days, on the detection date. */
     days: z.coerce.number().int().positive().max(90).default(14),
+    /**
+     * A cursor for pollers: only changes detected strictly after this instant,
+     * oldest first. Pass back the last `detectedAt` you processed.
+     */
+    since: z.coerce.date().optional().openapi({
+        description:
+            'Polling cursor: only changes detected strictly after this instant (a real instant, e.g. the last `detectedAt` you saw), returned **oldest first**. Replaces `days`. One scraper run shares a single `detectedAt`, so a run larger than `limit` is cut short — keep `groupIds` narrow.',
+        example: '2026-09-11T07:30:00.000Z',
+    }),
     limit: z.coerce.number().int().positive().max(200).default(100),
     dateFormat: DateFormatSchema,
 })

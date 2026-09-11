@@ -57,6 +57,28 @@ const schema = z.object({
         // null — and `.optional()` rejects null, so the api would refuse to
         // boot on the most likely starting file.
         .nullish(),
+    /**
+     * The Discord bots' shared keys. Optional: without any, every `Bot` header
+     * is refused and the /api/bot routes answer 503.
+     *
+     * A bot sends `Authorization: Bot <one of apiKeys>` and, to act for someone,
+     * `X-Acting-Discord-User: <snowflake>`. Every key is therefore as strong as a
+     * session for any account with a linked Discord identity — guard them like
+     * `jwt.secret`. Several keys let each bot (or a rotation) have its own, and
+     * be revoked by removing just that one.
+     */
+    bot: z
+        .object({
+            // The env var is one string, so it is split on commas.
+            apiKeys: z
+                .union([
+                    z.array(z.string()),
+                    z.string().transform((s) => s.split(',').map((k) => k.trim())),
+                ])
+                .pipe(z.array(z.string().min(32)).min(1)),
+        })
+        // `nullish` for the same reason as `push`.
+        .nullish(),
 })
 
 export const config = loadConfig({
@@ -81,6 +103,7 @@ export const config = loadConfig({
         PUSH_VAPID_PUBLIC_KEY: 'push.publicKey',
         PUSH_VAPID_PRIVATE_KEY: 'push.privateKey',
         PUSH_VAPID_SUBJECT: 'push.subject',
+        BOT_API_KEYS: 'bot.apiKeys',
     },
 })
 

@@ -59,7 +59,7 @@ const CompletionStatusSchema = z.object({
     data: z.object({ completedByMe: z.boolean(), completionCount: z.number() }),
 })
 
-const withRelations = {
+export const withRelations = {
     studentGroup: true as const,
     event: true as const,
     // The display name lives in user_identities now, not on the user row.
@@ -81,7 +81,7 @@ async function fetchAssignment(id: string) {
     })
 }
 
-function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: string) {
+export function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: string | null) {
     return {
         id: row.id,
         title: row.title,
@@ -103,7 +103,7 @@ function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: string) {
     }
 }
 
-async function getAncestorGroupIds(groupId: string): Promise<Set<string>> {
+export async function getAncestorGroupIds(groupId: string): Promise<Set<string>> {
     const result = new Set<string>()
     let current = [groupId]
     while (current.length > 0) {

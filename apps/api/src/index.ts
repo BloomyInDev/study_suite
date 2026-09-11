@@ -8,6 +8,7 @@ import authController from './controllers/auth.js'
 import configController from './controllers/config.js'
 import calendarController from './controllers/calendar.js'
 import assignmentsController from './controllers/assignments.js'
+import botController from './controllers/bot.js'
 import eventsController from './controllers/events.js'
 import groupsController from './controllers/groups.js'
 import pushController from './controllers/push.js'
@@ -23,6 +24,14 @@ _app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
     type: 'http',
     scheme: 'bearer',
     bearerFormat: 'JWT',
+})
+
+_app.openAPIRegistry.registerComponent('securitySchemes', 'Bot', {
+    type: 'apiKey',
+    in: 'header',
+    name: 'Authorization',
+    description:
+        '`Bot <apiKey>`. On the user routes, add `X-Acting-Discord-User: <discord id>` to act as the account that Discord identity is linked to.',
 })
 
 _app.doc('/api/docs/openapi.json', (c) => ({
@@ -58,6 +67,7 @@ const app = _app
             .route('/groups', groupsController)
             .route('/assignments', assignmentsController)
             .route('/push', pushController)
+            .route('/bot', botController)
             // Calendar clients key off the .ics suffix, so it is part of the path.
             .route('/calendar.ics', calendarController),
     )

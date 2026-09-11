@@ -1,7 +1,7 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eventChanges, events, studentGroups } from '@studysuite/db'
 import { eventStudentGroups } from '@studysuite/db'
-import { and, arrayOverlaps, asc, desc, eq, gte, inArray, lt } from 'drizzle-orm'
+import { and, arrayOverlaps, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm'
 import { wallClockNow } from '@studysuite/shared/time'
 import { db } from '../db.js'
 import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
@@ -140,7 +140,7 @@ export default new OpenAPIHono()
             operationId: 'listEventChanges',
             summary: 'List recent planning changes',
             description:
-                'The scraper’s audit log: what was added, removed, moved or edited on the planning, newest first. `groupIds` keeps only the changes touching those groups.',
+                'The scraper’s audit log: what was added, removed, moved or edited on the planning, newest first. `groupIds` keeps only the changes touching those groups. A poller passes `since` instead of `days` and reads oldest first from its cursor.',
             tags: ['Events'],
             request: { query: EventChangesSchema },
             responses: {
@@ -148,7 +148,7 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { groupIds, days, limit, dateFormat } = c.req.valid('query')
+            const { groupIds, days, since, limit, dateFormat } = c.req.valid('query')
 
             // The log stores group names, not ids: the event row a `removed`
             // change refers to is gone, so nothing could be joined back to.
@@ -165,14 +165,26 @@ export default new OpenAPIHono()
 
             // `detectedAt` is a real instant, not a wall-clock label, so it
             // compares with `new Date()` — unlike the event timestamps below.
-            const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
-
+            // A poller passing `since` reads forward from its cursor, so it gets
+            // the oldest first and can advance to the last row it handled.
             const rows = await db.query.eventChanges.findMany({
                 where: and(
-                    gte(eventChanges.detectedAt, since),
+                    // `defaultNow()` stores microseconds but `detectedAt` goes
+                    // out with milliseconds, so a raw `>` would hand the cursor's
+                    // own row back on every poll. (The string, not the Date: a raw
+                    // `sql` operand carries no column type to encode it with.)
+                    since
+                        ? gt(
+                              sql`date_trunc('milliseconds', ${eventChanges.detectedAt})`,
+                              since.toISOString(),
+                          )
+                        : gte(
+                              eventChanges.detectedAt,
+                              new Date(Date.now() - days * 24 * 60 * 60 * 1000),
+                          ),
                     groupNames ? arrayOverlaps(eventChanges.groups, groupNames) : undefined,
                 ),
-                orderBy: desc(eventChanges.detectedAt),
+                orderBy: since ? asc(eventChanges.detectedAt) : desc(eventChanges.detectedAt),
                 limit,
             })
 

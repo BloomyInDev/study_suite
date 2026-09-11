@@ -1,9 +1,11 @@
-import { eq } from 'drizzle-orm'
-import { users } from '@studysuite/db'
+import { and, eq, inArray } from 'drizzle-orm'
+import { userIdentities, users } from '@studysuite/db'
 import { createMiddleware } from 'hono/factory'
 import { verify } from 'hono/jwt'
 import { config } from '../config.js'
 import { db } from '../db.js'
+import { isSnowflake, matchesBotKey } from '../lib/bot-key.js'
+import { fetchEnrichedUser } from '../lib/users.js'
 
 export type JwtPayload = {
     sub: string
@@ -15,8 +17,68 @@ export type JwtPayload = {
 
 export type AuthEnv = { Variables: { user: JwtPayload } }
 
+/**
+ * The Discord bot acting for one of its members: `Authorization: Bot <key>`
+ * plus `X-Acting-Discord-User: <snowflake>`, resolved to the account that
+ * Discord identity is linked to. The request then runs exactly as that user's
+ * own would — same group, same approval status, same `completedByMe`.
+ *
+ * Never as an admin, though: the bot has no admin surface, and a leaked key
+ * should not reach the admin routes through whichever admin it names.
+ */
+async function resolveBotActor(discordId: string): Promise<JwtPayload | null> {
+    const user = await fetchEnrichedUser(
+        inArray(
+            users.id,
+            db
+                .select({ id: userIdentities.userId })
+                .from(userIdentities)
+                .where(
+                    and(
+                        eq(userIdentities.provider, 'discord'),
+                        eq(userIdentities.subject, discordId),
+                    ),
+                ),
+        ),
+    )
+    if (!user) return null
+    return { sub: user.id, isAdmin: false, status: user.status, role: user.role, exp: 0 }
+}
+
 export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
     const authHeader = c.req.header('Authorization')
+    if (authHeader?.startsWith('Bot ')) {
+        if (!matchesBotKey(authHeader, config.bot?.apiKeys)) {
+            return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid bot key' } }, 401)
+        }
+        const discordId = c.req.header('X-Acting-Discord-User')
+        if (!isSnowflake(discordId)) {
+            return c.json(
+                {
+                    error: {
+                        code: 'UNAUTHORIZED',
+                        message: 'Bot requests on user routes need X-Acting-Discord-User',
+                    },
+                },
+                401,
+            )
+        }
+        const actor = await resolveBotActor(discordId)
+        if (!actor) {
+            // Distinct code so the bot can tell the member to sign in once.
+            return c.json(
+                {
+                    error: {
+                        code: 'NOT_LINKED',
+                        message: 'No StudySuite account is linked to this Discord user',
+                    },
+                },
+                403,
+            )
+        }
+        c.set('user', actor)
+        return next()
+    }
     if (!authHeader?.startsWith('Bearer ')) {
         return c.json({ error: { code: 'UNAUTHORIZED', message: 'Missing token' } }, 401)
     }
@@ -47,6 +109,24 @@ export const requireAdmin = createMiddleware<AuthEnv>(async (c, next) => {
     const user = c.get('user')
     if (!user?.isAdmin) {
         return c.json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } }, 403)
+    }
+    await next()
+})
+
+/**
+ * The bot itself, acting for no one: for the /api/bot routes that serve a
+ * whole channel (a class's homework reminders, the role mappings) rather than
+ * one member. 503 while no key is configured, like the other optional blocks.
+ */
+export const requireBot = createMiddleware(async (c, next) => {
+    if (!config.bot) {
+        return c.json(
+            { error: { code: 'SERVICE_UNAVAILABLE', message: 'Bot access is not configured' } },
+            503,
+        )
+    }
+    if (!matchesBotKey(c.req.header('Authorization'), config.bot.apiKeys)) {
+        return c.json({ error: { code: 'UNAUTHORIZED', message: 'Invalid bot key' } }, 401)
     }
     await next()
 })

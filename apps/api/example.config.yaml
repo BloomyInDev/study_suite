@@ -44,3 +44,15 @@ push:
     # privateKey: "your_vapid_private_key"
     # Where a push service can reach you about a misbehaving sender.
     # subject: "mailto:admin@example.com"
+
+# Keys for Discord bots (each at least 32 characters). Leave the block out and
+# the /api/bot routes answer 503 and `Authorization: Bot …` is refused.
+#
+# A key lets its bot act as any user who has a linked Discord account, by
+# sending `X-Acting-Discord-User: <discord id>` — so guard them like jwt.secret.
+# Give each bot its own key so one can be revoked alone. As an env var:
+# BOT_API_KEYS=key1,key2
+#   openssl rand -hex 32
+bot:
+    # apiKeys:
+    #     - "a_random_key_at_least_32_characters_long"

@@ -227,47 +227,49 @@ on. It is ignored while the table is empty, so a fresh database still bootstraps
 
 Hono server on Bun, port 3000.
 
-**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional — leave it out and the api boots with the IUT routes answering 503. The `push` block (`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`) is optional the same way.
+**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional — leave it out and the api boots with the IUT routes answering 503. The `push` block (`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`) is optional the same way, and so is the `bot` block (`BOT_API_KEYS`, comma-separated) — see [Discord bot access](#discord-bot-access).
 
 ### Route table
 
-| Method | Path                                        | Auth  | Description                                                        |
-| ------ | ------------------------------------------- | ----- | ------------------------------------------------------------------ |
-| GET    | `/api/health`                               | —     | Health check                                                       |
-| GET    | `/api/config`                               | —     | Login providers, their labels, and the push public key             |
-| GET    | `/api/auth/discord`                         | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`) |
-| GET    | `/api/auth/discord/callback`                | —     | Exchange code, upsert user, issue JWT                              |
-| GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                    |
-| GET    | `/api/auth/iut`                             | —     | Redirect to the IUT bridge (PKCE); `?token=` links instead         |
-| GET    | `/api/auth/iut/callback`                    | —     | Verify the ID token, upsert or link the identity, issue JWT        |
-| GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                    |
-| GET    | `/api/events/week`                          | —     | Events for a week (`?date=`)                                       |
-| GET    | `/api/events/day`                           | —     | Events for a day (`?date=`)                                        |
-| GET    | `/api/events/upcoming`                      | —     | Next N events (`?limit=`)                                          |
-| GET    | `/api/events`                               | —     | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)         |
-| GET    | `/api/events/:id`                           | —     | Single event                                                       |
-| GET    | `/api/calendar.ics`                         | —     | iCal feed (`?groupId=&teacherId=&roomId=&from=&to=`)               |
-| PUT    | `/api/push/subscriptions`                   | opt.  | Register this browser for course reminders                         |
-| GET    | `/api/push/subscriptions`                   | opt.  | Read back what a browser is registered for (`?endpoint=`)          |
-| DELETE | `/api/push/subscriptions`                   | opt.  | Unregister a browser (`?endpoint=`)                                |
-| POST   | `/api/push/test`                            | opt.  | Push a notification to a browser now (`?endpoint=`)                |
-| GET    | `/api/teachers`                             | —     | All teachers                                                       |
-| GET    | `/api/rooms`                                | —     | All rooms                                                          |
-| GET    | `/api/groups`                               | —     | All groups with parent/child hierarchy                             |
-| GET    | `/api/groups/:id`                           | —     | Single group with hierarchy                                        |
-| GET    | `/api/groups/:id/events`                    | —     | Events for a group                                                 |
-| POST   | `/api/groups/:id/parents`                   | —     | Add parent relation                                                |
-| DELETE | `/api/groups/:id/parents/:parentId`         | —     | Remove parent relation                                             |
-| GET    | `/api/admin/users`                          | admin | List all users                                                     |
-| PATCH  | `/api/admin/users/:id`                      | admin | Update user (status, role, group, isAdmin)                         |
-| GET    | `/api/admin/guilds`                         | admin | List guilds with nested role mappings                              |
-| POST   | `/api/admin/guilds`                         | admin | Create guild                                                       |
-| DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                       |
-| POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                             |
-| DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                     |
-| GET    | `/api/admin/iut-mappings`                   | admin | List IUT directory group mappings                                  |
-| POST   | `/api/admin/iut-mappings`                   | admin | Map an IUT group to a role and a class                             |
-| DELETE | `/api/admin/iut-mappings/:id`               | admin | Remove an IUT group mapping                                        |
+| Method | Path                                        | Auth  | Description                                                          |
+| ------ | ------------------------------------------- | ----- | -------------------------------------------------------------------- |
+| GET    | `/api/health`                               | —     | Health check                                                         |
+| GET    | `/api/config`                               | —     | Login providers, their labels, and the push public key               |
+| GET    | `/api/auth/discord`                         | —     | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`)   |
+| GET    | `/api/auth/discord/callback`                | —     | Exchange code, upsert user, issue JWT                                |
+| GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                      |
+| GET    | `/api/auth/iut`                             | —     | Redirect to the IUT bridge (PKCE); `?token=` links instead           |
+| GET    | `/api/auth/iut/callback`                    | —     | Verify the ID token, upsert or link the identity, issue JWT          |
+| GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                      |
+| GET    | `/api/events/week`                          | —     | Events for a week (`?date=`)                                         |
+| GET    | `/api/events/day`                           | —     | Events for a day (`?date=`)                                          |
+| GET    | `/api/events/upcoming`                      | —     | Next N events (`?limit=`)                                            |
+| GET    | `/api/events`                               | —     | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)           |
+| GET    | `/api/events/:id`                           | —     | Single event                                                         |
+| GET    | `/api/calendar.ics`                         | —     | iCal feed (`?groupId=&teacherId=&roomId=&from=&to=`)                 |
+| PUT    | `/api/push/subscriptions`                   | opt.  | Register this browser for course reminders                           |
+| GET    | `/api/push/subscriptions`                   | opt.  | Read back what a browser is registered for (`?endpoint=`)            |
+| DELETE | `/api/push/subscriptions`                   | opt.  | Unregister a browser (`?endpoint=`)                                  |
+| POST   | `/api/push/test`                            | opt.  | Push a notification to a browser now (`?endpoint=`)                  |
+| GET    | `/api/bot/guilds/:discordGuildId/mappings`  | bot   | A server's Discord role → student group mappings                     |
+| GET    | `/api/bot/assignments`                      | bot   | Homework of some groups and their ancestors (`?groupIds=&from=&to=`) |
+| GET    | `/api/teachers`                             | —     | All teachers                                                         |
+| GET    | `/api/rooms`                                | —     | All rooms                                                            |
+| GET    | `/api/groups`                               | —     | All groups with parent/child hierarchy                               |
+| GET    | `/api/groups/:id`                           | —     | Single group with hierarchy                                          |
+| GET    | `/api/groups/:id/events`                    | —     | Events for a group                                                   |
+| POST   | `/api/groups/:id/parents`                   | —     | Add parent relation                                                  |
+| DELETE | `/api/groups/:id/parents/:parentId`         | —     | Remove parent relation                                               |
+| GET    | `/api/admin/users`                          | admin | List all users                                                       |
+| PATCH  | `/api/admin/users/:id`                      | admin | Update user (status, role, group, isAdmin)                           |
+| GET    | `/api/admin/guilds`                         | admin | List guilds with nested role mappings                                |
+| POST   | `/api/admin/guilds`                         | admin | Create guild                                                         |
+| DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                         |
+| POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                               |
+| DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                       |
+| GET    | `/api/admin/iut-mappings`                   | admin | List IUT directory group mappings                                    |
+| POST   | `/api/admin/iut-mappings`                   | admin | Map an IUT group to a role and a class                               |
+| DELETE | `/api/admin/iut-mappings/:id`               | admin | Remove an IUT group mapping                                          |
 
 ### iCal feed
 
@@ -345,6 +347,42 @@ dies with it.
 2. `/api/auth/discord/callback` → exchanges code, fetches `@me` + member roles across all configured guilds in parallel
 3. If any guild role matches a `discord_role_mappings` entry → auto-approve user, assign `studentGroupId`
 4. Issues JWT; redirects to `clientRedirectUri?token=...` if provided
+
+### Discord bot access
+
+A Discord bot (EliteBatKBot) reads and writes on its members' behalf with no
+JWT. It sends `Authorization: Bot <key>`, where the key is one of
+`bot.apiKeys`, in two ways:
+
+- **As a member**, on the ordinary user routes, adding
+  `X-Acting-Discord-User: <snowflake>`. `requireAuth` resolves the snowflake
+  through `user_identities` (`provider = 'discord'`) and runs the request as
+  that account: its group, its status, its `completedByMe`, and `createdBy`
+  on what it creates. A snowflake that no account is linked to gets
+  **`403 NOT_LINKED`**, so the bot can tell the member to sign in once on the
+  site. Nothing else changes for the routes themselves.
+- **As itself**, on `/api/bot/*` (`requireBot`), for what serves a whole
+  channel rather than one member: a server's role mappings, and a class's
+  homework for reminders.
+
+Things that are not obvious:
+
+- **An acting request is never admin**, even when the account is: the payload
+  is built with `isAdmin: false`. The bot has no admin surface, and a leaked
+  key must not reach `/api/admin` through whichever admin it names.
+- **Every key is a skeleton key** for all accounts with a linked Discord
+  identity. There are several so each bot, or each rotation, has its own and
+  can be revoked alone by removing it. `matchesBotKey` hashes before
+  `timingSafeEqual` and checks every key rather than stopping at the first
+  match, so the timing leaks neither a key's length nor which one matched.
+- **`optionalAuth` ignores `Bot`**: the push routes stay browser-only.
+- **The change feed cursor.** `GET /api/events/changes?since=` returns the
+  changes detected strictly after an instant, oldest first, for a poller to
+  advance to the last `detectedAt` it handled. The comparison truncates
+  `detected_at` to milliseconds: Postgres stores microseconds and the DTO
+  carries milliseconds, so a raw `>` returns the cursor's own row forever.
+  One scraper run shares a single `detected_at`, so a run larger than `limit`
+  is cut short — pollers should keep `groupIds` narrow.
 
 ---
 
