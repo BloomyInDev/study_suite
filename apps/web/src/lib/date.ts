@@ -134,3 +134,23 @@ export const previousDay = (date: Ref<Date>, decrement: number): void => {
     if (d.getUTCDay() === 0) d.setUTCDate(d.getUTCDate() - 1)
     date.value = d
 }
+
+/**
+ * Sunday is not one of the calendar's `weekdays`, and Vuetify walks from a
+ * timestamp it cannot show in both directions: `getStartOfWeek` steps *back* to
+ * the previous Monday while `getEndOfWeek` steps *forward* to the next
+ * Saturday, then fills `maxDays: 7` from that start. Handed a Sunday, the week
+ * view therefore renders Mon–Sat of the week that just ended plus the coming
+ * Monday. `mondayOfWeek` reads a Sunday as the ended week too, so the fetch and
+ * the grid would disagree on top of that.
+ *
+ * Snap onto the Monday that follows: on a Sunday the week worth showing is the
+ * one about to start. `nextDay` / `previousDay` already skip Sunday, so this is
+ * only needed where a date enters from outside: "Aujourd'hui" and mount.
+ */
+export const skipSunday = (date: Date): Date => {
+    if (date.getUTCDay() !== 0) return date
+    const d = new Date(date.getTime())
+    d.setUTCDate(d.getUTCDate() + 1)
+    return d
+}

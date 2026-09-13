@@ -9,7 +9,7 @@ import { useGroupOverride } from '../lib/group-override.js'
 import { groupLabel } from '../lib/group-label.js'
 import type { Event, Teacher } from '../lib/types.js'
 import WeekCalendar from '../components/WeekCalendar.vue'
-import { mondayOfWeek, wallClockNow } from '../lib/date.js'
+import { mondayOfWeek, skipSunday, wallClockNow } from '../lib/date.js'
 
 const { mobile } = useDisplay()
 // Carried onto the changes page so `?group=` survives the jump.
@@ -58,7 +58,7 @@ const events = ref<Event[]>([])
 // Wall-clock, not `new Date()`: `mondayOfWeek` reads the UTC getters, so a real
 // instant between midnight and 02h Paris still falls on the previous day and the
 // view opened on last week.
-const date = ref(wallClockNow())
+const date = ref(skipSunday(wallClockNow()))
 const loading = ref(false)
 
 // Switching between a teacher and a group, or paging faster than the api

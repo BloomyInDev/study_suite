@@ -2,8 +2,9 @@
 import { computed, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import { useEventsStore } from '../stores/events.js'
-import type { Event, TeacherWithDetails } from '../lib/types.js'
-import { formatTime, mondayOfWeek, wallClockNow } from '../lib/date.js'
+import { formatTime, mondayOfWeek, skipSunday, wallClockNow } from '../lib/date.js'
+import { backend } from '../lib/api.js'
+import { enhanceEvent, type Event, type TeacherWithDetails } from '../lib/types.js'
 import EventDetailsDialog from './EventDetailsDialog.vue'
 import WeekCalendar from './WeekCalendar.vue'
 
@@ -22,7 +23,7 @@ const show = computed({
 const { mobile } = useDisplay()
 
 // Wall-clock, like the event timestamps the api compares it to.
-const weekDate = ref(wallClockNow())
+const weekDate = ref(skipSunday(wallClockNow()))
 const weekEvents = ref<Event[]>([])
 const weekLoading = ref(false)
 // Paging faster than the api answers would otherwise let an older week land last.
@@ -47,7 +48,7 @@ async function loadWeek(teacherId: string, date: Date) {
 watch(
     () => props.modelValue,
     (open) => {
-        if (open) weekDate.value = wallClockNow()
+        if (open) weekDate.value = skipSunday(wallClockNow())
     },
 )
 
