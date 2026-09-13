@@ -5,6 +5,7 @@ import { wallClockNow } from '@studysuite/shared/time'
 // below reads them through `timeZone: 'UTC'` and the UTC getters. A real
 // instant has to be converted before it can be compared with one.
 export {
+    fromWallClock,
     toWallClock,
     wallClockNow,
     wallClockDayStart,
@@ -16,6 +17,15 @@ export const formatTime = (date: Date): string =>
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        timeZone: 'UTC',
+    })
+
+/** `lun. 15 sept.`: a wall-clock day, without its hour. */
+export const formatShortDay = (date: Date): string =>
+    date.toLocaleDateString('fr-FR', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
         timeZone: 'UTC',
     })
 

@@ -114,6 +114,47 @@ export const useEventsStore = defineStore('events', {
             return 'data' in body ? (body.data ?? []).map(enhanceEvent) : null
         },
 
+        /**
+         * Every event of some groups between two wall-clock bounds, merged and
+         * de-duplicated. A course shared by two of the ids comes back once.
+         *
+         * Not cached: the assignment form asks for an arbitrary window, unlike
+         * the day and week pages the cache is keyed for. `from` / `to` are
+         * wall-clock labels like the timestamps they filter, so the caller
+         * passes `wallClockDayStart()` and not `new Date()`.
+         */
+        async fetchRange(groupIds: string[], from: Date, to: Date): Promise<Event[]> {
+            // The route coerces its bounds with `z.coerce.date()`, so the
+            // generated client asks for a `Date`. Handing it one, though, lets
+            // `String()` render the label in the browser's timezone and shift
+            // the window by the Paris offset. The ISO text is what must travel.
+            const asParam = (d: Date) => d.toISOString() as unknown as Date
+            const window = { from: asParam(from), to: asParam(to) }
+            // The api filters on one group at a time, and a class inherits its
+            // ancestors' courses, so this is one request per id.
+            const responses = await Promise.all(
+                groupIds.length > 0
+                    ? groupIds.map((groupId) =>
+                          backend.api.events.$get({ query: { ...window, groupId } }),
+                      )
+                    : [backend.api.events.$get({ query: window })],
+            )
+            const byId = new Map<string, Event>()
+            for (const res of responses) {
+                const body = await res.json()
+                for (const e of body.data ?? []) byId.set(e.id, enhanceEvent(e))
+            }
+            return [...byId.values()].sort((a, b) => a.start.getTime() - b.start.getTime())
+        },
+
+        /** One event, for a link that points outside the window being shown. */
+        async fetchById(id: string): Promise<Event | null> {
+            const res = await backend.api.events[':id'].$get({ param: { id }, query: {} })
+            if (!res.ok) return null
+            const body = await res.json()
+            return 'id' in body ? enhanceEvent(body) : null
+        },
+
         async fetchUpcoming(groupIds: string[], limit = 5): Promise<Event[]> {
             // The api applies the limit after filtering, so this really is the
             // user's next `limit` events rather than everyone's.
