@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { groupLabel } from '../lib/group-label.js'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
 import { Duration, type Event } from '../lib/types.js'
@@ -76,17 +76,38 @@ const allCalendarEvents = computed(() => {
 
 const loading = computed(() => loadingMy.value || loadingOther.value)
 
+// The grid is drawn from wall-clock labels, so the current-time line has to be
+// placed from one too: `new Date()` with the local getters put it at the
+// browser's own hour, which is only the planning's hour inside Europe/Paris.
+// Ticking as well — read once, the line froze at the hour the page was opened.
+const now = ref(wallClockNow())
+let nowTick: ReturnType<typeof setInterval> | null = null
+
+onMounted(() => {
+    nowTick = setInterval(() => {
+        now.value = wallClockNow()
+    }, 60_000)
+})
+
+onUnmounted(() => {
+    if (nowTick) clearInterval(nowTick)
+})
+
 const nowY = computed(() => {
-    const now = new Date()
-    const minutesFromStart = (now.getHours() - 6) * 60 + now.getMinutes()
-    if (minutesFromStart < 0 || now.getHours() >= 20) return '-10px'
+    const hour = now.value.getUTCHours()
+    const minutesFromStart = (hour - 6) * 60 + now.value.getUTCMinutes()
+    if (minutesFromStart < 0 || hour >= 20) return '-10px'
     return `${(minutesFromStart / 60) * INTERVAL_HEIGHT}px`
 })
 
+// The calendar was handed `toCalendarLocalDate(date)`, so the day it reports
+// is the wall-clock day — compare it against the label's UTC parts, not the
+// browser's local ones. Kept numeric rather than string-compared so it does not
+// depend on whether the calendar zero-pads.
 const isToday = (dateStr: string) => {
     const [y, m, d] = dateStr.split('-').map(Number)
-    const today = new Date()
-    return y === today.getFullYear() && m === today.getMonth() + 1 && d === today.getDate()
+    const today = now.value
+    return y === today.getUTCFullYear() && m === today.getUTCMonth() + 1 && d === today.getUTCDate()
 }
 
 watch(
