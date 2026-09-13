@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { useEventsStore } from '../stores/events.js'
@@ -7,15 +7,8 @@ import { useGroupsStore } from '../stores/groups.js'
 import { useGroupOverride } from '../lib/group-override.js'
 import { groupLabel } from '../lib/group-label.js'
 import type { Event } from '../lib/types.js'
-import CalendarEvent from '../components/CalendarEvent.vue'
-import {
-    mondayOfWeek,
-    nextDay,
-    previousDay,
-    toCalendarLocalDate,
-    wallClockNow,
-    weekdayFormat,
-} from '../lib/date.js'
+import WeekCalendar from '../components/WeekCalendar.vue'
+import { mondayOfWeek, wallClockNow } from '../lib/date.js'
 
 const { mobile } = useDisplay()
 // Carried onto the changes page so `?group=` survives the jump.
@@ -36,22 +29,6 @@ const events = ref<Event[]>([])
 // view opened on last week.
 const date = ref(wallClockNow())
 const loading = ref(false)
-
-// The calendar reads `model-value` with the *local* getters, while `date` is a
-// wall-clock label — so handing it over raw applies the Paris offset a second
-// time and the grid runs 2h ahead of the events, which go through
-// `toCalendarLocalDate`. Past 22h wall-clock that rolled the view onto the next
-// day, and on a Sunday night onto next week, while the fetch stayed on the
-// current one.
-const calendarDate = computed(() => toCalendarLocalDate(date.value))
-
-const onKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowLeft') previous()
-    else if (e.key === 'ArrowRight') next()
-}
-
-onMounted(() => document.addEventListener('keydown', onKeydown))
-onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 watch(
     [() => override.groupIds.value, date],
@@ -83,21 +60,6 @@ watch(
     },
     { immediate: true, deep: true },
 )
-
-const calendarEvents = computed(() =>
-    events.value.map((e) => ({
-        name: e.title,
-        start: toCalendarLocalDate(e.start),
-        end: toCalendarLocalDate(e.end),
-        color: 'primary',
-        timed: true,
-        full: e,
-    })),
-)
-
-const previous = () => previousDay(date, mobile.value ? 1 : 7)
-const next = () => nextDay(date, mobile.value ? 1 : 7)
-const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
 </script>
 
 <template>
@@ -131,8 +93,8 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
         >
             Groupe introuvable : {{ override.unknownNames.value.join(', ') }}.
         </v-alert>
-        <v-row align="center" class="mb-4">
-            <v-col cols="12" md="4" class="d-flex align-center">
+        <WeekCalendar v-model="date" :events="events" :loading="loading">
+            <template #prepend>
                 <v-autocomplete
                     v-model="pickedGroupIds"
                     :items="groups.visibleGroups"
@@ -148,29 +110,8 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                     hide-details
                     style="max-width: 350px"
                 />
-            </v-col>
-            <v-col md="4" class="d-flex justify-start justify-md-center align-center">
-                <v-btn
-                    variant="text"
-                    :size="mobile ? 'small' : undefined"
-                    @click="previous"
-                    icon="mdi-chevron-left"
-                />
-                <v-btn
-                    variant="outlined"
-                    :class="mobile ? '' : 'mx-4'"
-                    @click="date = wallClockNow()"
-                >
-                    Aujourd'hui
-                </v-btn>
-                <v-btn
-                    variant="text"
-                    :size="mobile ? 'small' : undefined"
-                    @click="next"
-                    icon="mdi-chevron-right"
-                />
-            </v-col>
-            <v-col cols="auto" md="4" class="d-flex justify-end ga-2">
+            </template>
+            <template #append>
                 <v-tooltip text="Changements récents" location="start">
                     <template #activator="{ props }">
                         <v-btn
@@ -193,33 +134,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                         />
                     </template>
                 </v-tooltip>
-            </v-col>
-        </v-row>
-        <v-sheet class="position-relative d-flex flex-column" min-height="400">
-            <v-progress-linear :active="loading" indeterminate color="primary" absolute top />
-            <v-calendar
-                class="flex-grow-1"
-                :events="calendarEvents"
-                :model-value="calendarDate"
-                color="primary"
-                :type="mobile ? 'day' : 'week'"
-                :weekday-format="weekdayFormat"
-                :weekdays="[1, 2, 3, 4, 5, 6]"
-                :interval-format="formatInterval"
-                :first-interval="7"
-                :interval-count="13"
-                event-overlap-mode="column"
-            >
-                <template #event="{ event }">
-                    <CalendarEvent :event="event" />
-                </template>
-            </v-calendar>
-        </v-sheet>
+            </template>
+        </WeekCalendar>
     </v-container>
 </template>
-
-<style scoped>
-.position-relative {
-    position: relative;
-}
-</style>
