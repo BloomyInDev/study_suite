@@ -112,6 +112,14 @@ const board = computed<GroupNow[]>(() => {
                                 <v-icon size="16" class="mr-1">mdi-map-marker</v-icon>
                                 {{ event.rooms.map((r) => r.name).join(', ') }}
                             </div>
+                            <div v-if="event.teachers.length" class="d-flex align-center">
+                                <v-icon size="16" class="mr-1">mdi-account-tie</v-icon>
+                                {{
+                                    event.teachers
+                                        .map((t) => `${t.firstName} ${t.lastName}`)
+                                        .join(', ')
+                                }}
+                            </div>
                         </div>
                     </v-card-text>
                     <v-card-text v-else class="text-medium-emphasis">
