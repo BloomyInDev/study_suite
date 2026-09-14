@@ -97,6 +97,23 @@ export const useEventsStore = defineStore('events', {
             return this.fetchEvents(groupIds, Duration.DAY, date)
         },
 
+        /**
+         * A teacher's events for the week `date` falls in, or `null` when the
+         * teacher does not exist. `date` is wall-clock, like the bounds the api
+         * compares with. Not cached: the callers guard against stale responses.
+         */
+        async fetchTeacherWeekEvents(teacherId: string, date: Date): Promise<Event[] | null> {
+            const monday = mondayOfWeek(date)
+            const nextMonday = new Date(monday.getTime())
+            nextMonday.setUTCDate(nextMonday.getUTCDate() + 7)
+            const res = await backend.api.teachers[':id'].events.$get({
+                param: { id: teacherId },
+                query: { from: monday.getTime(), to: nextMonday.getTime() },
+            })
+            const body = await res.json()
+            return 'data' in body ? (body.data ?? []).map(enhanceEvent) : null
+        },
+
         async fetchUpcoming(groupIds: string[], limit = 5): Promise<Event[]> {
             // The api applies the limit after filtering, so this really is the
             // user's next `limit` events rather than everyone's.

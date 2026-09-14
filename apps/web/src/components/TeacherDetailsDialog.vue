@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useDisplay } from 'vuetify'
-import { backend } from '../lib/api.js'
-import { enhanceEvent, type Event, type TeacherWithDetails } from '../lib/types.js'
+import { useEventsStore } from '../stores/events.js'
+import type { Event, TeacherWithDetails } from '../lib/types.js'
 import { formatTime, mondayOfWeek, wallClockNow } from '../lib/date.js'
 import EventDetailsDialog from './EventDetailsDialog.vue'
 import WeekCalendar from './WeekCalendar.vue'
@@ -28,24 +28,15 @@ const weekLoading = ref(false)
 // Paging faster than the api answers would otherwise let an older week land last.
 let requestId = 0
 
-const weekEnd = (monday: Date): Date => {
-    const d = new Date(monday.getTime())
-    d.setUTCDate(d.getUTCDate() + 7)
-    return d
-}
+const eventsStore = useEventsStore()
 
 async function loadWeek(teacherId: string, date: Date) {
-    const monday = mondayOfWeek(date)
     const token = ++requestId
     weekLoading.value = true
     try {
-        const res = await backend.api.teachers[':id'].events.$get({
-            param: { id: teacherId },
-            query: { from: monday.getTime(), to: weekEnd(monday).getTime() },
-        })
-        const body = await res.json()
+        const events = await eventsStore.fetchTeacherWeekEvents(teacherId, date)
         if (token !== requestId) return
-        weekEvents.value = 'data' in body ? (body.data ?? []).map(enhanceEvent) : []
+        weekEvents.value = events ?? []
     } finally {
         if (token === requestId) weekLoading.value = false
     }
