@@ -44,7 +44,6 @@ export interface Event extends Omit<ApiEvent, 'startDate' | 'endDate'> {
 export interface TeacherWithDetails extends Teacher {
     available: boolean
     currentEvent: Event | null
-    todayEvents: Event[]
 }
 
 export interface RoomWithDetails extends Room {

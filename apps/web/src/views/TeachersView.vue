@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { backend } from '../lib/api.js'
-import type { Teacher, TeacherWithDetails, Event } from '../lib/types.js'
+import type { Teacher, TeacherWithDetails } from '../lib/types.js'
 import { enhanceEvent } from '../lib/types.js'
 import TeacherCard from '../components/TeacherCard.vue'
 import TeacherDetailsDialog from '../components/TeacherDetailsDialog.vue'
@@ -35,32 +35,13 @@ async function openTeacher(teacher: Teacher) {
     loadingDetails.value = true
     selectedTeacher.value = null
     try {
-        const now = new Date()
-        const dayStart = new Date(
-            Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0),
-        )
-        const dayEnd = new Date(
-            Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999),
-        )
-        const [detailsRes, eventsRes] = await Promise.all([
-            backend.api.teachers[':id'].$get({ param: { id: teacher.id }, query: {} }),
-            backend.api.teachers[':id'].events.$get({
-                param: { id: teacher.id },
-                query: { from: dayStart.getTime(), to: dayEnd.getTime() },
-            }),
-        ])
-        const [detailsBody, eventsBody] = await Promise.all([detailsRes.json(), eventsRes.json()])
-        if (!('data' in detailsBody) || !('data' in eventsBody)) throw new Error('Teacher not found')
-        const todayEvents: Event[] = (eventsBody.data ?? []).map(enhanceEvent)
-        const currentEvent = detailsBody.data.currentEvent
-            ? enhanceEvent(detailsBody.data.currentEvent as Parameters<typeof enhanceEvent>[0])
+        const res = await backend.api.teachers[':id'].$get({ param: { id: teacher.id }, query: {} })
+        const body = await res.json()
+        if (!('data' in body)) throw new Error('Teacher not found')
+        const currentEvent = body.data.currentEvent
+            ? enhanceEvent(body.data.currentEvent as Parameters<typeof enhanceEvent>[0])
             : null
-        selectedTeacher.value = {
-            ...teacher,
-            available: detailsBody.data.available,
-            currentEvent,
-            todayEvents,
-        }
+        selectedTeacher.value = { ...teacher, available: body.data.available, currentEvent }
     } finally {
         loadingDetails.value = false
     }
