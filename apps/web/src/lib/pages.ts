@@ -41,6 +41,12 @@ export const PAGES: PageSeo[] = [
         description: 'Les emplois du temps de plusieurs groupes, côte à côte.',
     },
     {
+        path: '/groups',
+        title: 'Groupes en ce moment',
+        description: 'Le cours en cours de chaque groupe.',
+        noindex: true,
+    },
+    {
         path: '/homework',
         title: 'Devoirs',
         description: 'Les devoirs à rendre pour ton groupe.',

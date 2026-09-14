@@ -28,6 +28,11 @@ export const routes: RouteRecordRaw[] = [
         meta: { requiresAuth: true },
     },
     {
+        path: '/groups',
+        component: () => import('./views/GroupsNowView.vue'),
+        meta: { requiresAuth: true },
+    },
+    {
         path: '/homework',
         component: () => import('./views/AssignmentsView.vue'),
         meta: { requiresAuth: true },

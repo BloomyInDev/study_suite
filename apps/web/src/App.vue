@@ -80,6 +80,7 @@ const shortHash = commitHash?.slice(0, 7) ?? 'unknown'
 const navItems = [
     { title: 'Accueil', icon: 'mdi-home', to: '/' },
     { title: 'Planning', icon: 'mdi-calendar', to: '/planning' },
+    { title: 'Groupes', icon: 'mdi-account-group', to: '/groups' },
     { title: 'Devoirs', icon: 'mdi-book-edit', to: '/homework' },
     { title: 'Enseignants', icon: 'mdi-account-tie', to: '/teachers' },
     { title: 'Salles', icon: 'mdi-door', to: '/rooms' },
