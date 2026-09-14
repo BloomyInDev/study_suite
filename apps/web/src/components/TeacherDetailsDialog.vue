@@ -143,7 +143,17 @@ watch([() => props.teacher?.id, weekDate], ([id, newDate], [oldId, oldDate]) => 
                             </template>
                         </EventDetailsDialog>
                     </div>
-                    <h3 class="text-h6 mb-2 text-primary">Planning de la semaine</h3>
+                    <div class="d-flex align-center flex-wrap ga-2 mb-2">
+                        <h3 class="text-h6 text-primary">Planning de la semaine</h3>
+                        <v-spacer />
+                        <v-btn
+                            variant="tonal"
+                            prepend-icon="mdi-calendar-week"
+                            :to="{ path: '/planning', query: { teacher: teacher.id } }"
+                        >
+                            Voir le planning complet
+                        </v-btn>
+                    </div>
                     <WeekCalendar
                         v-model="weekDate"
                         :events="weekEvents"
