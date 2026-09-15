@@ -1,27 +1,51 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
+import { backend } from '../lib/api.js'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
 import { useGroupOverride } from '../lib/group-override.js'
 import { groupLabel } from '../lib/group-label.js'
-import type { Event } from '../lib/types.js'
-import CalendarEvent from '../components/CalendarEvent.vue'
-import {
-    mondayOfWeek,
-    nextDay,
-    previousDay,
-    toCalendarLocalDate,
-    wallClockNow,
-    weekdayFormat,
-} from '../lib/date.js'
+import type { Event, Teacher } from '../lib/types.js'
+import WeekCalendar from '../components/WeekCalendar.vue'
+import { mondayOfWeek, wallClockNow } from '../lib/date.js'
 
 const { mobile } = useDisplay()
 // Carried onto the changes page so `?group=` survives the jump.
 const route = useRoute()
+const router = useRouter()
 const groups = useGroupsStore()
 const override = useGroupOverride()
+
+// `?teacher=<id>` shows that teacher's timetable, and wins over `?group=`: it is
+// where the teacher dialog's "full planning" button lands.
+const teacherId = computed(() =>
+    typeof route.query.teacher === 'string' && route.query.teacher ? route.query.teacher : null,
+)
+const teacher = ref<Teacher | null>(null)
+const teacherNotFound = ref(false)
+
+watch(
+    teacherId,
+    async (id) => {
+        teacher.value = null
+        teacherNotFound.value = false
+        if (!id) return
+        const res = await backend.api.teachers[':id'].$get({ param: { id }, query: {} })
+        const body = await res.json()
+        if (id !== teacherId.value) return
+        if ('data' in body) teacher.value = body.data
+        else teacherNotFound.value = true
+    },
+    { immediate: true },
+)
+
+const clearTeacher = () => {
+    const query = { ...route.query }
+    delete query.teacher
+    void router.push({ path: route.path, query })
+}
 
 // A single v-model over the url: picking a group writes `?group=`, clearing it
 // (or picking one's own class) removes it.
@@ -37,73 +61,83 @@ const events = ref<Event[]>([])
 const date = ref(wallClockNow())
 const loading = ref(false)
 
-// The calendar reads `model-value` with the *local* getters, while `date` is a
-// wall-clock label — so handing it over raw applies the Paris offset a second
-// time and the grid runs 2h ahead of the events, which go through
-// `toCalendarLocalDate`. Past 22h wall-clock that rolled the view onto the next
-// day, and on a Sunday night onto next week, while the fetch stayed on the
-// current one.
-const calendarDate = computed(() => toCalendarLocalDate(date.value))
-
-const onKeydown = (e: KeyboardEvent) => {
-    if (e.key === 'ArrowLeft') previous()
-    else if (e.key === 'ArrowRight') next()
-}
-
-onMounted(() => document.addEventListener('keydown', onKeydown))
-onUnmounted(() => document.removeEventListener('keydown', onKeydown))
+// Switching between a teacher and a group, or paging faster than the api
+// answers, would otherwise let an older response land last.
+let requestId = 0
 
 watch(
-    [() => override.groupIds.value, date],
-    async ([newGroupIds, newDate], [oldGroupIds, oldDate]) => {
-        if (newGroupIds.length === 0) {
-            events.value = []
-            return
-        }
-        // Paging within a week shows the same events; a group change never does.
+    [teacherId, () => override.groupIds.value, date],
+    async ([newTeacherId, newGroupIds, newDate], [oldTeacherId, oldGroupIds, oldDate]) => {
+        // Paging within a week shows the same events; a teacher or group change never does.
+        const sameWeek =
+            oldDate !== undefined &&
+            mondayOfWeek(newDate as Date).getTime() === mondayOfWeek(oldDate as Date).getTime()
+        const sameTeacher = newTeacherId === oldTeacherId
         const sameGroups =
             oldGroupIds !== undefined &&
             oldGroupIds.length === newGroupIds.length &&
             newGroupIds.every((id) => oldGroupIds.includes(id))
-        if (
-            sameGroups &&
-            oldDate &&
-            mondayOfWeek(newDate as Date).getTime() === mondayOfWeek(oldDate as Date).getTime()
-        )
+        if (sameWeek && sameTeacher && (newTeacherId !== null || sameGroups)) return
+
+        const token = ++requestId
+        if (newTeacherId === null && newGroupIds.length === 0) {
+            events.value = []
+            loading.value = false
             return
+        }
         loading.value = true
         try {
-            events.value = await eventsStore.fetchWeekEvents(
-                mondayOfWeek(newDate as Date),
-                newGroupIds as string[],
-            )
+            const fetched = newTeacherId
+                ? await eventsStore.fetchTeacherWeekEvents(newTeacherId, newDate as Date)
+                : await eventsStore.fetchWeekEvents(
+                      mondayOfWeek(newDate as Date),
+                      newGroupIds as string[],
+                  )
+            if (token !== requestId) return
+            events.value = fetched ?? []
         } finally {
-            loading.value = false
+            if (token === requestId) loading.value = false
         }
     },
     { immediate: true, deep: true },
 )
-
-const calendarEvents = computed(() =>
-    events.value.map((e) => ({
-        name: e.title,
-        start: toCalendarLocalDate(e.start),
-        end: toCalendarLocalDate(e.end),
-        color: 'primary',
-        timed: true,
-        full: e,
-    })),
-)
-
-const previous = () => previousDay(date, mobile.value ? 1 : 7)
-const next = () => nextDay(date, mobile.value ? 1 : 7)
-const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
 </script>
 
 <template>
     <v-container fluid class="pa-4">
         <v-alert
-            v-if="override.isActive.value"
+            v-if="teacher"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+            icon="mdi-account-tie"
+        >
+            <div class="d-flex align-center ga-2 flex-wrap">
+                <span>
+                    Vous consultez le planning de
+                    <strong>{{ teacher.firstName }} {{ teacher.lastName }}</strong
+                    >.
+                </span>
+                <v-spacer />
+                <v-btn size="small" variant="text" @click="clearTeacher()"> Revenir au mien </v-btn>
+            </div>
+        </v-alert>
+        <v-alert
+            v-else-if="teacherNotFound"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+        >
+            <div class="d-flex align-center ga-2 flex-wrap">
+                <span>Enseignant introuvable.</span>
+                <v-spacer />
+                <v-btn size="small" variant="text" @click="clearTeacher()"> Revenir au mien </v-btn>
+            </div>
+        </v-alert>
+        <v-alert
+            v-else-if="!teacherId && override.isActive.value"
             type="info"
             variant="tonal"
             density="compact"
@@ -123,7 +157,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
             </div>
         </v-alert>
         <v-alert
-            v-else-if="override.unknownNames.value.length > 0"
+            v-else-if="!teacherId && override.unknownNames.value.length > 0"
             type="warning"
             variant="tonal"
             density="compact"
@@ -131,9 +165,10 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
         >
             Groupe introuvable : {{ override.unknownNames.value.join(', ') }}.
         </v-alert>
-        <v-row align="center" class="mb-4">
-            <v-col cols="12" md="4" class="d-flex align-center">
+        <WeekCalendar v-model="date" :events="events" :loading="loading">
+            <template #prepend>
                 <v-autocomplete
+                    v-if="!teacherId"
                     v-model="pickedGroupIds"
                     :items="groups.visibleGroups"
                     :item-title="groupLabel"
@@ -148,30 +183,9 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                     hide-details
                     style="max-width: 350px"
                 />
-            </v-col>
-            <v-col md="4" class="d-flex justify-start justify-md-center align-center">
-                <v-btn
-                    variant="text"
-                    :size="mobile ? 'small' : undefined"
-                    @click="previous"
-                    icon="mdi-chevron-left"
-                />
-                <v-btn
-                    variant="outlined"
-                    :class="mobile ? '' : 'mx-4'"
-                    @click="date = wallClockNow()"
-                >
-                    Aujourd'hui
-                </v-btn>
-                <v-btn
-                    variant="text"
-                    :size="mobile ? 'small' : undefined"
-                    @click="next"
-                    icon="mdi-chevron-right"
-                />
-            </v-col>
-            <v-col cols="auto" md="4" class="d-flex justify-end ga-2">
-                <v-tooltip text="Changements récents" location="start">
+            </template>
+            <template #append>
+                <v-tooltip v-if="!teacherId" text="Changements récents" location="start">
                     <template #activator="{ props }">
                         <v-btn
                             v-bind="props"
@@ -193,33 +207,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                         />
                     </template>
                 </v-tooltip>
-            </v-col>
-        </v-row>
-        <v-sheet class="position-relative d-flex flex-column" min-height="400">
-            <v-progress-linear :active="loading" indeterminate color="primary" absolute top />
-            <v-calendar
-                class="flex-grow-1"
-                :events="calendarEvents"
-                :model-value="calendarDate"
-                color="primary"
-                :type="mobile ? 'day' : 'week'"
-                :weekday-format="weekdayFormat"
-                :weekdays="[1, 2, 3, 4, 5, 6]"
-                :interval-format="formatInterval"
-                :first-interval="7"
-                :interval-count="13"
-                event-overlap-mode="column"
-            >
-                <template #event="{ event }">
-                    <CalendarEvent :event="event" />
-                </template>
-            </v-calendar>
-        </v-sheet>
+            </template>
+        </WeekCalendar>
     </v-container>
 </template>
-
-<style scoped>
-.position-relative {
-    position: relative;
-}
-</style>

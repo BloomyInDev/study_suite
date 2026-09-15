@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import type { TeacherWithDetails } from '../lib/types.js'
-import { formatTime } from '../lib/date.js'
+import { computed, ref, watch } from 'vue'
+import { useDisplay } from 'vuetify'
+import { useEventsStore } from '../stores/events.js'
+import type { Event, TeacherWithDetails } from '../lib/types.js'
+import { formatTime, mondayOfWeek, wallClockNow } from '../lib/date.js'
 import EventDetailsDialog from './EventDetailsDialog.vue'
+import WeekCalendar from './WeekCalendar.vue'
 
 const props = defineProps<{
     modelValue: boolean
@@ -15,10 +18,59 @@ const show = computed({
     get: () => props.modelValue,
     set: (v) => emit('update:modelValue', v),
 })
+
+const { mobile } = useDisplay()
+
+// Wall-clock, like the event timestamps the api compares it to.
+const weekDate = ref(wallClockNow())
+const weekEvents = ref<Event[]>([])
+const weekLoading = ref(false)
+// Paging faster than the api answers would otherwise let an older week land last.
+let requestId = 0
+
+const eventsStore = useEventsStore()
+
+async function loadWeek(teacherId: string, date: Date) {
+    const token = ++requestId
+    weekLoading.value = true
+    try {
+        const events = await eventsStore.fetchTeacherWeekEvents(teacherId, date)
+        if (token !== requestId) return
+        weekEvents.value = events ?? []
+    } finally {
+        if (token === requestId) weekLoading.value = false
+    }
+}
+
+// Reopening lands on the current week rather than wherever the last teacher was
+// left. It runs before the teacher itself arrives, so the fetch below sees it.
+watch(
+    () => props.modelValue,
+    (open) => {
+        if (open) weekDate.value = wallClockNow()
+    },
+)
+
+watch([() => props.teacher?.id, weekDate], ([id, newDate], [oldId, oldDate]) => {
+    if (!id) {
+        requestId++
+        weekEvents.value = []
+        return
+    }
+    // On mobile the calendar pages a day at a time; the week it belongs to
+    // is what the fetch covers.
+    if (
+        id === oldId &&
+        oldDate &&
+        mondayOfWeek(newDate).getTime() === mondayOfWeek(oldDate).getTime()
+    )
+        return
+    void loadWeek(id, newDate)
+})
 </script>
 
 <template>
-    <v-dialog v-model="show" max-width="600">
+    <v-dialog v-model="show" :max-width="1100" :fullscreen="mobile" scrollable>
         <v-card>
             <div v-if="loading" class="d-flex flex-column justify-center align-center pa-8">
                 <v-progress-circular indeterminate color="primary" />
@@ -91,47 +143,24 @@ const show = computed({
                             </template>
                         </EventDetailsDialog>
                     </div>
-                    <div>
-                        <h3 class="text-h6 mb-2 text-primary">Planning du jour</h3>
-                        <div v-if="teacher.todayEvents.length > 0">
-                            <v-list lines="two" density="compact" class="bg-transparent">
-                                <EventDetailsDialog
-                                    v-for="event in teacher.todayEvents"
-                                    :key="event.id"
-                                    :event="event"
-                                >
-                                    <template #activator="{ props: aProps }">
-                                        <v-list-item
-                                            v-bind="aProps"
-                                            class="mb-2 rounded border cursor-pointer"
-                                            link
-                                        >
-                                            <v-list-item-title class="font-weight-bold">{{
-                                                event.title
-                                            }}</v-list-item-title>
-                                            <v-list-item-subtitle>
-                                                <span class="mr-3">
-                                                    <v-icon icon="mdi-map-marker" size="x-small" />
-                                                    {{ event.rooms.map((r) => r.name).join(', ') }}
-                                                </span>
-                                                <span>
-                                                    <v-icon
-                                                        icon="mdi-clock-outline"
-                                                        size="x-small"
-                                                    />
-                                                    {{ formatTime(event.start) }} -
-                                                    {{ formatTime(event.end) }}
-                                                </span>
-                                            </v-list-item-subtitle>
-                                        </v-list-item>
-                                    </template>
-                                </EventDetailsDialog>
-                            </v-list>
-                        </div>
-                        <v-alert v-else type="info" variant="tonal" density="compact">
-                            Aucun cours prévu aujourd'hui.
-                        </v-alert>
+                    <div class="d-flex align-center flex-wrap ga-2 mb-2">
+                        <h3 class="text-h6 text-primary">Planning de la semaine</h3>
+                        <v-spacer />
+                        <v-btn
+                            variant="tonal"
+                            prepend-icon="mdi-calendar-week"
+                            :to="{ path: '/planning', query: { teacher: teacher.id } }"
+                        >
+                            Voir le planning complet
+                        </v-btn>
                     </div>
+                    <WeekCalendar
+                        v-model="weekDate"
+                        :events="weekEvents"
+                        :loading="weekLoading"
+                        :height="mobile ? undefined : 560"
+                        :min-height="mobile ? 400 : undefined"
+                    />
                 </v-card-text>
             </template>
         </v-card>
