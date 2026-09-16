@@ -77,9 +77,9 @@ const allCalendarEvents = computed(() => {
 const loading = computed(() => loadingMy.value || loadingOther.value)
 
 const nowY = computed(() => {
-    const now = new Date()
-    const minutesFromStart = (now.getHours() - 6) * 60 + now.getMinutes()
-    if (minutesFromStart < 0 || now.getHours() >= 20) return '-10px'
+    const now = wallClockNow()
+    const minutesFromStart = (now.getUTCHours() - 6) * 60 + now.getUTCMinutes()
+    if (minutesFromStart < 0 || now.getUTCHours() >= 20) return '-10px'
     return `${(minutesFromStart / 60) * INTERVAL_HEIGHT}px`
 })
 
