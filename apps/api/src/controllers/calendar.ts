@@ -2,16 +2,10 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { events, locations, studentGroups, teachers } from '@studysuite/db'
 import { and, asc, eq } from 'drizzle-orm'
 import { db } from '../db.js'
+import { defaultCalendarFrom } from '../lib/calendar-window.js'
 import { eventFilterConditions } from '../lib/event-filters.js'
 import { buildCalendar } from '../lib/ical.js'
 import { withEventRelations } from '../lib/serialize.js'
-
-/**
- * How far back the feed reaches when no explicit `from` is given. Calendar
- * clients re-fetch the whole document, so an unbounded history would grow the
- * payload every week for events nobody looks at any more.
- */
-const DEFAULT_PAST_DAYS = 60
 
 const CalendarQuerySchema = z.object({
     groupId: z.string().uuid().optional(),
@@ -67,8 +61,9 @@ export default new OpenAPIHono().openapi(
     }),
     async (c) => {
         const filters = c.req.valid('query')
-        const from =
-            filters.from ?? new Date(Date.now() - DEFAULT_PAST_DAYS * 24 * 60 * 60 * 1000)
+        // A wall-clock label, like `events.startDate` it is compared with —
+        // `Date.now()` here shifted the cutoff by the Paris offset.
+        const from = filters.from ?? defaultCalendarFrom()
         const rows = await db.query.events.findMany({
             where: and(...eventFilterConditions({ ...filters, from })),
             with: withEventRelations,
