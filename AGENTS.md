@@ -196,7 +196,25 @@ Run modes: watch loop (default) or `node index.js --once`.
 - `div.labelLegend[style*="top: 20px"]` — day header cells; `.textContent` ends with `dd/mm/yyyy`; `.style.left` values used to compute column width
 - `#x-auto-26` — week navigation container; children have IDs `x-auto-N`
 - `.x-btn-pressed` — currently selected week button
-- `.gwt-PopupPanel` — loading spinner; navigation waits for it to detach
+- `.gwt-PopupPanel` — loading spinner; up for the whole of a week swap
+
+**A week that has not rendered looks exactly like a week with no courses.** Both
+show zero `#Planning > div`: the Christmas weeks settle that way, and so does
+any week for the ~600 ms between the click and GWT appending its events. The
+pressed class and the day headers flip within ~50 ms of the click, so neither is
+evidence the week is on screen. `waitForWeekRender` (`browser/navigation.ts`)
+therefore requires all three at once (the button pressed, the spinner gone, and
+the wrapper count unchanged for 600 ms) and throws `WeekNavigationError` after
+20 s rather than handing back what it found.
+
+It has to, because `applyWeekEvents` deletes whatever the scrape did not return:
+an empty extraction wipes the week, the next run puts it back, and in between a
+student's day is missing from the app while `event_changes` fills with bogus
+`removed` rows and cross-week `moved` pairs. `scrapeAllWeeks` skips a week that
+throws instead of applying it, counts it in `failedWeeks`, and `--once` exits
+non-zero if any week was skipped. A click that lands while the app is still busy
+is dropped silently by the page, which is the other thing the pressed-button
+check catches.
 
 **Event text parsing** (`apps/scraper/src/parser/`):
 

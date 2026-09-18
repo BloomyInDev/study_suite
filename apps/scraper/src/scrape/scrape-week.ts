@@ -8,15 +8,18 @@ import { getAllWeekIds, gotoPlanning, gotoWeek } from '../browser/navigation.js'
 import type { Config } from '../config.js'
 import { computeColumnWidth } from '../extraction/column-width.js'
 import { extractRawEvents } from '../extraction/planning.js'
-import { readWeekDates } from '../extraction/week-dates.js'
 import { parseEventText } from '../parser/event-text.js'
 
 type Db = ReturnType<typeof createDb>
 
 function parseWeekMonday(weekDates: string[]): Date {
-    const first = weekDates[0] ?? '01/01/2000'
+    // `gotoWeek` has already rejected a header that does not parse, so there is
+    // no fallback here: an unreadable date used to become 01/01/2000 and target
+    // a week that does not exist.
+    const first = weekDates[0]
+    if (!first) throw new Error('Week has no day headers')
     const [day, month, year] = first.split('/')
-    return new Date(Date.UTC(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10)))
+    return new Date(Date.UTC(parseInt(year!, 10), parseInt(month!, 10) - 1, parseInt(day!, 10)))
 }
 
 async function scrapeWeek(
@@ -26,9 +29,7 @@ async function scrapeWeek(
     knownGroupNames: Set<string>,
     strictGroups: boolean,
 ): Promise<WeekDiff> {
-    await gotoWeek(page, weekId)
-
-    const weekDates = await readWeekDates(page)
+    const weekDates = await gotoWeek(page, weekId)
     const columnWidth = await computeColumnWidth(page)
     const rawEvents = await extractRawEvents(page)
 
@@ -57,6 +58,7 @@ export async function scrapeAllWeeks(
     updated: number
     moved: number
     weeks: number
+    failedWeeks: number
     durationMs: number
 }> {
     const t0 = Date.now()
@@ -68,18 +70,42 @@ export async function scrapeAllWeeks(
         console.log(`[scraper] Found ${weekIds.length} weeks to scrape`)
 
         const diffs: WeekDiff[] = []
+        let failedWeeks = 0
+
         for (const weekId of weekIds) {
-            diffs.push(
-                await scrapeWeek(page, weekId, db, knownGroupNames, config.scrape.strictGroups),
-            )
+            try {
+                diffs.push(
+                    await scrapeWeek(page, weekId, db, knownGroupNames, config.scrape.strictGroups),
+                )
+            } catch (err) {
+                // A week that did not render is skipped, never applied. Handing
+                // its empty extraction to `applyWeekEvents` deletes every event
+                // of the week and the next run puts them back: a day vanishing
+                // from the app for one interval, and a burst of bogus
+                // removed/moved rows in the changes feed.
+                failedWeeks++
+                console.error(
+                    `[scraper]   Skipped week id ${weekId}:`,
+                    err instanceof Error ? err.message : err,
+                )
+                await captureFailure(page, config.scrape.debugDir)
+            }
         }
 
+        // Only the weeks that rendered. A course moved out of a skipped week
+        // therefore shows up as a lone `added` this run and a lone `removed`
+        // the next, rather than as a `moved`. That is the cost of not guessing.
         const stats = await insertAllChanges(db, diffs)
         console.log(
             `[scraper] Changes — added: ${stats.added}, removed: ${stats.removed}, updated: ${stats.updated}, moved: ${stats.moved}`,
         )
 
-        return { ...stats, weeks: weekIds.length, durationMs: Date.now() - t0 }
+        return {
+            ...stats,
+            weeks: weekIds.length - failedWeeks,
+            failedWeeks,
+            durationMs: Date.now() - t0,
+        }
     } catch (err) {
         // Screenshot while the page is still alive — finally closes the browser.
         await captureFailure(page, config.scrape.debugDir)

@@ -29,6 +29,14 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
                 `[scraper] Done — ${result.weeks} weeks, added: ${result.added}, removed: ${result.removed}, ` +
                     `updated: ${result.updated}, moved: ${result.moved}, duration: ${result.durationMs}ms`,
             )
+            if (result.failedWeeks > 0) {
+                console.error(
+                    `[scraper] ${result.failedWeeks} week(s) did not render and were left untouched`,
+                )
+                // A skipped week means the app is serving what the last good run
+                // wrote for it, which is the point, but a CI check has to fail.
+                if (runOnce) process.exitCode = 1
+            }
         } catch (err) {
             console.error('[scraper] Error during scrape:', err)
             // A one-shot run is a manual/CI check: surface the failure.
