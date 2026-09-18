@@ -17,7 +17,7 @@ const commitHash =
         }
     })()
 
-// Absolute base for the og: tags — crawlers (Discord included) will not resolve
+// Absolute base for the og: tags. Crawlers (Discord included) will not resolve
 // a relative image. The docker build passes the public origin; a local build
 // falls back to the dev server so the tags stay well-formed.
 const siteUrl = (process.env.VITE_SITE_URL || 'http://localhost:5173').replace(/\/+$/, '')
@@ -25,7 +25,7 @@ const siteUrl = (process.env.VITE_SITE_URL || 'http://localhost:5173').replace(/
 // robots.txt and sitemap.xml are generated rather than kept in public/: both
 // need the absolute origin, which is only known at build time, and both would
 // drift from pages.ts if they were maintained by hand. `noindex` is the single
-// switch — an entry marked with it is excluded here and carries the robots meta
+// switch. An entry marked with it is excluded here and carries the robots meta
 // tag, so the two can never disagree.
 function writeCrawlerFiles(outDir: string) {
     const indexable = PAGES.filter((p) => !p.noindex)
@@ -60,7 +60,7 @@ function writeCrawlerFiles(outDir: string) {
 export default defineConfig({
     plugins: [vue(), vuetify({ autoImport: true })],
     // Vuetify ships its component CSS as .css imports, which Node cannot load
-    // when it is left external to the SSG render — bundle it instead.
+    // when it is left external to the SSG render, so bundle it instead.
     ssr: { noExternal: ['vuetify'] },
     ssgOptions: {
         // /planning → dist/planning/index.html, so nginx serves it for the URL

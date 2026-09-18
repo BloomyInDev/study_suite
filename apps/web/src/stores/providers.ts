@@ -9,7 +9,7 @@ export interface Provider {
 }
 
 /**
- * What the login page renders before `GET /api/config` answers — and what the
+ * What the login page renders before `GET /api/config` answers, and what the
  * static build bakes into `login/index.html`, which cannot fetch anything.
  * A deployment with no bridge configured drops the second one on hydration.
  */
@@ -21,7 +21,7 @@ const DEFAULTS: Provider[] = [
 /**
  * Whether this deployment can send course reminders, and the VAPID key the
  * browser needs to subscribe. It rides along here because it comes from the
- * same `GET /api/config` this store already fetches at boot — one request, and
+ * same `GET /api/config` this store already fetches at boot. One request, and
  * the settings screen never has to wait for a second one.
  *
  * Off until the api says otherwise: a toggle that appears and then turns out to

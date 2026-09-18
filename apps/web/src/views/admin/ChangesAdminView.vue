@@ -60,7 +60,7 @@ const visible = computed(() => {
 
 const batches = computed(() => groupByRun(visible.value))
 
-/** How many of each type are on screen — the quickest read on a scraper run. */
+/** How many of each type are on screen. The quickest read on a scraper run. */
 const counts = computed(() => {
     const tally = { added: 0, removed: 0, moved: 0, updated: 0 }
     for (const change of visible.value) tally[change.changeType]++

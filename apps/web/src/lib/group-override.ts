@@ -53,7 +53,7 @@ export function useGroupOverride() {
     const isActive = computed(() => matched.value.length > 0)
     const labels = computed(() => matched.value.map(groupLabel))
 
-    /** The ids the calendar should query — the override wins when it resolves. */
+    /** The ids the calendar should query. The override wins when it resolves. */
     const groupIds = computed(() =>
         isActive.value
             ? groups.withAncestors(matched.value.map((g) => g.id))
@@ -81,7 +81,7 @@ export function useGroupOverride() {
         void router.push({ path: route.path, query })
     }
 
-    /** Selecting nothing — or one's own group — hands the page back untouched. */
+    /** Selecting nothing, or one's own group, hands the page back untouched. */
     const set = (groupIds: string[]) => {
         const picked = groupIds
             .map((id) => groups.allGroups.find((g) => g.id === id))

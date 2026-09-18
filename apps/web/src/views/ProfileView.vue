@@ -63,7 +63,7 @@ const linkedAccounts = computed(() =>
 )
 
 /**
- * The link flow is a redirect, so the app token cannot ride in a header — it
+ * The link flow is a redirect, so the app token cannot ride in a header. It
  * goes in the query the way it already does on the way back from a login.
  */
 function linkIutUrl(): string {

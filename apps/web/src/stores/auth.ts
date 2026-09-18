@@ -34,8 +34,8 @@ type LegacyUser = Omit<AuthUser, 'displayName' | 'avatarUrl' | 'identities'> & {
 /**
  * A user cached before identities existed carries Discord fields and no
  * `displayName`. Discarding it would sign everyone out for one navigation on
- * the deploy that ships this — the route guard runs before `App.vue` can
- * `refresh()` — so the old shape is converted instead. `refresh()` replaces it
+ * the deploy that ships this, because the route guard runs before `App.vue` can
+ * `refresh()`. The old shape is converted instead, and `refresh()` replaces it
  * with the server's version a moment later.
  */
 function readStoredUser(): AuthUser | null {

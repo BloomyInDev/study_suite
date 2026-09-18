@@ -4,8 +4,8 @@ import { backend } from './api.js'
  * The browser half of course reminders: the service worker registration, the
  * push subscription, and keeping the api's copy of it in step.
  *
- * Nothing here runs during the static render — vite-ssg renders under jsdom,
- * which has neither `Notification` nor a push manager — so every entry point
+ * Nothing here runs during the static render. vite-ssg renders under jsdom,
+ * which has neither `Notification` nor a push manager, so every entry point
  * checks `pushSupported()` first.
  */
 
@@ -93,8 +93,8 @@ async function save(
 /**
  * Ask for permission, subscribe, and register with the api.
  *
- * The permission prompt has to be driven by a real click — every browser drops
- * it otherwise — so this belongs on an event handler, not in `onMounted`.
+ * A real click has to drive the permission prompt, or every browser drops it,
+ * so this belongs on an event handler rather than in `onMounted`.
  */
 export async function enablePush(
     vapidPublicKey: string,
@@ -131,7 +131,7 @@ export async function disablePush(): Promise<void> {
 }
 
 /**
- * Re-send the current groups and lead time — after the student changes class,
+ * Re-send the current groups and lead time, after the student changes class,
  * picks different groups, or the browser rotates the subscription. A no-op when
  * this browser never subscribed.
  */

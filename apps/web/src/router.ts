@@ -1,8 +1,8 @@
 import type { RouteRecordRaw, Router } from 'vue-router'
 import { useAuthStore } from './stores/auth.js'
 
-// vite-ssg owns the router instance — it needs a memory history to render each
-// route at build time — so this module only describes the routes and the guard.
+// vite-ssg owns the router instance, since it needs a memory history to render
+// each route at build time. This module only describes the routes and the guard.
 export const routes: RouteRecordRaw[] = [
     { path: '/login', component: () => import('./views/LoginView.vue') },
     { path: '/pending', component: () => import('./views/PendingView.vue') },

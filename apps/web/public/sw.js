@@ -1,13 +1,13 @@
 /**
- * Study Suite — course reminders.
+ * Study Suite course reminders.
  *
  * Deliberately registers no `fetch` handler: this worker caches nothing and
  * intercepts nothing. nginx rewrites the origin into a fresh copy of `dist` at
  * every container start (see the head-tags section of AGENTS.md), and a caching
  * service worker would happily serve the previous one for days.
  *
- * Not bundled — `public/` is copied verbatim — so this file is plain JS and
- * cannot import from `src/`.
+ * Not bundled, because `public/` is copied verbatim, so this file is plain JS
+ * and cannot import from `src/`.
  */
 
 self.addEventListener('install', () => self.skipWaiting())
@@ -16,7 +16,7 @@ self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim(
 self.addEventListener('push', (event) => {
     // The api encrypts a JSON body (RFC 8291); the push service only ever saw a
     // blob it could not read. A push with no data is not ours, but showing
-    // *something* is mandatory on several platforms — a worker that wakes and
+    // something is mandatory on several platforms: a worker that wakes and
     // stays silent gets its permission revoked.
     let payload = { title: 'Study Suite', body: 'Prochain cours', url: '/', eventId: 'unknown' }
     if (event.data) {
@@ -66,7 +66,7 @@ self.addEventListener('notificationclick', (event) => {
 
 /**
  * Chrome fires this when it rotates the subscription out from under us. The
- * page cannot fix it — it may not be open — but it can be told to re-subscribe
+ * page cannot fix it, and may not even be open, but it can be told to re-subscribe
  * the next time it runs, which `lib/push.ts` does on every load.
  */
 self.addEventListener('pushsubscriptionchange', (event) => {

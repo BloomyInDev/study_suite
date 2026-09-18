@@ -12,7 +12,7 @@ export const OG_IMAGE_PATH = '/og-image.png'
 
 export interface PageSeo {
     path: string
-    /** Page name alone — the site name is appended. */
+    /** Page name alone. The site name is appended. */
     title: string
     description?: string
     /** Auth and admin screens: nothing there is worth indexing. */

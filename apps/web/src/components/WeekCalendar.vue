@@ -24,13 +24,13 @@ const props = withDefaults(
 )
 
 // The paged date is a Paris wall-clock label, like the event timestamps it is
-// compared to — never `new Date()`.
+// compared to. Never `new Date()`.
 const date = defineModel<Date>({ required: true })
 
 const { mobile } = useDisplay()
 
 // The calendar reads `model-value` with the *local* getters, while `date` is a
-// wall-clock label — so handing it over raw applies the Paris offset a second
+// wall-clock label, so handing it over raw applies the Paris offset a second
 // time and the grid runs ahead of the events, which go through
 // `toCalendarLocalDate`.
 const calendarDate = computed(() => toCalendarLocalDate(date.value))

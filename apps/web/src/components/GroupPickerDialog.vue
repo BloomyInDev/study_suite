@@ -55,7 +55,7 @@ function buildTree(list: Group[]): TreeNode[] {
     }
 
     // A group is a root only when nothing visible sits above it, hidden
-    // intermediates included — otherwise whether it renders nested or at the
+    // intermediates included. Otherwise whether it renders nested or at the
     // top level would depend on the order groups arrive in.
     const hasVisibleAncestor = (g: Group, seen = new Set<string>()): boolean => {
         if (seen.has(g.id)) return false

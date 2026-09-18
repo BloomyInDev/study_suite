@@ -13,7 +13,7 @@ const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 const providers = useProvidersStore()
 
-/** Which accounts the user signs in with — `Discord bastien · Dép. Info. lubenb`. */
+/** Which accounts the user signs in with: `Discord bastien · Dép. Info. lubenb`. */
 function identityLabel(user: AuthUser) {
     return user.identities.map((i) => `${providers.label(i.provider)} ${i.subject}`).join(' · ')
 }

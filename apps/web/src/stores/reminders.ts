@@ -29,7 +29,7 @@ function storedLead(): number {
 /**
  * Course reminders: one toggle, one lead time, per browser.
  *
- * Per *browser*, not per account — a push subscription belongs to the install,
+ * Per browser, not per account. A push subscription belongs to the install,
  * so signing in on a phone and a laptop is two subscriptions, and turning
  * reminders off on one leaves the other alone. That is also why this works
  * without an account at all.
@@ -50,8 +50,8 @@ export const useRemindersStore = defineStore('reminders', () => {
      *
      * False where nothing on this screen could make it work: a browser without
      * push, or a deployment with no keypair. A toggle that cannot work is worse
-     * than no toggle. What *is* actionable — a blocked permission, no group
-     * picked — stays visible inside the card.
+     * than no toggle. What the student can act on stays visible inside the
+     * card: a blocked permission, or no group picked.
      *
      * Starts false and is settled by `init()` after mount, so the static render
      * and the first client frame agree.
@@ -62,8 +62,8 @@ export const useRemindersStore = defineStore('reminders', () => {
      * Show the feature, but as an invitation to install rather than a toggle.
      *
      * Only iOS lands here: Safari grants push to a standalone PWA alone, so a
-     * plain tab has no `PushManager` and `supported` is false — which is
-     * exactly the case where hiding the card would tell an iPhone student the
+     * plain tab has no `PushManager` and `supported` is false. That is exactly
+     * the case where hiding the card would tell an iPhone student the
      * app has no reminders at all, when they are one "Sur l'écran d'accueil"
      * away. Everywhere else push works in an ordinary tab and nothing needs
      * installing, so this stays false and the real card renders.
@@ -73,7 +73,7 @@ export const useRemindersStore = defineStore('reminders', () => {
     /** Whether `/profile` renders the card in either of its two forms. */
     const shown = computed(() => visible.value || installPrompt.value)
 
-    /** Nothing the app can do about this one — it has to be undone in the
+    /** Nothing the app can do about this one. It has to be undone in the
      *  browser's own site settings. */
     const blocked = computed(() => perm.value === 'denied')
 
@@ -98,7 +98,7 @@ export const useRemindersStore = defineStore('reminders', () => {
             leadMinutes.value = stored.leadMinutes
             localStorage.setItem(LS_LEAD, String(stored.leadMinutes))
         } else {
-            // Subscribed here but unknown to the api — the row was pruned after
+            // Subscribed here but unknown to the api. The row was pruned after
             // a run of failures, or the database was restored. Re-register.
             await syncPush(groupIds(), leadMinutes.value)
         }

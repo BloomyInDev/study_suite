@@ -23,7 +23,7 @@ export const formatDetected = (iso: string): string =>
         minute: '2-digit',
     })
 
-/** The slot an event held, as one line — wall-clock, hence the UTC formatters. */
+/** The slot an event held, as one line. Wall-clock, hence the UTC formatters. */
 export const formatSlot = (start: Date, end: Date): string =>
     `${formatFullDate(start)} – ${formatTime(end)}`
 

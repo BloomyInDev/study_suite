@@ -101,7 +101,7 @@ export interface EventChange extends Omit<
     ApiEventChange,
     'startDate' | 'endDate' | 'newStartDate' | 'newEndDate'
 > {
-    /** Wall-clock, like every event timestamp — display with the UTC getters. */
+    /** Wall-clock, like every event timestamp. Display it with the UTC getters. */
     start: Date
     end: Date
     newStart: Date | null

@@ -49,7 +49,7 @@ async function runTest() {
         <v-card-subtitle>Une notification avant chaque cours</v-card-subtitle>
 
         <!-- iOS: the feature exists, it just needs the app on the home screen.
-             Rendering the toggle here would be a lie — Safari does not even
+             Rendering the toggle here would be a lie. Safari does not even
              define PushManager in a plain tab. -->
         <v-card-text v-if="reminders.installPrompt">
             <p class="mb-3">

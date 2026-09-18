@@ -119,7 +119,7 @@ export const weekdayFormat = (timestamp: { date: string }): string =>
     new Date(timestamp.date).toLocaleDateString('fr-FR', { weekday: 'long', timeZone: 'UTC' })
 
 // The paged date is wall-clock, like everything else here, so the arithmetic and
-// the Sunday skip read the UTC getters — the local ones would land on the next
+// the Sunday skip read the UTC getters. The local ones would land on the next
 // day (and skip the wrong Sunday) for any wall-clock hour past 22h.
 export const nextDay = (date: Ref<Date>, increment: number): void => {
     const d = new Date(date.value)

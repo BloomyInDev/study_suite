@@ -33,7 +33,7 @@ export const useGroupsStore = defineStore('groups', {
         accountGroupId: (): string | null => useAuthStore().user?.studentGroupId ?? null,
 
         /**
-         * A signed-in student follows their own class — the manual picker is for
+         * A signed-in student follows their own class. The manual picker is for
          * visitors who have no account to read it from.
          */
         activeGroupIds(state): string[] {

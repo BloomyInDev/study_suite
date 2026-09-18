@@ -22,7 +22,7 @@ const auth = useAuthStore()
 const events = ref<Event[]>([])
 const assignments = ref<Assignment[]>([])
 const loading = ref(true)
-// A real instant — assignment due dates are real instants too. Event times are
+// A real instant. Assignment due dates are real instants too. Event times are
 // not, so anything compared against those goes through `wallNow`.
 const now = ref(new Date())
 const pickerOpen = ref(false)
@@ -102,8 +102,8 @@ const upcomingAssignments = computed(() =>
 const todoAssignments = computed(() => upcomingAssignments.value.filter((a) => !a.completedByMe))
 const doneCount = computed(() => upcomingAssignments.value.length - todoAssignments.value.length)
 
-// allGroups loads after mount, so the ancestors — and with them the promo's
-// events — only join effectiveGroupIds a moment later.
+// allGroups loads after mount, so the ancestors, and with them the promo's
+// events, only join effectiveGroupIds a moment later.
 watch(
     () => groupStore.effectiveGroupIds.join(','),
     () => void load(),
