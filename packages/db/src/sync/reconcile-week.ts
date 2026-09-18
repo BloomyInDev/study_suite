@@ -127,7 +127,7 @@ const sharedCount = (a: string[], b: string[]): number => {
 
 /**
  * How likely two events in the same slot are the same event with something
- * changed. The audience decides first — a room swap is routine, but two
+ * changed. The audience decides first. A room swap is routine, but two
  * "Réunion de rentrée BUT2" for Q-Sète and Q1..Q4 are different meetings.
  */
 function matchScore(a: Relations, b: Relations): number {
@@ -140,8 +140,8 @@ function matchScore(a: Relations, b: Relations): number {
 
 /**
  * Pairs the events a slot holds on both sides. Identical relations pair off
- * first, then the leftovers greedily by best score — whatever is left over is
- * a genuine removal or addition.
+ * first, then the leftovers greedily by best score. Whatever is left over is a
+ * genuine removal or addition.
  */
 function matchSlot(
     existing: ExistingEvent[],
@@ -247,7 +247,7 @@ async function insertEventWithRelations(
 
 /**
  * Applies event mutations for one week (delete removed, insert added/updated).
- * Does NOT write eventChanges — call insertAllChanges after all weeks are processed.
+ * Does NOT write eventChanges. Call insertAllChanges once every week is processed.
  */
 export async function applyWeekEvents(
     db: Db,
@@ -269,7 +269,7 @@ export async function applyWeekEvents(
         // A slot holds as many events as the planning shows in it: the same
         // meeting runs in Montpellier and in Sète, same title, same hour. Keyed
         // on the slot alone, one silently overwrote the other and never reached
-        // the database — hence the bucket per slot.
+        // the database, hence the bucket per slot.
         const existingBySlot = new Map<string, ExistingEvent[]>()
         for (const ev of existingEvents) {
             const key = eventKey(ev.title, ev.startDate, ev.endDate)

@@ -11,8 +11,8 @@ import { users } from './users.js'
  * class whenever the client re-subscribes.
  *
  * `endpoint` is the push service's URL for this browser and is the natural
- * identity — a browser that re-subscribes hands back the same one, so the
- * client upserts on it rather than accumulating dead rows.
+ * identity. A browser that re-subscribes hands back the same one, so the client
+ * upserts on it rather than accumulating dead rows.
  */
 export const pushSubscriptions = pgTable(
     'push_subscriptions',
@@ -25,7 +25,7 @@ export const pushSubscriptions = pgTable(
         /** The subscription's 16-byte auth secret, same purpose. */
         auth: text('auth').notNull(),
         /**
-         * Group ids, ancestors included — the client widens them the same way
+         * Group ids, ancestors included. The client widens them the same way
          * `GET /api/events` callers have to, or a promo-wide lecture tagged on
          * `BUT1` never matches a subscriber who follows `S5`.
          */

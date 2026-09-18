@@ -2,9 +2,9 @@ import { index, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-co
 import { users } from './users.js'
 
 /**
- * One row per external account a user signs in with. `users` used to *be* the
- * Discord identity — `discord_id NOT NULL UNIQUE` — which left no room for a
- * second provider.
+ * One row per external account a user signs in with. `users` used to be the
+ * Discord identity itself, with `discord_id NOT NULL UNIQUE`, which left no
+ * room for a second provider.
  */
 export const userIdentities = pgTable(
     'user_identities',
@@ -16,9 +16,9 @@ export const userIdentities = pgTable(
         provider: text('provider', { enum: ['discord', 'iut'] }).notNull(),
         /**
          * What we key the account on. Discord: the snowflake. IUT: the LDAP
-         * `preferred_username` (`lubenb`) — *not* the OIDC `sub`, which the
-         * bridge builds from the DN (`uid=lubenb,ou=Ann3,…`) and therefore
-         * changes at every year rollover, orphaning the account each September.
+         * `preferred_username` (`lubenb`), never the OIDC `sub`. The bridge
+         * builds that from the DN (`uid=lubenb,ou=Ann3,...`), so it changes at
+         * every year rollover and orphans the account each September.
          */
         subject: text('subject').notNull(),
         /** The `sub` the IdP actually sent. Diagnostics only; never matched on. */

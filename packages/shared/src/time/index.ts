@@ -8,10 +8,10 @@
  * actually sees, which is why the api formats it that way and `lib/ical.ts`
  * emits it under `TZID=Europe/Paris`.
  *
- * The consequence is that a real instant — `new Date()` — cannot be compared
- * with one of those timestamps directly; doing so is off by the Paris UTC
- * offset, one hour in winter and two in summer. Convert it first with
- * `toWallClock`, or take the current moment from `wallClockNow`.
+ * So a real instant such as `new Date()` cannot be compared with one of those
+ * timestamps directly. Doing so is off by the Paris UTC offset, one hour in
+ * winter and two in summer. Convert it first with `toWallClock`, or take the
+ * current moment from `wallClockNow`.
  */
 
 export const PLANNING_TZ = 'Europe/Paris'
@@ -74,7 +74,7 @@ export function wallClockDayStart(instant: Date = new Date()): Date {
     return new Date(Date.UTC(year, month - 1, day))
 }
 
-/** Midnight closing it — exclusive, so pair it with a strict `<`. */
+/** The midnight closing it. Exclusive, so pair it with a strict `<`. */
 export function wallClockDayEnd(instant: Date = new Date()): Date {
     const end = wallClockDayStart(instant)
     end.setUTCDate(end.getUTCDate() + 1)
@@ -87,7 +87,7 @@ function offsetMinutesAt(instant: Date): number {
 }
 
 /**
- * The real instant a wall-clock label denotes — the inverse of `toWallClock`.
+ * The real instant a wall-clock label denotes, the inverse of `toWallClock`.
  *
  * The offset depends on the instant, which is what we are solving for, so the
  * label is first read as if it were UTC to get a candidate offset, then the

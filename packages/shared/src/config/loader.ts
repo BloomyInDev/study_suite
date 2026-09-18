@@ -7,7 +7,7 @@ export interface LoadConfigOptions<T extends z.ZodTypeAny> {
     yamlPath: string
     /** Explicit mapping: env var name → dot-path in config object */
     envMap?: Record<string, string>
-    /** Defaults to process.env — override for testing */
+    /** Defaults to process.env. Override it in tests. */
     env?: NodeJS.ProcessEnv
 }
 
