@@ -7,7 +7,7 @@ import { config } from '../config.js'
  * The package owns the two parts worth not hand-rolling: the RFC 8292 VAPID
  * header (an ES256 JWT signed per push service origin) and the RFC 8291 payload
  * encryption (aes128gcm, keyed by the subscription's own P-256 key). The
- * payload is therefore opaque to Google, Apple and Mozilla — they route a blob
+ * payload is therefore opaque to Google, Apple and Mozilla. They route a blob
  * they cannot read.
  */
 
@@ -37,7 +37,7 @@ export interface PushTarget {
 }
 
 /**
- * `gone` means the browser dropped the subscription for good — the caller
+ * `gone` means the browser dropped the subscription for good, so the caller
  * should delete the row rather than count a failure. Everything else is
  * transient (the push service being unhappy, the network), and the next tick
  * will try the following course.

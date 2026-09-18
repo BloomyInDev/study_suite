@@ -21,7 +21,7 @@ export type AuthEnv = { Variables: { user: JwtPayload } }
  * The Discord bot acting for one of its members: `Authorization: Bot <key>`
  * plus `X-Acting-Discord-User: <snowflake>`, resolved to the account that
  * Discord identity is linked to. The request then runs exactly as that user's
- * own would — same group, same approval status, same `completedByMe`.
+ * own would: same group, same approval status, same `completedByMe`.
  *
  * Never as an admin, though: the bot has no admin surface, and a leaked key
  * should not reach the admin routes through whichever admin it names.
@@ -135,10 +135,10 @@ export const requireBot = createMiddleware(async (c, next) => {
  * Attaches the user when a valid token is present, and lets the request through
  * when it is not.
  *
- * For routes that serve visitors and account holders alike — push
- * subscriptions, like the event routes they feed on, work without an account.
- * A bad or expired token is treated as no token: the caller gets the
- * anonymous behaviour rather than a 401 they cannot act on.
+ * For routes that serve visitors and account holders alike. Push subscriptions
+ * work without an account, like the event routes they feed on. A bad or expired
+ * token is treated as no token: the caller gets the anonymous behaviour rather
+ * than a 401 they cannot act on.
  */
 export const optionalAuth = createMiddleware<{ Variables: { user?: JwtPayload } }>(
     async (c, next) => {

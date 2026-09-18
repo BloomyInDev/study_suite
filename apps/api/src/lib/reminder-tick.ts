@@ -13,15 +13,15 @@ const SEND_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 /**
  * One pass: find the courses due a reminder, claim them, push them.
  *
- * Claiming happens *before* sending — the insert into `push_reminder_sends` is
- * `ON CONFLICT DO NOTHING … RETURNING`, so only the rows this pass actually
+ * Claiming happens before sending. The insert into `push_reminder_sends` is
+ * `ON CONFLICT DO NOTHING ... RETURNING`, so only the rows this pass actually
  * created get pushed. That is what makes the tick idempotent: an api restart
  * mid-minute, or a second replica running the same window, claims nothing and
  * sends nothing.
  *
- * Volumes are small by construction — a department's worth of subscriptions and
- * the events of the next hour — so the matching runs in JS rather than as a
- * join against a `uuid[]` column.
+ * Volumes are small by construction, a department's worth of subscriptions and
+ * the events of the next hour, so the matching runs in JS rather than as a join
+ * against a `uuid[]` column.
  */
 export async function runReminderTick(now: Date = wallClockNow()): Promise<number> {
     if (!pushConfigured) return 0
@@ -104,7 +104,7 @@ async function pruneSends(): Promise<void> {
  */
 export function startReminderTick(): void {
     if (!pushConfigured) {
-        console.log('[push] no VAPID keypair configured — course reminders are off')
+        console.log('[push] no VAPID keypair configured, course reminders are off')
         return
     }
 

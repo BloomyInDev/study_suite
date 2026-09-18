@@ -54,8 +54,8 @@ const schema = z.object({
         })
         // `nullish`, not `optional`: a config.yaml copied from the example has
         // `push:` present with every key commented out, which YAML parses as
-        // null — and `.optional()` rejects null, so the api would refuse to
-        // boot on the most likely starting file.
+        // null. `.optional()` rejects null, so the api would refuse to boot on
+        // the most likely starting file.
         .nullish(),
     /**
      * The Discord bots' shared keys. Optional: without any, every `Bot` header
@@ -63,7 +63,7 @@ const schema = z.object({
      *
      * A bot sends `Authorization: Bot <one of apiKeys>` and, to act for someone,
      * `X-Acting-Discord-User: <snowflake>`. Every key is therefore as strong as a
-     * session for any account with a linked Discord identity — guard them like
+     * session for any account with a linked Discord identity, so guard them like
      * `jwt.secret`. Several keys let each bot (or a rotation) have its own, and
      * be revoked by removing just that one.
      */

@@ -12,7 +12,7 @@ const SubscriptionInput = z
     .object({
         endpoint: z.string().url().openapi({
             description: 'The push service URL the browser handed out',
-            example: 'https://fcm.googleapis.com/fcm/send/dK3f…',
+            example: 'https://fcm.googleapis.com/fcm/send/dK3f...',
         }),
         keys: z.object({
             p256dh: z.string().min(1),
@@ -20,7 +20,7 @@ const SubscriptionInput = z
         }),
         groupIds: z.array(z.string().uuid()).max(50).openapi({
             description:
-                'Ancestors included — widen with the same rule `GET /api/events` callers use, or a promo-wide lecture never matches.',
+                'Ancestors included. Widen them with the same rule `GET /api/events` callers use, or a promo-wide lecture never matches.',
         }),
         leadMinutes: z.number().int().min(1).max(180).default(15),
     })
@@ -66,7 +66,7 @@ base.use('*', optionalAuth)
  * The routes are chained, and the middleware above is not, because `.use()`
  * hands back a plain `Hono` while `.openapi()` returns the instance with the
  * route folded into its type. That accumulated type *is* `AppType`, which is
- * what gives the web app a typed `backend.api.push.*` — register a route as a
+ * what gives the web app a typed `backend.api.push.*`. Register a route as a
  * bare statement and the client simply does not know it exists.
  */
 const app = base
@@ -77,7 +77,7 @@ const app = base
             operationId: 'upsertPushSubscription',
             summary: 'Register this browser for course reminders',
             description:
-                'Idempotent on `endpoint`: a browser that re-subscribes — after a permission reset, a settings change, or a push service key rotation — updates its row instead of adding one. Works without an account, like the event routes it draws on; sending a token links the subscription to the user so it dies with them.',
+                'Idempotent on `endpoint`. A browser that re-subscribes updates its row instead of adding one, whether after a permission reset, a settings change, or a push service key rotation. Works without an account, like the event routes it draws on. Sending a token links the subscription to the user so it dies with them.',
             tags: ['Push'],
             request: {
                 body: { content: { 'application/json': { schema: SubscriptionInput } } },
@@ -200,7 +200,7 @@ const app = base
             operationId: 'sendTestPush',
             summary: 'Send this browser a notification now',
             description:
-                'The end-to-end check. Everything between the api and the phone — VAPID signature, payload encryption, the push service, the service worker — either works here or nowhere, and a permission that looks granted in the browser UI can still be silently dead.',
+                'The end-to-end check. Everything between the api and the phone either works here or nowhere: VAPID signature, payload encryption, the push service, the service worker. A permission that looks granted in the browser UI can still be silently dead.',
             tags: ['Push'],
             request: { query: EndpointQuery },
             responses: {

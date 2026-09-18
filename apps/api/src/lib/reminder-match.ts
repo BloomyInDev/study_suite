@@ -1,8 +1,8 @@
 import type { ReminderPayload } from './push.js'
 
 /**
- * Deciding *which* course is due a reminder, kept free of the database and the
- * config so it can be tested on plain objects — the window arithmetic and the
+ * Deciding which course is due a reminder, kept free of the database and the
+ * config so it can be tested on plain objects. The window arithmetic and the
  * wall-clock formatting below are where this feature gets silently wrong.
  */
 
@@ -17,7 +17,7 @@ export interface Subscriber {
 export interface UpcomingEvent {
     id: string
     title: string
-    /** A Paris wall-clock label — see the Time section of AGENTS.md. */
+    /** A Paris wall-clock label. See the Time section of AGENTS.md. */
     startDate: Date
     eventLocations: { location: { name: string } }[]
     eventTeachers: { teacher: { firstName: string; lastName: string } }[]
@@ -67,9 +67,9 @@ export function buildPayload(event: UpcomingEvent, now: Date): ReminderPayload {
  *
  * The condition is one-sided on purpose: it never fires early, and once the
  * reminder point has passed it stays true until the course starts. A tick the
- * api missed — a restart, a slow query, a deploy — is therefore picked up by
- * the next one instead of being lost, and the caller's claim table stops the
- * repeat that would otherwise cause.
+ * api missed, whether to a restart, a slow query or a deploy, is therefore
+ * picked up by the next one instead of being lost. The caller's claim table
+ * stops the repeat that would otherwise cause.
  */
 export function duePairs<S extends Subscriber, E extends UpcomingEvent>(
     subscribers: S[],

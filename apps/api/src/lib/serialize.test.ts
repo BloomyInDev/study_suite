@@ -42,7 +42,7 @@ describe('formatDate', () => {
     })
 
     describe('the legacy formats stay wrong by exactly the Paris offset', () => {
-        // Not an aspiration — a regression guard. Correcting these in place
+        // A regression guard, not an aspiration. Correcting these in place
         // would silently break apps/web and every existing consumer.
         it.each([
             ['summer', SUMMER, 2],

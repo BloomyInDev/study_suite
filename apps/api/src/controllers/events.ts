@@ -140,7 +140,7 @@ export default new OpenAPIHono()
             operationId: 'listEventChanges',
             summary: 'List recent planning changes',
             description:
-                'The scraper’s audit log: what was added, removed, moved or edited on the planning, newest first. `groupIds` keeps only the changes touching those groups. A poller passes `since` instead of `days` and reads oldest first from its cursor.',
+                "The scraper's audit log: what was added, removed, moved or edited on the planning, newest first. `groupIds` keeps only the changes touching those groups. A poller passes `since` instead of `days` and reads oldest first from its cursor.",
             tags: ['Events'],
             request: { query: EventChangesSchema },
             responses: {
@@ -164,7 +164,7 @@ export default new OpenAPIHono()
             }
 
             // `detectedAt` is a real instant, not a wall-clock label, so it
-            // compares with `new Date()` — unlike the event timestamps below.
+            // compares with `new Date()`, unlike the event timestamps below.
             // A poller passing `since` reads forward from its cursor, so it gets
             // the oldest first and can advance to the last row it handled.
             const rows = await db.query.eventChanges.findMany({

@@ -2,7 +2,7 @@ export type Provider = 'discord' | 'iut'
 
 export type IdentitySummary = {
     provider: Provider
-    /** What the account is keyed on — a Discord snowflake, or an LDAP uid. */
+    /** What the account is keyed on: a Discord snowflake, or an LDAP uid. */
     subject: string
     /** The label to show a human, not the key: a Discord global name, a full name. */
     username: string | null

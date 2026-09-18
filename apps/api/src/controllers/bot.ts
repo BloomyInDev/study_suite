@@ -57,7 +57,7 @@ app.openapi(
         operationId: 'botListRoleMappings',
         summary: 'Discord role → student group mappings of one server',
         description:
-            'Lets the bot work out a member’s class from their roles, from the same table that auto-approves them at sign-in. An unconfigured server answers an empty list.',
+            "Lets the bot work out a member's class from their roles, from the same table that auto-approves them at sign-in. An unconfigured server answers an empty list.",
         tags: ['Bot'],
         security: [{ Bot: [] }],
         request: { params: GuildParamSchema },
@@ -108,7 +108,7 @@ app.openapi(
         operationId: 'botListAssignments',
         summary: 'Homework of some groups, for channel reminders',
         description:
-            'Ordered by due date. `completedByMe` is always false: there is no “me”. To read a member’s own list, call `GET /api/assignments` with `X-Acting-Discord-User`.',
+            'Ordered by due date. `completedByMe` is always false, because there is no "me". To read a member\'s own list, call `GET /api/assignments` with `X-Acting-Discord-User`.',
         tags: ['Bot'],
         security: [{ Bot: [] }],
         request: { query: BotAssignmentsQuerySchema },

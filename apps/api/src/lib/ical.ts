@@ -1,5 +1,5 @@
 /**
- * Minimal RFC 5545 writer — enough for a read-only subscription feed.
+ * Minimal RFC 5545 writer, enough for a read-only subscription feed.
  *
  * Event timestamps are stored as Paris wall-clock labelled UTC (the scraper
  * builds them with `Date.UTC` from what the planning page displays), so the

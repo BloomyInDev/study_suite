@@ -5,7 +5,7 @@ import { z } from '@hono/zod-openapi'
  *
  * `iso`, `unix` and `unix-ms` all carry the Paris *wall-clock label* the
  * planning is stored as, so `iso` ends in `Z` while denoting local time and the
- * two numeric formats are the same label as an epoch — off by the Paris offset,
+ * two numeric formats are the same label as an epoch, off by the Paris offset,
  * with nothing in the value to signal it. They stay, `iso` as the default,
  * because clients already depend on them.
  *
@@ -81,7 +81,7 @@ export const EventChangesSchema = z.object({
      */
     since: z.coerce.date().optional().openapi({
         description:
-            'Polling cursor: only changes detected strictly after this instant (a real instant, e.g. the last `detectedAt` you saw), returned **oldest first**. Replaces `days`. One scraper run shares a single `detectedAt`, so a run larger than `limit` is cut short — keep `groupIds` narrow.',
+            'Polling cursor: only changes detected strictly after this instant (a real instant, e.g. the last `detectedAt` you saw), returned **oldest first**. Replaces `days`. One scraper run shares a single `detectedAt`, so a run larger than `limit` is cut short. Keep `groupIds` narrow.',
         example: '2026-09-11T07:30:00.000Z',
     }),
     limit: z.coerce.number().int().positive().max(200).default(100),

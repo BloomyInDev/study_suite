@@ -450,7 +450,7 @@ app.openapi(
         }
 
         // A Discord role can only map to the class staff knows about (S1), so a
-        // student may move anywhere at or below it — including back up to it.
+        // student may move anywhere at or below it, including back up to it.
         const anchor = student.assignedGroupId ?? student.studentGroupId
         if (anchor && anchor !== studentGroupId) {
             const allowed = await getDescendantGroupIds(anchor)
@@ -478,14 +478,14 @@ app.openapi(
 )
 
 // ---------------------------------------------------------------------------
-// IUT — the department's LDAP↔OIDC bridge
+// IUT: the department's LDAP/OIDC bridge
 // ---------------------------------------------------------------------------
 
 const IUT_COOKIE = 'iut_oidc'
 const IUT_FLOW_TTL_S = 600
 
 type IutFlow = {
-    /** PKCE verifier, nonce and state — all three have to survive the redirect. */
+    /** PKCE verifier, nonce and state. All three have to survive the redirect. */
     v: string
     n: string
     s: string
@@ -497,7 +497,7 @@ type IutFlow = {
 }
 
 /**
- * The Discord flow is stateless — its `state` is a plain base64 blob — but PKCE
+ * The Discord flow is stateless, its `state` being a plain base64 blob, but PKCE
  * is not: the verifier must never reach the browser's URL. It rides in a signed,
  * HttpOnly cookie instead. `SameSite=Lax` is enough because the bridge sends the
  * user back with a top-level GET.
@@ -552,7 +552,7 @@ app.openapi(
         operationId: 'iutLogin',
         summary: 'Start the IUT OIDC flow',
         description:
-            'Redirects to the department bridge with PKCE. Pass `token` to link the IUT account to the session it belongs to instead of signing in — the browser cannot send an Authorization header through a redirect, so the app token travels as a query parameter here, the way it already does on the way back.',
+            'Redirects to the department bridge with PKCE. Pass `token` to link the IUT account to the session it belongs to instead of signing in. The browser cannot send an Authorization header through a redirect, so the app token travels as a query parameter here, the way it already does on the way back.',
         tags: ['Auth'],
         request: {
             query: z.object({

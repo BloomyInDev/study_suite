@@ -28,7 +28,7 @@ export default app
             description:
                 'A room counts as busy when any event overlaps the range, not merely starts inside it. ' +
                 '`from` and `to` are Paris wall-clock labelled UTC, the same encoding the event ' +
-                'timestamps come back in — passing a real instant (`new Date().toISOString()`) ' +
+                'timestamps come back in. Passing a real instant (`new Date().toISOString()`) ' +
                 'shifts the window by the Paris offset.',
             tags: ['Rooms'],
             request: { query: DateRangeSchema },

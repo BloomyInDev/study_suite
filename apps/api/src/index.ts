@@ -74,7 +74,7 @@ const app = _app
     // Transitional: Discord may still call back on the pre-/api path until the
     // developer portal entry is updated. Remove once that is done. The plain
     // Hono wrapper keeps the alias serving while leaving it out of the OpenAPI
-    // document — `route` only merges the registry of an OpenAPIHono — so the
+    // document, because `route` only merges the registry of an OpenAPIHono, so the
     // spec advertises each auth route once, under /api.
     .route('/auth', new Hono().route('/', authController))
     .route(

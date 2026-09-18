@@ -11,14 +11,14 @@ const ProviderSchema = z
     .openapi('AuthProvider')
 
 /**
- * `publicKey` is not a secret — the browser has to pass it to
- * `pushManager.subscribe()` — and it is null when the deployment configured no
+ * `publicKey` is not a secret, since the browser has to pass it to
+ * `pushManager.subscribe()`. It is null when the deployment configured no
  * keypair, which is how the frontend knows not to offer the toggle at all.
  */
 const PushConfigSchema = z
     .object({
         enabled: z.boolean().openapi({ example: true }),
-        publicKey: z.string().nullable().openapi({ example: 'BEl62iUYgUivxIkv69yViEuiBIa…' }),
+        publicKey: z.string().nullable().openapi({ example: 'BEl62iUYgUivxIkv69yViEuiBIa...' }),
     })
     .openapi('PushConfig')
 

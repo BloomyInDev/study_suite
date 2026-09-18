@@ -18,7 +18,7 @@ export const IdParamSchema = z.object({
 // --- Response builders -------------------------------------------------------
 // Every JSON payload travels in a `{ data }` envelope, and every failure is an
 // `Error`. Spelling that out at each of the ~45 routes buried the one part that
-// differs — the schema and the description.
+// differs: the schema and the description.
 
 /** A `{ data: <schema> }` body, the shape every successful response uses. */
 export function dataResponse<T extends z.ZodTypeAny>(schema: T, description: string) {
@@ -28,7 +28,7 @@ export function dataResponse<T extends z.ZodTypeAny>(schema: T, description: str
     }
 }
 
-/** A body that is not enveloped — a handful of routes answer with the entity itself. */
+/** A body that is not enveloped. A handful of routes answer with the entity itself. */
 export function jsonResponse<T extends z.ZodTypeAny>(schema: T, description: string) {
     return { content: { 'application/json': { schema } }, description }
 }
@@ -69,12 +69,12 @@ export const EventDtoSchema = z
         title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
         startDate: z.union([z.string(), z.number()]).openapi({
             description:
-                'Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC** — it is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
+                'Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC.** It is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
             example: '2026-09-01T08:30:00.000Z',
         }),
         endDate: z.union([z.string(), z.number()]).openapi({
             description:
-                'Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC** — it is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
+                'Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC.** It is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
             example: '2026-09-01T10:30:00.000Z',
         }),
         source: z.string().openapi({ example: 'prose' }),
@@ -201,7 +201,7 @@ export const EventChangeDtoSchema = z
         title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
         startDate: z.union([z.string(), z.number()]).openapi({
             description:
-                'The slot the event held when it was last seen — for a `moved` change, the old one. Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC** — it is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
+                'The slot the event held when it was last seen. For a `moved` change, that is the old one. Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC.** It is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
         }),
         endDate: z.union([z.string(), z.number()]),
         /** Present on `moved` only: where the event went. */

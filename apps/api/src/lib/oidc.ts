@@ -13,7 +13,7 @@ export * from './oidc-claims.js'
  * under both Node and Bun. The intermediate the leaf's AIA extension points at
  * (`http://crt.harica.gr/HARICA-GEANT-TLS-R1.cer`) does chain to a root the
  * system already trusts, so the deployment mounts it and sets
- * `NODE_EXTRA_CA_CERTS` — see the api Dockerfile. Drop that once the department
+ * `NODE_EXTRA_CA_CERTS`, see the api Dockerfile. Drop that once the department
  * fixes the chain; nothing here has to change.
  */
 

@@ -9,7 +9,7 @@ export type IutClaims = JWTPayload & {
 
 /**
  * The claim that keys the account. The bridge's `sub` is the raw LDAP DN
- * (`uid=lubenb,ou=Ann3,…`), so it changes at every year rollover and would
+ * (`uid=lubenb,ou=Ann3,...`), so it changes at every year rollover and would
  * orphan the account each September; `preferred_username` is the stable half.
  */
 export function iutSubject(claims: IutClaims): string | null {

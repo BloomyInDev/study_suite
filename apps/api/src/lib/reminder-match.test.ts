@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildPayload, duePairs, formatHour, type Subscriber, type UpcomingEvent } from './reminder-match.js'
+import {
+    buildPayload,
+    duePairs,
+    formatHour,
+    type Subscriber,
+    type UpcomingEvent,
+} from './reminder-match.js'
 
 /** A wall-clock label: the hour the planning displays, encoded with `Date.UTC`. */
 const label = (s: string) => new Date(`${s}Z`)
@@ -61,7 +67,7 @@ describe('duePairs', () => {
         expect(duePairs([sub], [e], new Date(SUMMER.getTime() + 60_000))).toHaveLength(0)
     })
 
-    it('honours each subscriber’s own lead time', () => {
+    it("honours each subscriber's own lead time", () => {
         const early = subscriber({ id: 's-early', leadMinutes: 60 })
         const late = subscriber({ id: 's-late', leadMinutes: 5 })
         const at30 = minutesBefore(SUMMER, 30)
@@ -74,14 +80,16 @@ describe('duePairs', () => {
         expect(duePairs([sub], [other], minutesBefore(SUMMER, 10))).toHaveLength(0)
     })
 
-    it('matches on any of the subscriber’s groups, ancestors included', () => {
+    it("matches on any of the subscriber's groups, ancestors included", () => {
         const lecture = event({ eventStudentGroups: [{ studentGroup: { id: 'g-but3' } }] })
         const withAncestor = subscriber({ groupIds: ['g-but3a', 'g-but3'] })
         expect(duePairs([withAncestor], [lecture], minutesBefore(SUMMER, 10))).toHaveLength(1)
     })
 
     it('skips a visitor who has picked no group', () => {
-        expect(duePairs([subscriber({ groupIds: [] })], [e], minutesBefore(SUMMER, 10))).toHaveLength(0)
+        expect(
+            duePairs([subscriber({ groupIds: [] })], [e], minutesBefore(SUMMER, 10)),
+        ).toHaveLength(0)
     })
 })
 
@@ -93,7 +101,7 @@ describe('buildPayload', () => {
         }
     })
 
-    it('says “Maintenant” rather than “Dans 0 min”', () => {
+    it('says "Maintenant" rather than "Dans 0 min"', () => {
         const payload = buildPayload(event(), new Date(SUMMER.getTime() - 20_000))
         expect(payload.body.startsWith('Maintenant · ')).toBe(true)
     })

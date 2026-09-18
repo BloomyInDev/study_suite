@@ -57,7 +57,7 @@ export default new OpenAPIHono().openapi(
                     'text/calendar': {
                         schema: z.string().openapi({
                             example:
-                                'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//StudySuite//Planning//FR\r\n…\r\nEND:VCALENDAR',
+                                'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//StudySuite//Planning//FR\r\n...\r\nEND:VCALENDAR',
                         }),
                     },
                 },
@@ -67,8 +67,7 @@ export default new OpenAPIHono().openapi(
     }),
     async (c) => {
         const filters = c.req.valid('query')
-        const from =
-            filters.from ?? new Date(Date.now() - DEFAULT_PAST_DAYS * 24 * 60 * 60 * 1000)
+        const from = filters.from ?? new Date(Date.now() - DEFAULT_PAST_DAYS * 24 * 60 * 60 * 1000)
         const rows = await db.query.events.findMany({
             where: and(...eventFilterConditions({ ...filters, from })),
             with: withEventRelations,
