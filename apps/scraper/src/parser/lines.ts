@@ -36,7 +36,7 @@ export function categorizeLines(
             roomsEnd = lastP + 1
             groupsStart = lastP + 1
         } else {
-            // No teacher, no path — treat everything as groups (e.g. all-hands events)
+            // No teacher and no path, so everything is a group (all-hands events)
             roomsEnd = 0
             groupsStart = 0
         }
@@ -56,7 +56,7 @@ export function categorizeLines(
     // strict mode there would reject every line.
     const strict = strictGroups && knownGroupNames.size > 0
     if (strictGroups && knownGroupNames.size === 0) {
-        console.warn('[parser] strictGroups is on but no groups are known yet — ignoring it')
+        console.warn('[parser] strictGroups is on but no groups are known yet, ignoring it')
     }
 
     // Without a teacher line the boundary is the last path line, so anything the

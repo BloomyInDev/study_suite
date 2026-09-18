@@ -26,8 +26,8 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
         try {
             const result = await scrapeAllWeeks(config, db, knownGroupNames)
             console.log(
-                `[scraper] Done — ${result.weeks} weeks, added: ${result.added}, removed: ${result.removed}, ` +
-                    `updated: ${result.updated}, moved: ${result.moved}, duration: ${result.durationMs}ms`,
+                `[scraper] Done: ${result.weeks} weeks, added ${result.added}, removed ${result.removed}, ` +
+                    `updated ${result.updated}, moved ${result.moved}, duration ${result.durationMs}ms`,
             )
             if (result.failedWeeks > 0) {
                 console.error(

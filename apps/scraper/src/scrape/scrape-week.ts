@@ -43,7 +43,7 @@ async function scrapeWeek(
     const weekMonday = parseWeekMonday(weekDates)
     const diff = await applyWeekEvents(db, weekMonday, parsed)
     console.log(
-        `[scraper]   Week ${weekDates[0] ?? '?'} — +${diff.added.length} -${diff.removed.length} ~${diff.updated.length}`,
+        `[scraper]   Week ${weekDates[0] ?? '?'}: +${diff.added.length} -${diff.removed.length} ~${diff.updated.length}`,
     )
     return diff
 }
@@ -97,7 +97,7 @@ export async function scrapeAllWeeks(
         // the next, rather than as a `moved`. That is the cost of not guessing.
         const stats = await insertAllChanges(db, diffs)
         console.log(
-            `[scraper] Changes — added: ${stats.added}, removed: ${stats.removed}, updated: ${stats.updated}, moved: ${stats.moved}`,
+            `[scraper] Changes: added ${stats.added}, removed ${stats.removed}, updated ${stats.updated}, moved ${stats.moved}`,
         )
 
         return {
@@ -107,7 +107,7 @@ export async function scrapeAllWeeks(
             durationMs: Date.now() - t0,
         }
     } catch (err) {
-        // Screenshot while the page is still alive — finally closes the browser.
+        // Screenshot while the page is still alive. `finally` closes the browser.
         await captureFailure(page, config.scrape.debugDir)
         throw err
     } finally {

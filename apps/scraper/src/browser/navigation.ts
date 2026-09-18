@@ -67,8 +67,8 @@ function readWeekState(page: Page, weekId: number): Promise<WeekState> {
  * Waits until the page is showing the week that was clicked, fully rendered.
  *
  * The pressed class and the day headers both flip within ~50ms of the click,
- * long before the events land, so neither is evidence on its own. What is:
- * the spinner gone and `#Planning > div` unchanged for `SETTLE_QUIET_MS`.
+ * long before the events land, so neither is evidence on its own. The spinner
+ * being gone and `#Planning > div` holding still for `SETTLE_QUIET_MS` is.
  */
 async function waitForWeekRender(page: Page, weekId: number): Promise<string[]> {
     const deadline = Date.now() + SETTLE_TIMEOUT_MS

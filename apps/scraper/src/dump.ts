@@ -15,7 +15,7 @@ const { browser, page } = await launchBrowser(config.scrape.headless, config.scr
 try {
     await gotoPlanning(page, config.scrape.url)
 
-    // Collect all week button IDs — filter out navigation arrows by checking button text
+    // Collect all week button IDs, filtering out navigation arrows by their text
     const weekIds = await page.evaluate(() => {
         const container = document.querySelector('#x-auto-26')
         if (!container) throw new Error('#x-auto-26 not found')
@@ -42,15 +42,15 @@ try {
         const events = rawEvents.map(({ rawText, left }) => {
             const dayIndex = Math.floor(left / columnWidth)
             const parsed = parseEventText(rawText, dayIndex, weekDates, new Set())
-            // rawText is what the parser actually saw — keep it, it is the only
-            // way to diagnose a miscategorised line after the fact.
+            // rawText is what the parser actually saw. It is the only way to
+            // diagnose a miscategorised line after the fact, so keep it.
             return { date: weekDates[dayIndex] ?? null, rawText, parsed }
         })
 
         weeks.push({ weekId, weekDates, events })
 
         console.log(
-            `[dump] ${i + 1}/${weekIds.length} — week ${weekId} (${weekDates[0] ?? '?'}) — ${rawEvents.length} events`,
+            `[dump] ${i + 1}/${weekIds.length} week ${weekId} (${weekDates[0] ?? '?'}): ${rawEvents.length} events`,
         )
     }
 
