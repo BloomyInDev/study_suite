@@ -20,6 +20,13 @@ export const ParsedEventSchema = z.object({
     rooms: z.array(LocationSchema),
     teachers: z.array(TeacherSchema),
     groups: z.array(StudentGroupSchema),
+    /**
+     * The `#rrggbb` the planning paints the event with: its category, the one
+     * piece of the page the parser cannot read out of the text. Nullish: an
+     * unpainted event has none, and a caller that does not scrape has nothing
+     * to supply.
+     */
+    color: z.string().nullish(),
 })
 
 export type Location = z.infer<typeof LocationSchema>

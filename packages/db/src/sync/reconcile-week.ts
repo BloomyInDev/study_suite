@@ -73,6 +73,7 @@ interface ExistingEvent {
     title: string
     startDate: Date
     endDate: Date
+    color: string | null
     eventLocations: Array<{ location: { name: string } }>
     eventTeachers: Array<{ teacher: { firstName: string; lastName: string } }>
     eventStudentGroups: Array<{ studentGroup: { internalName: string } }>
@@ -147,6 +148,7 @@ function matchSlot(
     existing: ExistingEvent[],
     scraped: ParsedEvent[],
 ): {
+    untouched: { existing: ExistingEvent; scraped: ParsedEvent }[]
     updated: { existing: ExistingEvent; scraped: ParsedEvent }[]
     removed: ExistingEvent[]
     added: ParsedEvent[]
@@ -154,13 +156,18 @@ function matchSlot(
     const remainingExisting = [...existing]
     const remainingScraped = [...scraped]
 
-    // Untouched events: same slot, same relations. They pair off and are left alone.
+    // Untouched events: same slot, same relations. The row is left alone, but
+    // the pair is returned, because the colour is not part of the key and a
+    // repaint has to reach the row without being reported as a change.
+    const untouched: { existing: ExistingEvent; scraped: ParsedEvent }[] = []
     for (let i = remainingExisting.length - 1; i >= 0; i--) {
         const relKey = existingRelationsKey(remainingExisting[i]!)
         const match = remainingScraped.findIndex((ev) => relationsKey(ev) === relKey)
         if (match !== -1) {
-            remainingExisting.splice(i, 1)
-            remainingScraped.splice(match, 1)
+            untouched.push({
+                existing: remainingExisting.splice(i, 1)[0]!,
+                scraped: remainingScraped.splice(match, 1)[0]!,
+            })
         }
     }
 
@@ -180,7 +187,7 @@ function matchSlot(
         })
     }
 
-    return { updated, removed: remainingExisting, added: remainingScraped }
+    return { untouched, updated, removed: remainingExisting, added: remainingScraped }
 }
 
 async function getOrCreateLocation(
@@ -226,7 +233,12 @@ async function insertEventWithRelations(
 ): Promise<void> {
     const [inserted] = await tx
         .insert(events)
-        .values({ title: ev.title, startDate: ev.startDate, endDate: ev.endDate })
+        .values({
+            title: ev.title,
+            startDate: ev.startDate,
+            endDate: ev.endDate,
+            color: ev.color ?? null,
+        })
         .returning({ id: events.id })
 
     for (const room of ev.rooms) {
@@ -285,11 +297,21 @@ export async function applyWeekEvents(
         const toRemove: string[] = []
         const toAdd: ParsedEvent[] = []
         const toUpdate: ParsedEvent[] = []
+        // The colour is a presentation detail, not part of what identifies an
+        // event: a repaint updates the row in place and emits no eventChanges
+        // row, or every palette tweak on the planning would read as a wave of
+        // modified courses on /planning/changes.
+        const toRecolor: { id: string; color: string | null }[] = []
 
         const diff: WeekDiff = { added: [], removed: [], updated: [] }
 
         for (const key of new Set([...existingBySlot.keys(), ...scrapedBySlot.keys()])) {
             const slot = matchSlot(existingBySlot.get(key) ?? [], scrapedBySlot.get(key) ?? [])
+
+            for (const { existing, scraped: scrapedEv } of slot.untouched) {
+                const color = scrapedEv.color ?? null
+                if (existing.color !== color) toRecolor.push({ id: existing.id, color })
+            }
 
             for (const { existing, scraped: scrapedEv } of slot.updated) {
                 toRemove.push(existing.id)
@@ -346,6 +368,12 @@ export async function applyWeekEvents(
 
         for (const ev of [...toAdd, ...toUpdate]) {
             await insertEventWithRelations(tx, ev)
+        }
+
+        // Deleted-and-reinserted rows carry the new colour already; these are
+        // the ones nothing else touched.
+        for (const { id, color } of toRecolor) {
+            await tx.update(events).set({ color }).where(eq(events.id, id))
         }
 
         return diff

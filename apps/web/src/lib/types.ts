@@ -31,6 +31,8 @@ export interface ApiEvent {
     startDate: string | number
     endDate: string | number
     source: string
+    /** `#rrggbb` the planning paints the event with; null when it paints none. */
+    color: string | null
     rooms: Room[]
     teachers: Teacher[]
     groups: Group[]

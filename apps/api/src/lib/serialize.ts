@@ -43,6 +43,7 @@ export type EventRow = {
     startDate: Date
     endDate: Date
     source: string
+    color: string | null
     eventLocations: { location: { id: string; name: string } }[]
     eventTeachers: { teacher: { id: string; firstName: string; lastName: string } }[]
     eventStudentGroups: {
@@ -57,6 +58,8 @@ export function eventToDto(row: EventRow, fmt: DateFormat) {
         startDate: formatDate(row.startDate, fmt),
         endDate: formatDate(row.endDate, fmt),
         source: row.source,
+        /** `#rrggbb` from the planning, or null when it painted none. */
+        color: row.color,
         rooms: row.eventLocations.map((el) => el.location),
         teachers: row.eventTeachers.map((et) => et.teacher),
         groups: row.eventStudentGroups.map((eg) => eg.studentGroup),

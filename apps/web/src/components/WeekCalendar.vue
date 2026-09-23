@@ -53,7 +53,9 @@ const calendarEvents = computed(() =>
         name: e.title,
         start: toCalendarLocalDate(e.start),
         end: toCalendarLocalDate(e.end),
-        color: 'primary',
+        // The planning's own colour is the course's category; 'primary' is the
+        // fallback for a row scraped before it was read.
+        color: e.color ?? 'primary',
         timed: true,
         full: e,
     })),

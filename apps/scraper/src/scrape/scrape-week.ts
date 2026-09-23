@@ -34,10 +34,11 @@ async function scrapeWeek(
     const rawEvents = await extractRawEvents(page)
 
     const parsed: ParsedEvent[] = []
-    for (const { rawText, left } of rawEvents) {
+    for (const { rawText, left, color } of rawEvents) {
         const dayIndex = Math.floor(left / columnWidth)
         const event = parseEventText(rawText, dayIndex, weekDates, knownGroupNames, strictGroups)
-        if (event) parsed.push(event)
+        // The colour comes off the DOM, not the text, so the parser never sees it.
+        if (event) parsed.push({ ...event, color })
     }
 
     const weekMonday = parseWeekMonday(weekDates)

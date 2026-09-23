@@ -3,11 +3,19 @@ import { groupLabel } from '../lib/group-label.js'
 import { computed } from 'vue'
 import type { Event } from '../lib/types.js'
 import { formatTime } from '../lib/date.js'
+import { scrapedColor, textOn } from '../lib/event-color.js'
 import EventDetailsDialog from './EventDetailsDialog.vue'
 
 const props = defineProps<{ event: { color?: string; name?: string; full?: Event } }>()
 
 const eventFull = computed<Event>(() => props.event.full!)
+
+// The comparison view hands out a theme name per group on purpose; only a
+// scraped `#rrggbb` bypasses Vuetify's palette.
+const custom = computed(() => scrapedColor(props.event.color))
+const customStyle = computed(() =>
+    custom.value ? { backgroundColor: custom.value, color: textOn(custom.value) } : undefined,
+)
 </script>
 
 <template>
@@ -15,7 +23,8 @@ const eventFull = computed<Event>(() => props.event.full!)
         <template #activator="{ props: aProps }">
             <v-card
                 v-bind="aProps"
-                :color="props.event.color"
+                :color="custom ? undefined : props.event.color"
+                :style="customStyle"
                 variant="flat"
                 class="fill-height event-card"
                 link
@@ -34,9 +43,7 @@ const eventFull = computed<Event>(() => props.event.full!)
                         {{ eventFull.rooms.map((r) => r.name).join(', ') }}
                     </div>
                     <div class="text-caption event-line event-detail event-detail-3">
-                        {{
-                            eventFull.groups.map(groupLabel).join(', ') || 'Aucun groupe'
-                        }}
+                        {{ eventFull.groups.map(groupLabel).join(', ') || 'Aucun groupe' }}
                     </div>
                 </v-card-text>
             </v-card>

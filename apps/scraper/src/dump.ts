@@ -39,12 +39,17 @@ try {
         const columnWidth = await computeColumnWidth(page)
         const rawEvents = await extractRawEvents(page)
 
-        const events = rawEvents.map(({ rawText, left }) => {
+        const events = rawEvents.map(({ rawText, left, color }) => {
             const dayIndex = Math.floor(left / columnWidth)
             const parsed = parseEventText(rawText, dayIndex, weekDates, new Set())
             // rawText is what the parser actually saw. It is the only way to
             // diagnose a miscategorised line after the fact, so keep it.
-            return { date: weekDates[dayIndex] ?? null, rawText, parsed }
+            return {
+                date: weekDates[dayIndex] ?? null,
+                rawText,
+                color,
+                parsed: parsed ? { ...parsed, color } : parsed,
+            }
         })
 
         weeks.push({ weekId, weekDates, events })

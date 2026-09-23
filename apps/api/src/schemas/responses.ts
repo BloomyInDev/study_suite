@@ -78,6 +78,11 @@ export const EventDtoSchema = z
             example: '2026-09-01T10:30:00.000Z',
         }),
         source: z.string().openapi({ example: 'prose' }),
+        color: z.string().nullable().openapi({
+            description:
+                'The colour the planning paints the event with, `#rrggbb`: its category as the source shows it. Null for an event scraped before the colour was read, or one the planning leaves unpainted.',
+            example: '#cfe2ff',
+        }),
         rooms: z.array(LocationSchema),
         teachers: z.array(TeacherRefSchema),
         groups: z.array(GroupRefSchema),
