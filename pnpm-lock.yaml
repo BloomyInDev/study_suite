@@ -104,6 +104,34 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  apps/scraper-ade:
+    dependencies:
+      '@studysuite/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@studysuite/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
+      zod:
+        specifier: ^3.24.4
+        version: 3.25.76
+    devDependencies:
+      '@studysuite/tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/tsconfig
+      '@types/node':
+        specifier: ^22.15.18
+        version: 22.19.19
+      tsx:
+        specifier: ^4.19.4
+        version: 4.22.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@22.19.19)(jsdom@30.0.1)(vite@6.4.2(@types/node@22.19.19)(terser@5.51.2)(tsx@4.22.1)(yaml@2.9.0))
+
   apps/web:
     dependencies:
       '@fortawesome/fontawesome-free':

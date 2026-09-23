@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/api/package.json     apps/api/
 COPY apps/scraper/package.json apps/scraper/
+COPY apps/scraper-ade/package.json apps/scraper-ade/
 COPY apps/web/package.json     apps/web/
 COPY packages/db/package.json       packages/db/
 COPY packages/shared/package.json   packages/shared/

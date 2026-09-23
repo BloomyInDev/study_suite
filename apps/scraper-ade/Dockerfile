@@ -1,5 +1,6 @@
-# Use the official Playwright image — browsers + all system deps pre-installed
-FROM mcr.microsoft.com/playwright:v1.60.0-noble
+# Plain Node: the scraper talks to ADE's iCalendar servlet over HTTP and needs
+# no browser, unlike apps/scraper which runs on the Playwright image.
+FROM node:22-slim
 WORKDIR /app
 
 RUN npm install -g pnpm@11.21.0
@@ -13,12 +14,10 @@ COPY packages/db/package.json       packages/db/
 COPY packages/shared/package.json   packages/shared/
 COPY packages/tsconfig/package.json packages/tsconfig/
 
-# Skip re-downloading browsers — they're already in the base image
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-RUN pnpm install --frozen-lockfile --filter @studysuite/scraper...
+RUN pnpm install --frozen-lockfile --filter @studysuite/scraper-ade...
 
 COPY packages/ packages/
-COPY apps/scraper/ apps/scraper/
+COPY apps/scraper-ade/ apps/scraper-ade/
 
 # Watch loop: rescrapes every scrape.intervalMs and stays up.
-CMD ["pnpm", "--filter", "@studysuite/scraper", "run", "start"]
+CMD ["pnpm", "--filter", "@studysuite/scraper-ade", "run", "start"]

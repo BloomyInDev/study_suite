@@ -27,6 +27,8 @@ jobs:
                       build-args: VITE_GIT_COMMIT_HASH=${{ github.sha }}
                     - name: scraper
                       dockerfile: apps/scraper/Dockerfile
+                    - name: scraper-ade
+                      dockerfile: apps/scraper-ade/Dockerfile
                     - name: migrate
                       dockerfile: packages/db/Dockerfile
 

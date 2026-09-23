@@ -110,6 +110,34 @@ services:
         #   docker compose run --rm scraper pnpm -F @studysuite/scraper scrape
         restart: unless-stopped
 
+    # Same job as `scraper`, over ADE's iCalendar servlet instead of a browser
+    # (see apps/scraper-ade). Both reconcile the same tables, so run one or the
+    # other, never both: opt in with `--profile ade` and stop `scraper`.
+    scraper-ade:
+        image: ghcr.io/bloomyindev/study_suite/scraper-ade:latest
+        profiles: ['ade']
+        build:
+            context: .
+            dockerfile: apps/scraper-ade/Dockerfile
+        environment:
+            DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+            CONFIG_PATH: /config.yaml
+        volumes:
+            # Reads the same file as `scraper`; keys it does not know are ignored.
+            # See apps/scraper-ade/example.config.yaml for its own.
+            - ./scraper.config.yaml:/config.yaml:ro
+        depends_on:
+            postgres:
+                condition: service_healthy
+            migrate:
+                condition: service_completed_successfully
+        networks:
+            - backend
+            - egress
+        # One-shot pass:
+        #   docker compose run --rm scraper-ade pnpm -F @studysuite/scraper-ade scrape
+        restart: unless-stopped
+
 networks:
     # Lets nginx resolve and reach `api` for its /api/ and /auth/ proxy_pass.
     # Not internal: the reverse proxy lives on another host and reaches web

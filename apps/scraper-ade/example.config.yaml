@@ -1,0 +1,21 @@
+# Scraper configuration
+# Copy this file to config.yaml and adjust for your environment.
+# cp example.config.yaml config.yaml
+# All values can be set here. Env vars take precedence when defined.
+
+database:
+    # url: postgres://user:pass@localhost:5432/study_suite
+
+scrape:
+    # The Prose Consult /direct/?data=... planning URL. The data blob is the
+    # credential: it encodes which groups the feed covers.
+    # url: https://...
+    intervalMs: 1800000
+    # How far back and forward to reconcile, in days.
+    pastDays: 30
+    futureDays: 365
+    # ADE project id. It is an academic year, not a deployment, so it changes every
+    # September. Leave it commented out: the scraper picks the project holding
+    # the most events in its range and rolls over on its own. Pin it only to
+    # force a specific year.
+    # projectId: 9
