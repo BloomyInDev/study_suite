@@ -22,7 +22,20 @@ export async function readWeekDates(page: Page): Promise<string[]> {
  * Whether the header is complete enough to trust the columns under it. A
  * half-rendered header is the difference between reading a week and reading
  * nothing, and reading nothing used to delete the week.
+ *
+ * Five valid dates are not enough: a header caught mid-swap read Tuesday to
+ * Saturday, and its first date became the start of a week window that deleted
+ * Tuesday to the next Monday. The first column is always a Monday.
  */
 export function isWeekHeaderReady(dates: string[]): boolean {
-    return dates.length >= MIN_DAY_COLUMNS && dates.every((d) => DAY_DATE.test(d))
+    return (
+        dates.length >= MIN_DAY_COLUMNS &&
+        dates.every((d) => DAY_DATE.test(d)) &&
+        isMonday(dates[0]!)
+    )
+}
+
+function isMonday(date: string): boolean {
+    const [day, month, year] = date.split('/').map((n) => parseInt(n, 10))
+    return new Date(Date.UTC(year!, month! - 1, day!)).getUTCDay() === 1
 }
