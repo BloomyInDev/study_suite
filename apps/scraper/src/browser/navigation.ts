@@ -27,6 +27,9 @@ export class WeekNavigationError extends Error {
 export async function gotoPlanning(page: Page, url: string): Promise<void> {
     await page.goto(url)
     await page.waitForSelector('div#Planning')
+    // The planning is on screen before the initial load finishes, and a click
+    // landing under its spinner is dropped: the first week was never scraped.
+    await page.waitForSelector('.gwt-PopupPanel', { state: 'detached' })
 }
 
 export async function getCurrentWeekId(page: Page): Promise<number> {
