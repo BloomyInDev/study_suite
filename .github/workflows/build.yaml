@@ -4,6 +4,9 @@ on:
     push:
         branches:
             - main
+            # Preview env. Only main publishes `:latest`; this branch, and a
+            # manual run from any other, publishes `:staging`.
+            - staging
     workflow_dispatch:
 
 concurrency:
@@ -55,6 +58,6 @@ jobs:
                   push: true
                   provenance: false
                   platforms: linux/amd64
-                  tags: ghcr.io/bloomyindev/study_suite/${{ matrix.name }}:latest
+                  tags: ghcr.io/bloomyindev/study_suite/${{ matrix.name }}:${{ github.ref_name == 'main' && 'latest' || 'staging' }}
                   cache-from: type=gha,scope=${{ matrix.name }}
                   cache-to: type=gha,mode=max,scope=${{ matrix.name }}
