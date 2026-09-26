@@ -3,6 +3,7 @@ import { groupLabel } from '../lib/group-label.js'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
+import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { Duration, type Event } from '../lib/types.js'
 import CalendarEvent from '../components/CalendarEvent.vue'
 import {
@@ -15,6 +16,9 @@ import {
 
 const groupsStore = useGroupsStore()
 const eventsStore = useEventsStore()
+// Only "Mon Planning" leaves hidden courses out; the groups it is compared
+// with are shown whole.
+const hiddenCourses = useHiddenCoursesStore()
 
 // See PlanningView: a real instant lands on the previous day before 02h Paris.
 const date = ref(wallClockNow())
@@ -111,7 +115,7 @@ const isToday = (dateStr: string) => {
 }
 
 watch(
-    [date, () => groupsStore.effectiveGroupIds],
+    [date, () => groupsStore.effectiveGroupIds, () => hiddenCourses.key],
     async ([newDate, newGroupIds], _, onCleanup) => {
         let cancelled = false
         onCleanup(() => {
@@ -123,7 +127,11 @@ watch(
         }
         loadingMy.value = true
         try {
-            const evts = await eventsStore.fetchDayEvents(newDate as Date, newGroupIds as string[])
+            const evts = await eventsStore.fetchDayEvents(
+                newDate as Date,
+                newGroupIds as string[],
+                hiddenCourses.titles,
+            )
             if (!cancelled) myEvents.value = evts
         } finally {
             if (!cancelled) loadingMy.value = false

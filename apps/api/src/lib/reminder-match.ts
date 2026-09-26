@@ -11,6 +11,8 @@ export interface Subscriber {
     id: string
     groupIds: string[]
     leadMinutes: number
+    /** Titles the user hid; the planning does not show them, so neither does this. */
+    excludedTitles: string[]
 }
 
 /** The event fields it reads, in the shape `withEventRelations` returns. */
@@ -82,12 +84,14 @@ export function duePairs<S extends Subscriber, E extends UpcomingEvent>(
         // A visitor who has not picked a group yet is subscribed to nothing.
         if (sub.groupIds.length === 0) continue
         const groups = new Set(sub.groupIds)
+        const hidden = new Set(sub.excludedTitles)
         const lead = sub.leadMinutes * 60_000
 
         for (const event of upcoming) {
             if (event.startDate.getTime() <= now.getTime()) continue
             if (event.startDate.getTime() - now.getTime() > lead) continue
             if (!event.eventStudentGroups.some((g) => groups.has(g.studentGroup.id))) continue
+            if (hidden.has(event.title)) continue
             pairs.push({ sub, event })
         }
     }

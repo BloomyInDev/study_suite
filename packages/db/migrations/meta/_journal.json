@@ -113,6 +113,13 @@
       "when": 1790166980856,
       "tag": "0015_wide_paibok",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790449624872,
+      "tag": "0016_spicy_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }

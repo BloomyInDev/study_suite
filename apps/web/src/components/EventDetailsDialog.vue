@@ -1,9 +1,25 @@
 <script setup lang="ts">
+import { inject, ref } from 'vue'
 import { groupLabel } from '../lib/group-label.js'
 import type { Event } from '../lib/types.js'
 import { formatFullDate } from '../lib/date.js'
+import { CAN_HIDE_COURSES, useHiddenCoursesStore } from '../stores/hidden-courses.js'
+import { useNotificationsStore } from '../stores/notifications.js'
 
-defineProps<{ event: Event }>()
+const props = defineProps<{ event: Event }>()
+
+const canHide = inject(CAN_HIDE_COURSES, ref(false))
+const hiddenCourses = useHiddenCoursesStore()
+const notifs = useNotificationsStore()
+
+function hideCourse(close: () => void) {
+    hiddenCourses.hide(props.event.title)
+    notifs.info(
+        `«\u00a0${props.event.title}\u00a0» est masqué. Vous pouvez le réafficher depuis votre profil.`,
+        5000,
+    )
+    close()
+}
 
 const groupAccentClass = (index: number): string => {
     const accents = [
@@ -54,6 +70,12 @@ const groupAccentClass = (index: number): string => {
                     </div>
                 </v-card-text>
                 <v-card-actions>
+                    <v-btn
+                        v-if="canHide"
+                        prepend-icon="mdi-eye-off"
+                        text="Masquer ce cours"
+                        @click="hideCourse(() => (isActive.value = false))"
+                    />
                     <v-spacer />
                     <v-btn text="Fermer" @click="isActive.value = false" />
                 </v-card-actions>

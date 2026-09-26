@@ -2,18 +2,24 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
+import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import type { Event } from '../lib/types.js'
 import { wallClockNow } from '../lib/date.js'
 
 const eventsStore = useEventsStore()
 const groups = useGroupsStore()
+const hiddenCourses = useHiddenCoursesStore()
 
 const events = ref<Event[]>([])
 const loading = ref(true)
 
 async function load() {
     try {
-        events.value = await eventsStore.fetchWeekEvents(wallClockNow(), groups.effectiveGroupIds)
+        events.value = await eventsStore.fetchWeekEvents(
+            wallClockNow(),
+            groups.effectiveGroupIds,
+            hiddenCourses.titles,
+        )
     } finally {
         loading.value = false
     }
@@ -22,7 +28,7 @@ async function load() {
 onMounted(() => void load())
 // The hierarchy arrives after mount; reload when the ancestors join in.
 watch(
-    () => groups.effectiveGroupIds.join(','),
+    () => `${groups.effectiveGroupIds.join(',')}|${hiddenCourses.key}`,
     () => void load(),
 )
 

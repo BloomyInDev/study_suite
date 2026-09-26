@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, provide, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { backend } from '../lib/api.js'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
+import { CAN_HIDE_COURSES, useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { useGroupOverride } from '../lib/group-override.js'
 import { groupLabel } from '../lib/group-label.js'
 import type { Event, Teacher } from '../lib/types.js'
@@ -54,6 +55,12 @@ const pickedGroupIds = computed({
     set: (ids: string[]) => override.set(ids),
 })
 const eventsStore = useEventsStore()
+const hiddenCourses = useHiddenCoursesStore()
+// Hidden courses are the student's own business: a teacher's timetable, or a
+// class looked up with `?group=`, is shown whole.
+const ownPlanning = computed(() => !teacherId.value && !override.isActive.value)
+const hiddenTitles = computed(() => (ownPlanning.value ? hiddenCourses.titles : []))
+provide(CAN_HIDE_COURSES, ownPlanning)
 const events = ref<Event[]>([])
 // Wall-clock, not `new Date()`: `mondayOfWeek` reads the UTC getters, so a real
 // instant between midnight and 02h Paris still falls on the previous day and the
@@ -66,8 +73,11 @@ const loading = ref(false)
 let requestId = 0
 
 watch(
-    [teacherId, () => override.groupIds.value, date],
-    async ([newTeacherId, newGroupIds, newDate], [oldTeacherId, oldGroupIds, oldDate]) => {
+    [teacherId, () => override.groupIds.value, date, () => hiddenTitles.value.join('\n')],
+    async (
+        [newTeacherId, newGroupIds, newDate, newHidden],
+        [oldTeacherId, oldGroupIds, oldDate, oldHidden],
+    ) => {
         // Paging within a week shows the same events; a teacher or group change never does.
         const sameWeek =
             oldDate !== undefined &&
@@ -77,7 +87,8 @@ watch(
             oldGroupIds !== undefined &&
             oldGroupIds.length === newGroupIds.length &&
             newGroupIds.every((id) => oldGroupIds.includes(id))
-        if (sameWeek && sameTeacher && (newTeacherId !== null || sameGroups)) return
+        const sameHidden = newHidden === oldHidden
+        if (sameWeek && sameTeacher && sameHidden && (newTeacherId !== null || sameGroups)) return
 
         const token = ++requestId
         if (newTeacherId === null && newGroupIds.length === 0) {
@@ -92,6 +103,7 @@ watch(
                 : await eventsStore.fetchWeekEvents(
                       mondayOfWeek(newDate as Date),
                       newGroupIds as string[],
+                      hiddenTitles.value,
                   )
             if (token !== requestId) return
             events.value = fetched ?? []
@@ -185,6 +197,17 @@ watch(
                 />
             </template>
             <template #append>
+                <v-chip
+                    v-if="ownPlanning && hiddenCourses.titles.length > 0"
+                    to="/profile"
+                    prepend-icon="mdi-eye-off"
+                    variant="tonal"
+                    :size="mobile ? 'small' : undefined"
+                >
+                    {{ hiddenCourses.titles.length }} masqué{{
+                        hiddenCourses.titles.length > 1 ? 's' : ''
+                    }}
+                </v-chip>
                 <v-tooltip v-if="!teacherId" text="Changements récents" location="start">
                     <template #activator="{ props }">
                         <v-btn

@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
 import { useAuthStore } from '../stores/auth.js'
+import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { mondayOfWeek, toWallClock } from '../lib/date.js'
 import type { Event, Assignment } from '../lib/types.js'
 import NoGroupsCard from '../components/NoGroupsCard.vue'
@@ -18,6 +19,7 @@ import FreeRoomsCard from '../components/FreeRoomsCard.vue'
 const groupStore = useGroupsStore()
 const eventsStore = useEventsStore()
 const auth = useAuthStore()
+const hiddenCourses = useHiddenCoursesStore()
 
 const events = ref<Event[]>([])
 const assignments = ref<Assignment[]>([])
@@ -34,9 +36,11 @@ async function load() {
     loading.value = true
     try {
         const promises: Promise<void>[] = [
-            eventsStore.fetchUpcoming(groupStore.effectiveGroupIds, 10).then((e) => {
-                events.value = e
-            }),
+            eventsStore
+                .fetchUpcoming(groupStore.effectiveGroupIds, 10, hiddenCourses.titles)
+                .then((e) => {
+                    events.value = e
+                }),
         ]
         if (auth.isAuthenticated && groupStore.effectiveGroupIds.length > 0) {
             const cutoff = new Date()
@@ -105,7 +109,7 @@ const doneCount = computed(() => upcomingAssignments.value.length - todoAssignme
 // allGroups loads after mount, so the ancestors, and with them the promo's
 // events, only join effectiveGroupIds a moment later.
 watch(
-    () => groupStore.effectiveGroupIds.join(','),
+    () => `${groupStore.effectiveGroupIds.join(',')}|${hiddenCourses.key}`,
     () => void load(),
 )
 

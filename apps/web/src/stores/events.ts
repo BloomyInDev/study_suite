@@ -21,11 +21,20 @@ const pad = (n: number) => n.toString().padStart(2, '0')
 const toUtcDateKey = (d: Date) =>
     `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
 
-const buildCacheKey = (groupIds: string[], duration: Duration, date: Date): string => {
+const buildCacheKey = (
+    groupIds: string[],
+    duration: Duration,
+    date: Date,
+    excludeTitles: string[],
+): string => {
     const gKey = [...groupIds].sort().join(',')
     const dKey = duration === Duration.WEEK ? toUtcDateKey(mondayOfWeek(date)) : toUtcDateKey(date)
-    return `${gKey}-${duration}-${dKey}`
+    const tKey = [...excludeTitles].sort().join('\n')
+    return `${gKey}-${duration}-${dKey}-${tKey}`
 }
+
+/** The `excludeTitle` query param, left out entirely when nothing is hidden. */
+const excludeQuery = (titles: string[]) => (titles.length > 0 ? { excludeTitle: titles } : {})
 
 export const useEventsStore = defineStore('events', {
     state: () => ({
@@ -43,20 +52,41 @@ export const useEventsStore = defineStore('events', {
             return !!c && Date.now() - c.fetchedAt < CACHE_TTL
         },
 
-        getCached(groupIds: string[], duration: Duration, date: Date): Event[] | null {
-            const key = buildCacheKey(groupIds, duration, date)
+        getCached(
+            groupIds: string[],
+            duration: Duration,
+            date: Date,
+            excludeTitles: string[] = [],
+        ): Event[] | null {
+            const key = buildCacheKey(groupIds, duration, date, excludeTitles)
             return this.isCacheValid(key) ? this.cache.get(key)!.events : null
         },
 
-        setCache(groupIds: string[], duration: Duration, date: Date, events: Event[]) {
-            this.cache.set(buildCacheKey(groupIds, duration, date), {
+        setCache(
+            groupIds: string[],
+            duration: Duration,
+            date: Date,
+            events: Event[],
+            excludeTitles: string[] = [],
+        ) {
+            this.cache.set(buildCacheKey(groupIds, duration, date, excludeTitles), {
                 events,
                 fetchedAt: Date.now(),
             })
         },
 
-        async fetchEvents(groupIds: string[], duration: Duration, date: Date): Promise<Event[]> {
-            const cached = this.getCached(groupIds, duration, date)
+        /**
+         * `excludeTitles` is the student's hidden courses. Only their own
+         * planning passes it: a room, a teacher or someone else's group is
+         * shown whole.
+         */
+        async fetchEvents(
+            groupIds: string[],
+            duration: Duration,
+            date: Date,
+            excludeTitles: string[] = [],
+        ): Promise<Event[]> {
+            const cached = this.getCached(groupIds, duration, date, excludeTitles)
             if (cached) return cached
 
             this.loading = true
@@ -65,13 +95,13 @@ export const useEventsStore = defineStore('events', {
                 if (duration === Duration.WEEK) {
                     const monday = mondayOfWeek(date)
                     const res = await backend.api.events.week.$get({
-                        query: { date: toIsoDateString(monday) },
+                        query: { date: toIsoDateString(monday), ...excludeQuery(excludeTitles) },
                     })
                     const weekBody = await res.json()
                     all = (weekBody.data ?? []).map(enhanceEvent)
                 } else {
                     const res = await backend.api.events.day.$get({
-                        query: { date: toIsoDateString(date) },
+                        query: { date: toIsoDateString(date), ...excludeQuery(excludeTitles) },
                     })
                     const dayBody = await res.json()
                     all = (dayBody.data ?? []).map(enhanceEvent)
@@ -82,19 +112,27 @@ export const useEventsStore = defineStore('events', {
                         ? all.filter((e) => e.groups.some((g) => groupIds.includes(g.id)))
                         : all
 
-                this.setCache(groupIds, duration, date, filtered)
+                this.setCache(groupIds, duration, date, filtered, excludeTitles)
                 return filtered
             } finally {
                 this.loading = false
             }
         },
 
-        async fetchWeekEvents(date: Date, groupIds: string[]): Promise<Event[]> {
-            return this.fetchEvents(groupIds, Duration.WEEK, date)
+        async fetchWeekEvents(
+            date: Date,
+            groupIds: string[],
+            excludeTitles: string[] = [],
+        ): Promise<Event[]> {
+            return this.fetchEvents(groupIds, Duration.WEEK, date, excludeTitles)
         },
 
-        async fetchDayEvents(date: Date, groupIds: string[]): Promise<Event[]> {
-            return this.fetchEvents(groupIds, Duration.DAY, date)
+        async fetchDayEvents(
+            date: Date,
+            groupIds: string[],
+            excludeTitles: string[] = [],
+        ): Promise<Event[]> {
+            return this.fetchEvents(groupIds, Duration.DAY, date, excludeTitles)
         },
 
         /**
@@ -155,11 +193,19 @@ export const useEventsStore = defineStore('events', {
             return 'id' in body ? enhanceEvent(body) : null
         },
 
-        async fetchUpcoming(groupIds: string[], limit = 5): Promise<Event[]> {
+        async fetchUpcoming(
+            groupIds: string[],
+            limit = 5,
+            excludeTitles: string[] = [],
+        ): Promise<Event[]> {
             // The api applies the limit after filtering, so this really is the
             // user's next `limit` events rather than everyone's.
             const res = await backend.api.events.upcoming.$get({
-                query: groupIds.length > 0 ? { limit, groupIds: groupIds.join(',') } : { limit },
+                query: {
+                    limit,
+                    ...(groupIds.length > 0 ? { groupIds: groupIds.join(',') } : {}),
+                    ...excludeQuery(excludeTitles),
+                },
             })
             const body = await res.json()
             return (body.data ?? []).map(enhanceEvent)

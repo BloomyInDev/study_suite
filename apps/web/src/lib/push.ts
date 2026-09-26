@@ -75,6 +75,7 @@ async function save(
     subscription: PushSubscription,
     groupIds: string[],
     leadMinutes: number,
+    excludedTitles: string[],
 ): Promise<void> {
     const { keys } = subscription.toJSON() as { keys?: { p256dh?: string; auth?: string } }
     if (!keys?.p256dh || !keys.auth) throw new Error('subscription carries no keys')
@@ -85,6 +86,7 @@ async function save(
             keys: { p256dh: keys.p256dh, auth: keys.auth },
             groupIds,
             leadMinutes,
+            excludedTitles,
         },
     })
     if (!res.ok) throw new Error(`api refused the subscription (${res.status})`)
@@ -100,6 +102,7 @@ export async function enablePush(
     vapidPublicKey: string,
     groupIds: string[],
     leadMinutes: number,
+    excludedTitles: string[],
 ): Promise<PushSubscription> {
     if (!pushSupported()) throw new Error('unsupported')
 
@@ -116,7 +119,7 @@ export async function enablePush(
             applicationServerKey: decodeVapidKey(vapidPublicKey),
         }))
 
-    await save(subscription, groupIds, leadMinutes)
+    await save(subscription, groupIds, leadMinutes, excludedTitles)
     return subscription
 }
 
@@ -131,14 +134,18 @@ export async function disablePush(): Promise<void> {
 }
 
 /**
- * Re-send the current groups and lead time, after the student changes class,
- * picks different groups, or the browser rotates the subscription. A no-op when
- * this browser never subscribed.
+ * Re-send the current groups, lead time and hidden courses, after the student
+ * changes class, picks different groups, hides a course, or the browser rotates
+ * the subscription. A no-op when this browser never subscribed.
  */
-export async function syncPush(groupIds: string[], leadMinutes: number): Promise<boolean> {
+export async function syncPush(
+    groupIds: string[],
+    leadMinutes: number,
+    excludedTitles: string[],
+): Promise<boolean> {
     const subscription = await currentSubscription()
     if (!subscription) return false
-    await save(subscription, groupIds, leadMinutes)
+    await save(subscription, groupIds, leadMinutes, excludedTitles)
     return true
 }
 

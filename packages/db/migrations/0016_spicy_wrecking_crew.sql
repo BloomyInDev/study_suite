@@ -1,0 +1,1 @@
+ALTER TABLE "push_subscriptions" ADD COLUMN "excluded_titles" text[] DEFAULT '{}' NOT NULL;

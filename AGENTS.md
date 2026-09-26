@@ -307,6 +307,20 @@ Hono server on Bun, port 3000.
 
 Event timestamps are Paris wall-clock stored as UTC (the scraper builds them with `Date.UTC` from what the page displays), so `lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` with the UTC components and ships a `VTIMEZONE`. Emitting them as `Z` instants would shift every course by one or two hours.
 
+### Hidden courses
+
+A student can hide a course they do not attend. The list is per browser
+(`stores/hidden-courses.ts`, localStorage), by exact title, and the api does
+the filtering: `/api/events`, `/week`, `/day`, `/upcoming` and
+`/api/calendar.ics` take a repeated `excludeTitle` param. Repeated rather than
+comma-separated because a title may hold a comma. On `/upcoming` it applies
+before the limit, which is why it is not done client-side.
+
+The web app only sends it for the student's own planning. A teacher's
+timetable, a room, or a class looked up with `?group=` is shown whole. Push
+reminders are sent server-side, so the subscription carries its own copy
+(`push_subscriptions.excluded_titles`), re-synced whenever the list changes.
+
 ### Course reminders: Web Push
 
 A student who opts in gets a notification a configurable number of minutes

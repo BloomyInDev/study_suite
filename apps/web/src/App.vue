@@ -7,6 +7,7 @@ import { useNotificationsStore } from './stores/notifications.js'
 import { useAuthStore } from './stores/auth.js'
 import { useProvidersStore } from './stores/providers.js'
 import { useRemindersStore } from './stores/reminders.js'
+import { useHiddenCoursesStore } from './stores/hidden-courses.js'
 import GroupPickerDialog from './components/GroupPickerDialog.vue'
 import { usePageSeo } from './lib/seo.js'
 
@@ -18,6 +19,7 @@ const providersStore = useProvidersStore()
 const notifs = useNotificationsStore()
 const auth = useAuthStore()
 const reminders = useRemindersStore()
+const hiddenCourses = useHiddenCoursesStore()
 
 // The one place the head is wired up: every page's title and og: tags come from
 // lib/pages.ts and follow the route, so no view carries head code of its own.
@@ -70,6 +72,11 @@ watch(
     () => groupsStore.effectiveGroupIds,
     () => void reminders.syncGroups(),
     { deep: true },
+)
+// Hiding a course has to reach the api too, or the reminder still fires.
+watch(
+    () => hiddenCourses.key,
+    () => void reminders.syncGroups(),
 )
 
 const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH

@@ -6,6 +6,7 @@ import { defaultCalendarFrom } from '../lib/calendar-window.js'
 import { eventFilterConditions } from '../lib/event-filters.js'
 import { buildCalendar } from '../lib/ical.js'
 import { withEventRelations } from '../lib/serialize.js'
+import { ExcludeTitleSchema } from '../schemas/query.js'
 
 const CalendarQuerySchema = z.object({
     groupId: z.string().uuid().optional(),
@@ -13,6 +14,7 @@ const CalendarQuerySchema = z.object({
     roomId: z.string().uuid().optional(),
     from: z.coerce.date().optional(),
     to: z.coerce.date().optional(),
+    excludeTitle: ExcludeTitleSchema,
 })
 
 /** Name shown by the calendar client, derived from whatever the feed filters on. */

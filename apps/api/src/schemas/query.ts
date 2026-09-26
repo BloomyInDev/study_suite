@@ -18,8 +18,26 @@ export const DateFormatSchema = z
     .default('iso')
 export type DateFormat = z.infer<typeof DateFormatSchema>
 
+/**
+ * Course titles to leave out, matched exactly. Repeated rather than
+ * comma-separated because a title may itself hold a comma:
+ * `?excludeTitle=Anglais&excludeTitle=PPP`. A lone value arrives as a string,
+ * several as an array, and both come out as an array.
+ */
+export const ExcludeTitleSchema = z
+    .union([z.string().max(200), z.array(z.string().max(200)).max(100)])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : [v].flat().filter(Boolean)))
+    .openapi({
+        param: { name: 'excludeTitle', in: 'query' },
+        description:
+            'A course title to hide, matched exactly. Repeat the parameter to hide several.',
+        example: 'Anglais',
+    })
+
 export const DateParamSchema = z.object({
     date: z.string().date(),
+    excludeTitle: ExcludeTitleSchema,
     dateFormat: DateFormatSchema,
 })
 
@@ -35,6 +53,7 @@ export const FilteredEventsSchema = z.object({
     teacherId: z.string().uuid().optional(),
     roomId: z.string().uuid().optional(),
     groupId: z.string().uuid().optional(),
+    excludeTitle: ExcludeTitleSchema,
     dateFormat: DateFormatSchema,
 })
 
@@ -46,6 +65,8 @@ export const LimitSchema = z.object({
         .optional()
         .transform((v) => (v ? v.split(',').filter(Boolean) : undefined))
         .openapi({ param: { name: 'groupIds', in: 'query' } }),
+    /** Applied before the limit, like `groupIds`, so hidden courses do not use it up. */
+    excludeTitle: ExcludeTitleSchema,
     dateFormat: DateFormatSchema,
 })
 

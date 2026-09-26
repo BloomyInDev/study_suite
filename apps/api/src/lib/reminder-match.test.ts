@@ -30,6 +30,7 @@ const subscriber = (over: Partial<Subscriber> = {}): Subscriber => ({
     id: 's1',
     groupIds: ['g-but3a'],
     leadMinutes: 15,
+    excludedTitles: [],
     ...over,
 })
 
@@ -90,6 +91,13 @@ describe('duePairs', () => {
         expect(
             duePairs([subscriber({ groupIds: [] })], [e], minutesBefore(SUMMER, 10)),
         ).toHaveLength(0)
+    })
+
+    it('skips a course the user hid, and only that one', () => {
+        const hid = subscriber({ excludedTitles: [e.title] })
+        const other = event({ id: 'e2', title: 'Anglais' })
+        const due = duePairs([hid], [e, other], minutesBefore(SUMMER, 10))
+        expect(due.map((p) => p.event.id)).toEqual(['e2'])
     })
 })
 

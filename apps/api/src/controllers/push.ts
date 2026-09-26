@@ -23,6 +23,10 @@ const SubscriptionInput = z
                 'Ancestors included. Widen them with the same rule `GET /api/events` callers use, or a promo-wide lecture never matches.',
         }),
         leadMinutes: z.number().int().min(1).max(180).default(15),
+        excludedTitles: z.array(z.string().max(200)).max(100).default([]).openapi({
+            description:
+                'Course titles the user hid, matched exactly. No reminder is sent for them.',
+        }),
     })
     .openapi('PushSubscriptionInput')
 
@@ -31,6 +35,7 @@ const SubscriptionDto = z
         endpoint: z.string(),
         groupIds: z.array(z.string()),
         leadMinutes: z.number(),
+        excludedTitles: z.array(z.string()),
         linkedToAccount: z.boolean(),
     })
     .openapi('PushSubscription')
@@ -100,6 +105,7 @@ const app = base
                     auth: body.keys.auth,
                     groupIds: body.groupIds,
                     leadMinutes: body.leadMinutes,
+                    excludedTitles: body.excludedTitles,
                 })
                 .onConflictDoUpdate({
                     target: pushSubscriptions.endpoint,
@@ -109,6 +115,7 @@ const app = base
                         auth: body.keys.auth,
                         groupIds: body.groupIds,
                         leadMinutes: body.leadMinutes,
+                        excludedTitles: body.excludedTitles,
                         // A browser that just re-subscribed is alive again.
                         failureCount: 0,
                         updatedAt: new Date(),
@@ -122,6 +129,7 @@ const app = base
                         endpoint: row.endpoint,
                         groupIds: row.groupIds,
                         leadMinutes: row.leadMinutes,
+                        excludedTitles: row.excludedTitles,
                         linkedToAccount: row.userId !== null,
                     },
                 },
@@ -160,6 +168,7 @@ const app = base
                               endpoint: row.endpoint,
                               groupIds: row.groupIds,
                               leadMinutes: row.leadMinutes,
+                              excludedTitles: row.excludedTitles,
                               linkedToAccount: row.userId !== null,
                           }
                         : null,

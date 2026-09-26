@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { groupLabel } from '../lib/group-label.js'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import ReminderSettingsCard from '../components/ReminderSettingsCard.vue'
 import { API_URL } from '../lib/api-url'
+import { backend } from '../lib/api.js'
+import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useGroupsStore } from '../stores/groups.js'
 import { useRemindersStore } from '../stores/reminders.js'
@@ -15,9 +17,19 @@ const auth = useAuthStore()
 const reminders = useRemindersStore()
 const notifs = useNotificationsStore()
 const providers = useProvidersStore()
+const hiddenCourses = useHiddenCoursesStore()
 const pickerOpen = ref(false)
 const savingGroup = ref(false)
 const classDraft = ref<string | null>(auth.user?.studentGroupId ?? null)
+
+// Every title the planning holds, so a course can be hidden before it is next
+// on screen. A hidden title that no longer exists stays listed, to be removed.
+const courseTitles = ref<string[]>([])
+const titleChoices = computed(() => [...new Set([...courseTitles.value, ...hiddenCourses.titles])])
+onMounted(async () => {
+    const res = await backend.api.events.titles.$get()
+    if (res.ok) courseTitles.value = (await res.json()).data
+})
 
 function groupLabelById(id: string): string {
     const g = groups.allGroups.find((group) => group.id === id)
@@ -175,6 +187,34 @@ async function saveClass() {
                  still renders, as an invitation to install. -->
             <v-col v-if="reminders.shown" cols="12" md="6">
                 <ReminderSettingsCard />
+            </v-col>
+
+            <v-col cols="12" md="6">
+                <v-card>
+                    <v-card-title>Cours masqués</v-card-title>
+                    <v-card-subtitle>Retirés de votre planning, sur ce navigateur</v-card-subtitle>
+                    <v-card-text>
+                        <v-autocomplete
+                            :model-value="hiddenCourses.titles"
+                            :items="titleChoices"
+                            label="Masquer un cours"
+                            multiple
+                            chips
+                            closable-chips
+                            clearable
+                            variant="outlined"
+                            density="compact"
+                            hide-details
+                            class="mb-3"
+                            @update:model-value="hiddenCourses.set"
+                        />
+                        <div class="text-caption text-medium-emphasis">
+                            Un cours masqué disparaît de votre planning, de l'accueil et des
+                            rappels. «&nbsp;Anglais&nbsp;» et «&nbsp;Anglais - Test&nbsp;» sont deux
+                            cours distincts.
+                        </div>
+                    </v-card-text>
+                </v-card>
             </v-col>
 
             <v-col v-if="!groups.usesAccountGroup" cols="12" md="6">

@@ -5,7 +5,7 @@ import { and, arrayOverlaps, asc, desc, eq, gt, gte, inArray, lt, sql } from 'dr
 import { wallClockNow } from '@studysuite/shared/time'
 import { db } from '../db.js'
 import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
-import { eventFilterConditions } from '../lib/event-filters.js'
+import { eventFilterConditions, excludeTitlesCondition } from '../lib/event-filters.js'
 import { eventChangeToDto, eventToDto, withEventRelations } from '../lib/serialize.js'
 import {
     DateFormatSchema,
@@ -57,11 +57,15 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { date, dateFormat } = c.req.valid('query')
+            const { date, excludeTitle, dateFormat } = c.req.valid('query')
             const from = weekMondayUTC(new Date(date))
             const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000)
             const rows = await db.query.events.findMany({
-                where: and(gte(events.startDate, from), lt(events.startDate, to)),
+                where: and(
+                    gte(events.startDate, from),
+                    lt(events.startDate, to),
+                    excludeTitlesCondition(excludeTitle),
+                ),
                 with: withEventRelations,
                 orderBy: asc(events.startDate),
             })
@@ -81,11 +85,15 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { date, dateFormat } = c.req.valid('query')
+            const { date, excludeTitle, dateFormat } = c.req.valid('query')
             const from = dayStartUTC(new Date(date))
             const to = dayEndUTC(new Date(date))
             const rows = await db.query.events.findMany({
-                where: and(gte(events.startDate, from), lt(events.startDate, to)),
+                where: and(
+                    gte(events.startDate, from),
+                    lt(events.startDate, to),
+                    excludeTitlesCondition(excludeTitle),
+                ),
                 with: withEventRelations,
                 orderBy: asc(events.startDate),
             })
@@ -107,7 +115,7 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { limit, dateFormat, groupIds } = c.req.valid('query')
+            const { limit, dateFormat, groupIds, excludeTitle } = c.req.valid('query')
             const rows = await db.query.events.findMany({
                 where: and(
                     // On `endDate`, not `startDate`: the homepage asks this route for
@@ -125,6 +133,7 @@ export default new OpenAPIHono()
                                   .where(inArray(eventStudentGroups.studentGroupId, groupIds)),
                           )
                         : undefined,
+                    excludeTitlesCondition(excludeTitle),
                 ),
                 with: withEventRelations,
                 orderBy: asc(events.startDate),
