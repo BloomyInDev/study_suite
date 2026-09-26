@@ -14,13 +14,6 @@ const schema = z.object({
         pastDays: zInt.positive().default(30),
         /** How far ahead. The planning is usually published a year out. */
         futureDays: zInt.positive().default(365),
-        /**
-         * ADE project id: an **academic year**, not a deployment. It changes
-         * every September, so leave it unset: the scraper picks the project
-         * holding the most events in its range, which rolls over on its own.
-         * Pin it only to force a specific year during an incident.
-         */
-        projectId: zInt.positive().optional(),
     }),
 })
 
@@ -36,7 +29,6 @@ export const config = loadConfig({
         SCRAPE_INTERVAL_MS: 'scrape.intervalMs',
         SCRAPE_PAST_DAYS: 'scrape.pastDays',
         SCRAPE_FUTURE_DAYS: 'scrape.futureDays',
-        SCRAPE_PROJECT_ID: 'scrape.projectId',
     },
 })
 

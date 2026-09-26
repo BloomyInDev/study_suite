@@ -1,10 +1,12 @@
+import { postRpc, type RpcTarget } from './gwt.js'
+
 /**
  * Signing in to a Prose Consult `/direct/?data=…` planning.
  *
  * The page is an Adesoft ADE 6.12 GWT client. The `data` blob in the URL is the
  * credential (it encodes a set of resources, the groups, server-side), but it is
- * *not* itself a session: the iCalendar servlet wants an `identifier`, which
- * only the GWT-RPC login hands out.
+ * *not* itself a session: every later call is keyed on the connection id sent
+ * here, alongside the `JSESSIONID` cookie.
  *
  * Everything here is shaped by GWT-RPC's wire format rather than by us, so it
  * is deliberately literal. Ported from the reference implementation in
@@ -73,22 +75,24 @@ function buildLoginBody(moduleBase: string, dataParam: string, connectionId: str
     return `7|0|${strings.length}|${strings.join('|')}|${values.join('|')}|`
 }
 
-export interface AdeSession {
-    /** `JSESSIONID=…`, to be sent back on the calendar request. */
-    cookie: string
+export interface AdeSession extends RpcTarget {
+    /** The client connection id, the first argument of every later call. */
+    connectionId: string
     /** The ADE session handle, `<hex32>w<n>`. */
     identifier: string
-    /** Comma-separated resource ids the `data` blob maps to. */
-    resources: string
+    /** Resource ids the `data` blob maps to: the planning's groups. */
+    resources: number[]
+    /** Which display configuration renders this planning, by name. */
+    displayConfName: string
+    /** Weekdays the planning shows, `0` being Monday. */
+    days: number[]
 }
 
 /**
  * Exchanges the `data` blob for a usable session.
  *
- * Two things that look wrong but are not: the POST goes to
- * `…/gwtdirectplanning/DirectPlanningServiceProxy`, not to the module base (the
- * module base answers 500), and the `data` blob cannot be reused as the
- * `identifier`: that has to come from this response.
+ * The `data` blob cannot be reused as the `identifier`: that has to come from
+ * this response.
  */
 export async function login(origin: string, dataParam: string): Promise<AdeSession> {
     const moduleBase = `${origin}/direct/gwtdirectplanning/`
@@ -97,29 +101,34 @@ export async function login(origin: string, dataParam: string): Promise<AdeSessi
     const page = await fetch(pageUrl)
     const cookie = (page.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).join('; ')
 
-    const body = buildLoginBody(moduleBase, dataParam, longToB64LE(BigInt(Date.now())))
-    const res = await fetch(`${moduleBase}DirectPlanningServiceProxy`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'text/x-gwt-rpc; charset=UTF-8',
-            'X-GWT-Permutation': 'B6FB4BD1F96498A84974F1F52B318B82',
-            'X-GWT-Module-Base': moduleBase,
-            Referer: pageUrl,
-            ...(cookie ? { Cookie: cookie } : {}),
-        },
-        body,
-    })
-
-    const text = await res.text()
+    const connectionId = longToB64LE(BigInt(Date.now()))
+    const target: RpcTarget = { moduleBase, pageUrl, cookie }
+    const text = await postRpc(
+        target,
+        'DirectPlanningServiceProxy',
+        buildLoginBody(moduleBase, dataParam, connectionId),
+    )
     if (!text.startsWith('//OK')) {
         throw new Error(`ADE login failed: ${text.slice(0, 200)}`)
     }
 
+    // The response is a HashMap of settings. Its keys and values sit next to
+    // each other in the string table, which is simpler to read than the map.
     const identifier = /"([0-9a-f]{32}w\d+)"/.exec(text)?.[1]
     const resources = /"resources","([0-9,]+)"/.exec(text)?.[1]
-    if (!identifier || !resources) {
-        throw new Error('ADE login returned no identifier/resources')
+    const days = /"days","([0-9,]+)"/.exec(text)?.[1]
+    // A String[] value: its two class names come between key and value.
+    const displayConfName = /"displayConfName","[^"]+","[^"]+","([^"]+)"/.exec(text)?.[1]
+    if (!identifier || !resources || !days || !displayConfName) {
+        throw new Error('ADE login returned no identifier/resources/days/displayConfName')
     }
 
-    return { cookie, identifier, resources }
+    return {
+        ...target,
+        connectionId,
+        identifier,
+        resources: resources.split(',').map(Number),
+        displayConfName,
+        days: days.split(',').map(Number),
+    }
 }

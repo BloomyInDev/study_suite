@@ -2,15 +2,14 @@ import { applyWeekEvents, createDb, insertAllChanges } from '@studysuite/db'
 import type { WeekDiff } from '@studysuite/db'
 import type { ParsedEvent } from '@studysuite/shared'
 import { wallClockNow } from '@studysuite/shared/time'
-import { fetchIcal, resolveProjectId } from '../ade/ical.js'
+import { toEvents } from '../ade/events.js'
 import { login } from '../ade/login.js'
-import { parseCalendar } from '../ade/parse.js'
+import { getDisplayConfigurationId, getTimetable, getWeeks } from '../ade/planning.js'
 import type { Config } from '../config.js'
 
 type Db = ReturnType<typeof createDb>
 
 const DAY_MS = 24 * 60 * 60 * 1000
-const WEEK_MS = 7 * DAY_MS
 
 /**
  * The Monday opening the week a wall-clock label falls in.
@@ -32,7 +31,6 @@ export interface ScrapeResult {
     moved: number
     weeks: number
     events: number
-    projectId: number
     durationMs: number
 }
 
@@ -47,26 +45,47 @@ export async function scrapePlanning(config: Config, db: Db): Promise<ScrapeResu
     const to = new Date(now.getTime() + config.scrape.futureDays * DAY_MS)
 
     const session = await login(origin, dataParam)
-    console.log(`[scraper] Signed in, ${session.resources.split(',').length} resources`)
+    console.log(`[scraper] Signed in, ${session.resources.length} resources`)
+    const configId = await getDisplayConfigurationId(session)
 
-    const projectId = config.scrape.projectId ?? (await resolveProjectId(origin, session, from, to))
-    if (projectId === null) {
-        // Never fall through to reconciliation here. `applyWeekEvents` deletes
-        // whatever a week holds that the scrape did not return, so treating
-        // "no project" as "no events" would empty the whole planning.
-        throw new Error('No ADE project holds events for the configured range')
+    // The session is bound to one ADE project, an academic year, and only
+    // its weeks can be fetched. Weeks of the window outside it are left alone
+    // rather than reconciled against nothing.
+    const first = weekMonday(from).getTime()
+    const last = weekMonday(to).getTime()
+    const weeks = (await getWeeks(session)).filter(
+        (w) => w.monday.getTime() >= first && w.monday.getTime() <= last,
+    )
+    if (weeks.length === 0) {
+        // Never fall through to reconciliation here: `applyWeekEvents` deletes
+        // whatever a week holds that the scrape did not return.
+        throw new Error('The ADE project has no week in the configured range')
     }
     console.log(
-        `[scraper] Project ${projectId}${config.scrape.projectId ? ' (pinned)' : ''}: ` +
-            `${from.toISOString().slice(0, 10)} → ${to.toISOString().slice(0, 10)}`,
+        `[scraper] ${weeks.length} weeks: ` +
+            `${weeks[0]!.monday.toISOString().slice(0, 10)} → ${weeks.at(-1)!.monday.toISOString().slice(0, 10)}`,
     )
 
-    const ics = await fetchIcal(origin, session, projectId, from, to)
-    if (!ics) throw new Error(`ADE returned no calendar for project ${projectId}`)
+    // One call for the whole range: the timetable takes a list of weeks.
+    const { events: squares, columns } = await getTimetable(
+        session,
+        configId,
+        weeks.map((w) => w.index),
+    )
+    const expected = weeks.flatMap((w) =>
+        session.days.map((d) =>
+            new Date(w.monday.getTime() + d * DAY_MS).toISOString().slice(0, 10),
+        ),
+    )
+    if (columns.join() !== expected.join()) {
+        throw new Error(
+            `ADE drew ${columns.length} day columns, not the ${expected.length} requested`,
+        )
+    }
 
-    const events = parseCalendar(ics)
+    const events = toEvents(squares, columns)
     if (events.length === 0) {
-        throw new Error('ADE returned an empty calendar, refusing to reconcile')
+        throw new Error('ADE returned an empty timetable, refusing to reconcile')
     }
 
     const byWeek = new Map<number, ParsedEvent[]>()
@@ -77,18 +96,16 @@ export async function scrapePlanning(config: Config, db: Db): Promise<ScrapeResu
         else byWeek.set(key, [event])
     }
 
-    // Every week in the range, not only the ones that came back with events: a
-    // week whose classes were all cancelled still has rows to remove, and it is
-    // only reconciled if `applyWeekEvents` is called for it.
+    // Every fetched week, not only the ones that came back with events: a week
+    // whose classes were all cancelled still has rows to remove, and it is only
+    // reconciled if `applyWeekEvents` is called for it.
     const diffs: WeekDiff[] = []
-    const lastMonday = weekMonday(to).getTime()
-    for (let monday = weekMonday(from).getTime(); monday <= lastMonday; monday += WEEK_MS) {
-        const scraped = byWeek.get(monday) ?? []
-        const diff = await applyWeekEvents(db, new Date(monday), scraped)
+    for (const { monday } of weeks) {
+        const diff = await applyWeekEvents(db, monday, byWeek.get(monday.getTime()) ?? [])
         diffs.push(diff)
         if (diff.added.length || diff.removed.length || diff.updated.length) {
             console.log(
-                `[scraper]   Week ${new Date(monday).toISOString().slice(0, 10)}: ` +
+                `[scraper]   Week ${monday.toISOString().slice(0, 10)}: ` +
                     `+${diff.added.length} -${diff.removed.length} ~${diff.updated.length}`,
             )
         }
@@ -106,7 +123,6 @@ export async function scrapePlanning(config: Config, db: Db): Promise<ScrapeResu
         ...stats,
         weeks: diffs.length,
         events: events.length,
-        projectId,
         durationMs: Date.now() - t0,
     }
 }

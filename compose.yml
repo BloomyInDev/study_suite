@@ -110,7 +110,7 @@ services:
         #   docker compose run --rm scraper pnpm -F @studysuite/scraper scrape
         restart: unless-stopped
 
-    # Same job as `scraper`, over ADE's iCalendar servlet instead of a browser
+    # Same job as `scraper`, replaying ADE's GWT-RPC calls instead of a browser
     # (see apps/scraper-ade). Both reconcile the same tables, so run one or the
     # other, never both: opt in with `--profile ade` and stop `scraper`.
     scraper-ade:

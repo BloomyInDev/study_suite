@@ -1,4 +1,4 @@
-# Plain Node: the scraper talks to ADE's iCalendar servlet over HTTP and needs
+# Plain Node: the scraper replays ADE's GWT-RPC calls over HTTP and needs
 # no browser, unlike apps/scraper which runs on the Playwright image.
 FROM node:22-slim
 WORKDIR /app

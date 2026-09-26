@@ -11,11 +11,7 @@ scrape:
     # credential: it encodes which groups the feed covers.
     # url: https://...
     intervalMs: 1800000
-    # How far back and forward to reconcile, in days.
+    # How far back and forward to reconcile, in days. Only weeks of the
+    # planning's current academic year are fetched; the rest are left alone.
     pastDays: 30
     futureDays: 365
-    # ADE project id. It is an academic year, not a deployment, so it changes every
-    # September. Leave it commented out: the scraper picks the project holding
-    # the most events in its range and rolls over on its own. Pin it only to
-    # force a specific year.
-    # projectId: 9
