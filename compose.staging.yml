@@ -1,0 +1,106 @@
+# Preview env: the `staging` branch's images, beside production on the same host.
+#
+# Throwaway by design. Postgres lives on a tmpfs, so every `down` or restart
+# starts from an empty database, which scraper-ade refills on its first run.
+# Nothing here reads or writes production's data: separate project, separate
+# networks, no published database port.
+#
+# Deploy from its own directory, under its own project name:
+#   docker compose -p study_staging pull && docker compose -p study_staging up -d
+#
+# The mem limits keep a misbehaving preview from starving production, which
+# shares this 2 GB LXC.
+
+services:
+    postgres:
+        image: postgres:18-alpine
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_DB: study_suite
+        # RAM, not disk: a full scrape is well under 100 MB.
+        tmpfs:
+            - /var/lib/postgresql:size=256m
+        mem_limit: 512m
+        networks:
+            - backend
+        healthcheck:
+            test: ['CMD-SHELL', 'pg_isready -U postgres']
+            interval: 5s
+            timeout: 5s
+            retries: 10
+
+    migrate:
+        image: ghcr.io/bloomyindev/study_suite/migrate:staging
+        environment:
+            DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+        depends_on:
+            postgres:
+                condition: service_healthy
+        networks:
+            - backend
+        restart: 'no'
+
+    api:
+        image: ghcr.io/bloomyindev/study_suite/api:staging
+        environment:
+            DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+            PORT: 3000
+            CORS_ORIGIN: '*'
+            CONFIG_PATH: /config.yaml
+        volumes:
+            # Its own file, not production's: a different jwt.secret and the
+            # preview's own OAuth redirect URIs.
+            - ./api.config.yaml:/config.yaml:ro
+        expose:
+            - '3000'
+        mem_limit: 256m
+        depends_on:
+            postgres:
+                condition: service_healthy
+            migrate:
+                condition: service_completed_successfully
+        networks:
+            - backend
+            - frontend
+        restart: unless-stopped
+
+    web:
+        image: ghcr.io/bloomyindev/study_suite/web:staging
+        environment:
+            SITE_URL: ${SITE_URL:-https://study-staging.bastienluben.dev}
+        # Production holds :80. The front proxy sends study-staging.bastienluben.dev here.
+        ports:
+            - '3000:80'
+        mem_limit: 64m
+        depends_on:
+            - api
+        networks:
+            - frontend
+        restart: unless-stopped
+
+    scraper-ade:
+        image: ghcr.io/bloomyindev/study_suite/scraper-ade:staging
+        environment:
+            DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+            CONFIG_PATH: /config.yaml
+        volumes:
+            # A copy of production's: only scrape.url is read, and the
+            # DATABASE_URL above overrides database.url.
+            - ./scraper.config.yaml:/config.yaml:ro
+        mem_limit: 512m
+        depends_on:
+            postgres:
+                condition: service_healthy
+            migrate:
+                condition: service_completed_successfully
+        networks:
+            - backend
+            - egress
+        restart: unless-stopped
+
+networks:
+    frontend:
+    backend:
+        internal: true
+    egress:
