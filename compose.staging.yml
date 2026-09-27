@@ -107,6 +107,10 @@ services:
         environment:
             DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
             CONFIG_PATH: /config.yaml
+            # POST /scrape runs a scrape now. Unauthenticated: never publish it.
+            SCRAPE_TRIGGER_PORT: 8081
+        expose:
+            - '8081'
         volumes:
             # A copy of production's: only scrape.url is read, and the
             # DATABASE_URL above overrides database.url.
@@ -126,6 +130,10 @@ services:
     # everyone approved, and admin for the Discord ids in ADMIN_DISCORD_IDS
     # (comma-separated, set in the stack's .env). Re-applied every 10 s, so a
     # new login is approved within seconds and a Postgres restart heals itself.
+    # An empty events table asks scraper-ade for a scrape, once per wipe.
+    # By hand:
+    #   docker compose -p study_staging exec staging-seed \
+    #       wget -qO- --post-data= http://scraper-ade:8081/scrape
     staging-seed:
         image: postgres:18-alpine
         environment:
@@ -140,9 +148,17 @@ services:
         entrypoint: ['/bin/sh', '-c']
         command:
             - |
+                asked=0
                 while true; do
                     psql -q -v ON_ERROR_STOP=1 -v admins="$$ADMIN_DISCORD_IDS" -f /seed.sql \
                         || echo "[staging-seed] seed failed, retrying"
+                    events=$$(psql -At -c 'SELECT count(*) FROM events' 2>/dev/null)
+                    if [ "$$events" = 0 ] && [ "$$asked" = 0 ]; then
+                        wget -qO- --post-data= http://scraper-ade:8081/scrape \
+                            && echo "[staging-seed] events empty, scrape requested" && asked=1
+                    elif [ -n "$$events" ] && [ "$$events" != 0 ]; then
+                        asked=0
+                    fi
                     sleep 10
                 done
         mem_limit: 32m
