@@ -22,6 +22,9 @@ services:
         tmpfs:
             - /var/lib/postgresql:size=256m
         mem_limit: 512m
+        # Comes back empty after a restart (tmpfs): `migrate` and
+        # `staging-seed` rebuild it within a minute.
+        restart: unless-stopped
         networks:
             - backend
         healthcheck:
@@ -30,16 +33,36 @@ services:
             timeout: 5s
             retries: 10
 
+    # Long-lived here, unlike production's one-shot: Postgres restarts empty,
+    # and on a host reboot Docker ignores depends_on, so a single run at `up`
+    # would leave the database without tables. Migrating is idempotent, so it
+    # simply runs again every minute.
     migrate:
         image: ghcr.io/bloomyindev/study_suite/migrate:staging
         environment:
             DATABASE_URL: postgres://postgres:postgres@postgres:5432/study_suite
+        entrypoint: ['/bin/sh', '-c']
+        command:
+            - |
+                while true; do
+                    pnpm --filter @studysuite/db run db:migrate > /dev/null \
+                        && touch /tmp/migrated \
+                        || echo "[migrate] failed, retrying"
+                    sleep 60
+                done
+        # Healthy once the first run has succeeded; the services below wait on it.
+        healthcheck:
+            test: ['CMD', 'test', '-f', '/tmp/migrated']
+            interval: 60s
+            start_period: 120s
+            start_interval: 2s
+        mem_limit: 256m
         depends_on:
             postgres:
                 condition: service_healthy
         networks:
             - backend
-        restart: 'no'
+        restart: unless-stopped
 
     api:
         image: ghcr.io/bloomyindev/study_suite/api:staging
@@ -59,7 +82,7 @@ services:
             postgres:
                 condition: service_healthy
             migrate:
-                condition: service_completed_successfully
+                condition: service_healthy
         networks:
             - backend
             - frontend
@@ -93,7 +116,7 @@ services:
             postgres:
                 condition: service_healthy
             migrate:
-                condition: service_completed_successfully
+                condition: service_healthy
         networks:
             - backend
             - egress
@@ -125,7 +148,7 @@ services:
         mem_limit: 32m
         depends_on:
             migrate:
-                condition: service_completed_successfully
+                condition: service_healthy
         networks:
             - backend
         restart: unless-stopped
