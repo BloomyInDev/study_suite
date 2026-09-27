@@ -99,6 +99,82 @@ services:
             - egress
         restart: unless-stopped
 
+    # Puts back what the tmpfs loses on every restart: the group hierarchy,
+    # everyone approved, and admin for the Discord ids in ADMIN_DISCORD_IDS
+    # (comma-separated, set in the stack's .env). Re-applied every 10 s, so a
+    # new login is approved within seconds and a Postgres restart heals itself.
+    staging-seed:
+        image: postgres:18-alpine
+        environment:
+            PGHOST: postgres
+            PGUSER: postgres
+            PGPASSWORD: postgres
+            PGDATABASE: study_suite
+            ADMIN_DISCORD_IDS: ${ADMIN_DISCORD_IDS:-}
+        configs:
+            - source: staging-seed-sql
+              target: /seed.sql
+        entrypoint: ['/bin/sh', '-c']
+        command:
+            - |
+                while true; do
+                    psql -q -v ON_ERROR_STOP=1 -v admins="$$ADMIN_DISCORD_IDS" -f /seed.sql \
+                        || echo "[staging-seed] seed failed, retrying"
+                    sleep 10
+                done
+        mem_limit: 32m
+        depends_on:
+            migrate:
+                condition: service_completed_successfully
+        networks:
+            - backend
+        restart: unless-stopped
+
+configs:
+    staging-seed-sql:
+        # Production's hierarchy, by name: ids differ between the two
+        # databases. Exported from prod on 2026-09-27. The scraper finds these
+        # groups by name, so creating them ahead of the first scrape is fine.
+        content: |
+            CREATE TEMP TABLE links (parent text, child text);
+            INSERT INTO links VALUES
+                ('BUT 1A PROMO', 'A1-Semestre-1'), ('BUT 2A PROMO', 'A2-Semestre-3'),
+                ('BUT 3A PROMO', 'A3-Semestre-5'),
+                ('A1-Semestre-1', 'S1'), ('A1-Semestre-1', 'S2'), ('A1-Semestre-1', 'S3'),
+                ('A1-Semestre-1', 'S4'), ('A1-Semestre-1', 'S5'), ('A1-Semestre-1', 'S6'),
+                ('A1-Semestre-1', 'Sète'),
+                ('A2-Semestre-3', 'Q-Sète'), ('A2-Semestre-3', 'Q1'), ('A2-Semestre-3', 'Q2'),
+                ('A2-Semestre-3', 'Q3'), ('A2-Semestre-3', 'Q4'),
+                ('A3-Semestre-5', 'G-Sète'), ('A3-Semestre-5', 'G1'), ('A3-Semestre-5', 'G2'),
+                ('A3-Semestre-5', 'G3'), ('A3-Semestre-5', 'G4'),
+                ('S1', 'S1a'), ('S1', 'S1b'), ('S2', 'S2a'), ('S2', 'S2b'),
+                ('S3', 'S3a'), ('S3', 'S3b'), ('S4', 'S4a'), ('S4', 'S4b'),
+                ('S5', 'S5a'), ('S5', 'S5b'), ('S6', 'S6a'), ('S6', 'S6b'),
+                ('Sète', 'SèteA'), ('Sète', 'SèteB');
+
+            INSERT INTO student_groups (internal_name)
+            SELECT parent FROM links UNION SELECT child FROM links
+            ON CONFLICT DO NOTHING;
+
+            -- The promo parents only exist in prod because an admin made them.
+            UPDATE student_groups SET display_name = v.display
+            FROM (VALUES ('BUT 1A PROMO', 'BUT1'), ('BUT 2A PROMO', 'BUT2'),
+                         ('BUT 3A PROMO', 'BUT3')) v(name, display)
+            WHERE internal_name = v.name AND display_name IS NULL;
+
+            INSERT INTO student_group_memberships (parent_id, child_id)
+            SELECT p.id, c.id FROM links l
+            JOIN student_groups p ON p.internal_name = l.parent
+            JOIN student_groups c ON c.internal_name = l.child
+            ON CONFLICT DO NOTHING;
+
+            UPDATE users SET status = 'approved' WHERE status <> 'approved';
+
+            UPDATE users u SET is_admin = true
+            FROM user_identities i
+            WHERE i.user_id = u.id AND i.provider = 'discord' AND NOT u.is_admin
+              AND i.subject = ANY (string_to_array(:'admins', ','));
+
 networks:
     frontend:
     backend:
