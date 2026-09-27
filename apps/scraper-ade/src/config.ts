@@ -14,6 +14,11 @@ const schema = z.object({
         pastDays: zInt.positive().default(30),
         /** How far ahead. The planning is usually published a year out. */
         futureDays: zInt.positive().default(365),
+        /**
+         * Port for `POST /scrape`, which runs a scrape now. Unset: no server.
+         * Unauthenticated, so only for a private network (see watch/trigger.ts).
+         */
+        triggerPort: zInt.positive().optional(),
     }),
 })
 
@@ -29,6 +34,7 @@ export const config = loadConfig({
         SCRAPE_INTERVAL_MS: 'scrape.intervalMs',
         SCRAPE_PAST_DAYS: 'scrape.pastDays',
         SCRAPE_FUTURE_DAYS: 'scrape.futureDays',
+        SCRAPE_TRIGGER_PORT: 'scrape.triggerPort',
     },
 })
 

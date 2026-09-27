@@ -4,8 +4,27 @@ import { scrapePlanning } from '../scrape/scrape-planning.js'
 
 type Db = ReturnType<typeof createDb>
 
+// Set while the loop waits for its next run; calling it ends the wait early.
+let wake: (() => void) | null = null
+// A trigger that lands mid-run is remembered, so the run after it is not lost.
+let requested = false
+
+/** Brings the next run forward, or queues one right after the current run. */
+export function requestScrape(): void {
+    requested = true
+    wake?.()
+}
+
 function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms))
+    return new Promise((resolve) => {
+        const timer = setTimeout(done, ms)
+        function done() {
+            clearTimeout(timer)
+            wake = null
+            resolve()
+        }
+        wake = done
+    })
 }
 
 export async function runWatchLoop(config: Config, db: Db, runOnce = false): Promise<void> {
@@ -15,6 +34,7 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
     })
 
     while (true) {
+        requested = false
         console.log(`[scraper] Starting scrape at ${new Date().toISOString()}`)
 
         try {
@@ -35,6 +55,7 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
         }
 
         if (runOnce) break
+        if (requested) continue
 
         console.log(`[scraper] Next run in ${config.scrape.intervalMs / 1000}s`)
         await sleep(config.scrape.intervalMs)

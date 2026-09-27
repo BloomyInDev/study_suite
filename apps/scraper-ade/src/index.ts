@@ -1,9 +1,14 @@
 import { createDb } from '@studysuite/db'
 import { config } from './config.js'
-import { runWatchLoop } from './watch/loop.js'
+import { requestScrape, runWatchLoop } from './watch/loop.js'
+import { startTriggerServer } from './watch/trigger.js'
 
 const db = createDb(config.database.url)
 const runOnce = process.argv.includes('--once')
+
+if (config.scrape.triggerPort && !runOnce) {
+    startTriggerServer(config.scrape.triggerPort, requestScrape)
+}
 
 runWatchLoop(config, db, runOnce)
     .then(async () => {
