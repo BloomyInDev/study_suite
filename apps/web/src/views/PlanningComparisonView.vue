@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { groupLabel } from '../lib/group-label.js'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
 import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { Duration, type Event } from '../lib/types.js'
 import CalendarEvent from '../components/CalendarEvent.vue'
+import CurrentTimeLine from '../components/CurrentTimeLine.vue'
 import {
     nextDay,
     previousDay,
@@ -13,6 +14,7 @@ import {
     wallClockNow,
     weekdayFormat,
 } from '../lib/date.js'
+import { useWallClockNow } from '../lib/use-wall-clock-now.js'
 
 const groupsStore = useGroupsStore()
 const eventsStore = useEventsStore()
@@ -35,8 +37,6 @@ const otherEventsMap = ref<Record<string, Event[]>>({})
 const calendarDate = computed(() => toCalendarLocalDate(date.value))
 const loadingMy = ref(false)
 const loadingOther = ref(false)
-
-const INTERVAL_HEIGHT = 48
 
 const COMPARISON_COLORS = ['secondary', 'error', 'success', 'warning', 'info']
 
@@ -80,39 +80,8 @@ const allCalendarEvents = computed(() => {
 
 const loading = computed(() => loadingMy.value || loadingOther.value)
 
-// The grid is drawn from wall-clock labels, so the current-time line has to be
-// placed from one too: `new Date()` with the local getters put it at the
-// browser's own hour, which is only the planning's hour inside Europe/Paris.
-// It ticks as well: read once, the line froze at the hour the page was opened.
-const now = ref(wallClockNow())
-let nowTick: ReturnType<typeof setInterval> | null = null
-
-onMounted(() => {
-    nowTick = setInterval(() => {
-        now.value = wallClockNow()
-    }, 60_000)
-})
-
-onUnmounted(() => {
-    if (nowTick) clearInterval(nowTick)
-})
-
-const nowY = computed(() => {
-    const hour = now.value.getUTCHours()
-    const minutesFromStart = (hour - 6) * 60 + now.value.getUTCMinutes()
-    if (minutesFromStart < 0 || hour >= 20) return '-10px'
-    return `${(minutesFromStart / 60) * INTERVAL_HEIGHT}px`
-})
-
-// The calendar was handed `toCalendarLocalDate(date)`, so the day it reports
-// is the wall-clock day. Compare it against the label's UTC parts, not the
-// browser's local ones. Kept numeric rather than string-compared so it does not
-// depend on whether the calendar zero-pads.
-const isToday = (dateStr: string) => {
-    const [y, m, d] = dateStr.split('-').map(Number)
-    const today = now.value
-    return y === today.getUTCFullYear() && m === today.getUTCMonth() + 1 && d === today.getUTCDate()
-}
+// Ticks in wall-clock time, like the grid it is drawn on.
+const now = useWallClockNow()
 
 watch(
     [date, () => groupsStore.effectiveGroupIds, () => hiddenCourses.key],
@@ -243,10 +212,8 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                         <template #event="{ event }">
                             <CalendarEvent :event="event" />
                         </template>
-                        <template #day-body="{ date: slotDate }">
-                            <template v-if="isToday(slotDate)">
-                                <div class="v-current-time" :style="{ top: nowY }" />
-                            </template>
+                        <template #day-body="day">
+                            <CurrentTimeLine :day="day" :now="now" />
                         </template>
                     </v-calendar>
                 </v-sheet>
@@ -258,13 +225,5 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
 <style scoped>
 .position-relative {
     position: relative;
-}
-.v-current-time {
-    height: 2px;
-    background-color: #ea4335;
-    position: absolute;
-    left: -1px;
-    right: 0;
-    pointer-events: none;
 }
 </style>

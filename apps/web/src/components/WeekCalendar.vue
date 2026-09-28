@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import type { Event } from '../lib/types.js'
 import CalendarEvent from './CalendarEvent.vue'
+import CurrentTimeLine from './CurrentTimeLine.vue'
 import {
     nextDay,
     previousDay,
@@ -11,6 +12,7 @@ import {
     wallClockNow,
     weekdayFormat,
 } from '../lib/date.js'
+import { useWallClockNow } from '../lib/use-wall-clock-now.js'
 
 const props = withDefaults(
     defineProps<{
@@ -29,6 +31,7 @@ const props = withDefaults(
 const date = defineModel<Date>({ required: true })
 
 const { mobile } = useDisplay()
+const now = useWallClockNow()
 
 // A Sunday renders as Mon–Sat of the ended week plus the next Monday, and pages
 // a week away from what the parent fetches (see `skipSunday`). Snap whatever
@@ -123,6 +126,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
         >
             <template #event="{ event }">
                 <CalendarEvent :event="event" />
+            </template>
+            <template #day-body="day">
+                <CurrentTimeLine :day="day" :now="now" />
             </template>
         </v-calendar>
     </v-sheet>
