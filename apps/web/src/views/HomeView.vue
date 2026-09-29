@@ -43,10 +43,14 @@ async function load() {
                 }),
         ]
         if (auth.isAuthenticated && groupStore.effectiveGroupIds.length > 0) {
-            const cutoff = new Date()
+            const from = new Date()
+            const cutoff = new Date(from)
             cutoff.setDate(cutoff.getDate() + 14)
+            // The api sorts oldest first, so without `from` the whole backlog
+            // of past homework came back ahead of what is still due.
             const params = new URLSearchParams({
                 groupIds: groupStore.effectiveGroupIds.join(','),
+                from: from.toISOString(),
                 to: cutoff.toISOString(),
             })
             promises.push(
@@ -55,7 +59,7 @@ async function load() {
                 })
                     .then((r) => (r.ok ? r.json() : { data: [] }))
                     .then((body: { data: Assignment[] }) => {
-                        assignments.value = body.data.slice(0, 5)
+                        assignments.value = body.data
                     })
                     .catch(() => {}),
             )
@@ -103,8 +107,10 @@ const upcomingAssignments = computed(() =>
 )
 
 /** The homepage lists what is left to do; the homework page shows everything. */
-const todoAssignments = computed(() => upcomingAssignments.value.filter((a) => !a.completedByMe))
-const doneCount = computed(() => upcomingAssignments.value.length - todoAssignments.value.length)
+const todoAssignments = computed(() =>
+    upcomingAssignments.value.filter((a) => !a.completedByMe).slice(0, 5),
+)
+const doneCount = computed(() => upcomingAssignments.value.filter((a) => a.completedByMe).length)
 
 // allGroups loads after mount, so the ancestors, and with them the promo's
 // events, only join effectiveGroupIds a moment later.
