@@ -59,5 +59,18 @@ jobs:
                   provenance: false
                   platforms: linux/amd64
                   tags: ghcr.io/bloomyindev/study_suite/${{ matrix.name }}:${{ github.ref_name == 'main' && 'latest' || 'staging' }}
+                  # Says which commit an image was built from. Without them the
+                  # only labels are the base image's: `api` reports Bun's own
+                  # revision and version, and nothing on a host tells a `:latest`
+                  # from the one before it. The descriptive ones are set too, or
+                  # the base's would show through next to our revision. `created`
+                  # and `licenses` are still the base image's.
+                  labels: |
+                      org.opencontainers.image.title=study_suite/${{ matrix.name }}
+                      org.opencontainers.image.description=Study Suite ${{ matrix.name }}
+                      org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+                      org.opencontainers.image.url=${{ github.server_url }}/${{ github.repository }}
+                      org.opencontainers.image.revision=${{ github.sha }}
+                      org.opencontainers.image.version=${{ github.ref_name }}
                   cache-from: type=gha,scope=${{ matrix.name }}
                   cache-to: type=gha,mode=max,scope=${{ matrix.name }}
