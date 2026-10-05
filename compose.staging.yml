@@ -5,8 +5,11 @@
 # Nothing here reads or writes production's data: separate project, separate
 # networks, no published database port.
 #
-# Deploy from its own directory, under its own project name:
+# Deployed by CI on every push to `staging` (the `deploy-staging` job runs
+# deploy/staging.sh on the host). By hand, from the stack's own directory and
+# under its own project name:
 #   docker compose -p study_staging pull && docker compose -p study_staging up -d
+# This file is not synced by the deploy: copy it over when it changes.
 #
 # The mem limits keep a misbehaving preview from starving production, which
 # shares this 2 GB LXC.

@@ -652,6 +652,35 @@ TLS-terminating proxy it would point back at `http://`.
 
 ---
 
+## Deploying
+
+`.github/workflows/build.yaml` builds the five images on every push to `main`
+(`:latest`) and `staging` (`:staging`), each labelled with its commit
+(`org.opencontainers.image.revision`), which is how to tell what a host runs.
+
+**Staging deploys itself.** After a push to `staging` builds, the
+`deploy-staging` job opens an SSH connection to the host and the preview stack
+pulls and restarts. **Production does not**: someone runs
+`docker compose pull && docker compose up -d` in its directory.
+
+The job's key is a dedicated one whose line in root's `authorized_keys` carries
+a forced command, `deploy/staging.sh` (installed on the host as
+`stacks/study_staging/deploy.sh`). The host runs that script whatever the
+client asks for, and the script reads nothing from the connection. That is the
+whole security model: the key is root's, on the host production shares, and it
+can do exactly one thing. Do not make the script take a tag, a branch or a
+compose file from the caller. The consequence is that `compose.staging.yml` and
+the script itself are not synced by a deploy and are copied over by hand.
+
+Secrets, on the repository: `STAGING_DEPLOY_SSH_KEY`, `_HOST`, `_PORT`, `_USER`
+and `_KNOWN_HOSTS` (the host's pinned public key, one `known_hosts` line).
+Without the key the job warns and passes, so a fork still builds.
+
+A token pushing over HTTPS needs the `workflow` scope to change that file.
+Pushing over SSH does not.
+
+---
+
 ## Commit convention
 
 All commits must follow [Conventional Commits](https://www.conventionalcommits.org/): `<type>(<scope>): <description>`.

@@ -74,3 +74,43 @@ jobs:
                       org.opencontainers.image.version=${{ github.ref_name }}
                   cache-from: type=gha,scope=${{ matrix.name }}
                   cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+    # The preview stack follows the `staging` branch on its own: once every
+    # image is pushed, the host pulls them and restarts. Only for a push to
+    # `staging` itself. A manual run from another branch publishes `:staging`
+    # too, but deploying that is a decision, not a side effect.
+    deploy-staging:
+        needs: build
+        if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+        runs-on: ubuntu-latest
+        # Talks to the host and nothing else: no token rights at all.
+        permissions: {}
+        steps:
+            - name: Deploy the preview stack
+              env:
+                  SSH_KEY: ${{ secrets.STAGING_DEPLOY_SSH_KEY }}
+                  SSH_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
+                  SSH_PORT: ${{ secrets.STAGING_DEPLOY_PORT }}
+                  SSH_USER: ${{ secrets.STAGING_DEPLOY_USER }}
+                  SSH_KNOWN_HOSTS: ${{ secrets.STAGING_DEPLOY_KNOWN_HOSTS }}
+              run: |
+                  # A fork, or a repo nobody gave the key to, has nothing to
+                  # deploy to. Say so instead of failing every build there.
+                  if [ -z "$SSH_KEY" ]; then
+                      echo "::warning::STAGING_DEPLOY_SSH_KEY is not set, the preview stack was not deployed"
+                      exit 0
+                  fi
+                  install -m 700 -d ~/.ssh
+                  printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy
+                  chmod 600 ~/.ssh/deploy
+                  # The host key is pinned, never learnt on first contact: the
+                  # runner is new every time, so trusting what answers would
+                  # verify nothing.
+                  printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+                  # The key's forced command on the host is deploy/staging.sh.
+                  # The host ignores what is asked for here, so there is
+                  # nothing to pass: no branch, no tag, no file.
+                  ssh -i ~/.ssh/deploy -p "$SSH_PORT" \
+                      -o IdentitiesOnly=yes -o BatchMode=yes \
+                      -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+                      "$SSH_USER@$SSH_HOST" deploy
