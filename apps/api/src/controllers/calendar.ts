@@ -4,12 +4,14 @@ import { and, asc, eq } from 'drizzle-orm'
 import { db } from '../db.js'
 import { defaultCalendarFrom } from '../lib/calendar-window.js'
 import { eventFilterConditions } from '../lib/event-filters.js'
+import { expandGroupIds } from '../lib/group-ancestors.js'
 import { buildCalendar } from '../lib/ical.js'
 import { withEventRelations } from '../lib/serialize.js'
-import { ExcludeTitleSchema } from '../schemas/query.js'
+import { ExcludeTitleSchema, IncludeAncestorGroupsSchema } from '../schemas/query.js'
 
 const CalendarQuerySchema = z.object({
     groupId: z.string().uuid().optional(),
+    includeAncestorGroups: IncludeAncestorGroupsSchema,
     teacherId: z.string().uuid().optional(),
     roomId: z.string().uuid().optional(),
     from: z.coerce.date().optional(),
@@ -63,11 +65,22 @@ export default new OpenAPIHono().openapi(
     }),
     async (c) => {
         const filters = c.req.valid('query')
+        const { groupId, includeAncestorGroups, ...rest } = filters
         // A wall-clock label, like `events.startDate` it is compared with.
         // `Date.now()` here shifted the cutoff by the Paris offset.
         const from = filters.from ?? defaultCalendarFrom()
         const rows = await db.query.events.findMany({
-            where: and(...eventFilterConditions({ ...filters, from })),
+            where: and(
+                ...eventFilterConditions({
+                    ...rest,
+                    from,
+                    // One subscription is then a student's whole timetable,
+                    // promo-wide lectures included.
+                    groupIds: groupId
+                        ? await expandGroupIds([groupId], includeAncestorGroups)
+                        : undefined,
+                }),
+            ),
             with: withEventRelations,
             orderBy: asc(events.startDate),
         })

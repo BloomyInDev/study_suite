@@ -7,7 +7,8 @@ export type EventFilters = {
     to?: Date
     teacherId?: string
     roomId?: string
-    groupId?: string
+    /** Already resolved: see `expandGroupIds`. An event in any of them matches. */
+    groupIds?: string[]
     excludeTitle?: string[]
 }
 
@@ -44,14 +45,14 @@ export function eventFilterConditions(filters: EventFilters): (SQL | undefined)[
             ),
         )
     }
-    if (filters.groupId) {
+    if (filters.groupIds) {
         conditions.push(
             inArray(
                 events.id,
                 db
                     .select({ id: eventStudentGroups.eventId })
                     .from(eventStudentGroups)
-                    .where(eq(eventStudentGroups.studentGroupId, filters.groupId)),
+                    .where(inArray(eventStudentGroups.studentGroupId, filters.groupIds)),
             ),
         )
     }

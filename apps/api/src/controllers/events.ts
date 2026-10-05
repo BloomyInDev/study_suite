@@ -6,6 +6,7 @@ import { wallClockNow } from '@studysuite/shared/time'
 import { db } from '../db.js'
 import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
 import { eventFilterConditions, excludeTitlesCondition } from '../lib/event-filters.js'
+import { expandGroupIds } from '../lib/group-ancestors.js'
 import { eventChangeToDto, eventToDto, withEventRelations } from '../lib/serialize.js'
 import {
     DateFormatSchema,
@@ -115,7 +116,12 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { limit, dateFormat, groupIds, excludeTitle } = c.req.valid('query')
+            const { limit, dateFormat, groupIds, includeAncestorGroups, excludeTitle } =
+                c.req.valid('query')
+            const scope =
+                groupIds && groupIds.length > 0
+                    ? await expandGroupIds(groupIds, includeAncestorGroups)
+                    : undefined
             const rows = await db.query.events.findMany({
                 where: and(
                     // On `endDate`, not `startDate`: the homepage asks this route for
@@ -124,13 +130,13 @@ export default new OpenAPIHono()
                     gte(events.endDate, wallClockNow()),
                     // Filter here, not client-side: limiting first would return
                     // other groups' events and leave the user with an empty list.
-                    groupIds && groupIds.length > 0
+                    scope
                         ? inArray(
                               events.id,
                               db
                                   .select({ id: eventStudentGroups.eventId })
                                   .from(eventStudentGroups)
-                                  .where(inArray(eventStudentGroups.studentGroupId, groupIds)),
+                                  .where(inArray(eventStudentGroups.studentGroupId, scope)),
                           )
                         : undefined,
                     excludeTitlesCondition(excludeTitle),
@@ -157,7 +163,8 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { groupIds, days, since, limit, dateFormat } = c.req.valid('query')
+            const { groupIds, includeAncestorGroups, days, since, limit, dateFormat } =
+                c.req.valid('query')
 
             // The log stores group names, not ids: the event row a `removed`
             // change refers to is gone, so nothing could be joined back to.
@@ -166,7 +173,12 @@ export default new OpenAPIHono()
                 const rows = await db
                     .select({ internalName: studentGroups.internalName })
                     .from(studentGroups)
-                    .where(inArray(studentGroups.id, groupIds))
+                    .where(
+                        inArray(
+                            studentGroups.id,
+                            await expandGroupIds(groupIds, includeAncestorGroups),
+                        ),
+                    )
                 groupNames = rows.map((r) => r.internalName)
                 // Ids that match nothing must not widen the feed to every group.
                 if (groupNames.length === 0) return c.json({ data: [] }, 200)
@@ -214,8 +226,13 @@ export default new OpenAPIHono()
             },
         }),
         async (c) => {
-            const { dateFormat, ...filters } = c.req.valid('query')
-            const conditions = eventFilterConditions(filters)
+            const { dateFormat, groupId, includeAncestorGroups, ...filters } = c.req.valid('query')
+            const conditions = eventFilterConditions({
+                ...filters,
+                groupIds: groupId
+                    ? await expandGroupIds([groupId], includeAncestorGroups)
+                    : undefined,
+            })
             const rows = await db.query.events.findMany({
                 where: and(...conditions),
                 with: withEventRelations,

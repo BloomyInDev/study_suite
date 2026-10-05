@@ -35,6 +35,26 @@ export const ExcludeTitleSchema = z
         example: 'Anglais',
     })
 
+/**
+ * Whether a group filter also covers the group's ancestors. On by default: a
+ * course is tagged with the widest group it is for, so a promo-wide lecture
+ * carries the promo and a filter on one TD group alone would miss it. `false`
+ * keeps the filter to exactly the groups asked for.
+ *
+ * An enum of spellings rather than `z.coerce.boolean()`, which reads the
+ * string `"false"` as true.
+ */
+export const IncludeAncestorGroupsSchema = z
+    .enum(['true', 'false', '1', '0'])
+    .default('true')
+    .transform((v) => v === 'true' || v === '1')
+    .openapi({
+        param: { name: 'includeAncestorGroups', in: 'query' },
+        description:
+            "Also match the ancestors of the group(s) filtered on, which is what a student's own timetable is: their group plus the semester and promo above it. Pass `false` for the exact groups only. Ignored without a group filter.",
+        example: 'true',
+    })
+
 export const DateParamSchema = z.object({
     date: z.string().date(),
     excludeTitle: ExcludeTitleSchema,
@@ -53,6 +73,7 @@ export const FilteredEventsSchema = z.object({
     teacherId: z.string().uuid().optional(),
     roomId: z.string().uuid().optional(),
     groupId: z.string().uuid().optional(),
+    includeAncestorGroups: IncludeAncestorGroupsSchema,
     excludeTitle: ExcludeTitleSchema,
     dateFormat: DateFormatSchema,
 })
@@ -65,6 +86,7 @@ export const LimitSchema = z.object({
         .optional()
         .transform((v) => (v ? v.split(',').filter(Boolean) : undefined))
         .openapi({ param: { name: 'groupIds', in: 'query' } }),
+    includeAncestorGroups: IncludeAncestorGroupsSchema,
     /** Applied before the limit, like `groupIds`, so hidden courses do not use it up. */
     excludeTitle: ExcludeTitleSchema,
     dateFormat: DateFormatSchema,
@@ -82,6 +104,11 @@ export const OptionalDateRangeSchema = z.object({
     dateFormat: DateFormatSchema,
 })
 
+/** The date window of `GET /groups/:id/events`, where the group is the path's. */
+export const GroupEventsQuerySchema = OptionalDateRangeSchema.extend({
+    includeAncestorGroups: IncludeAncestorGroupsSchema,
+})
+
 export const SearchSchema = z.object({
     q: z.string().min(1),
     dateFormat: DateFormatSchema,
@@ -94,6 +121,7 @@ export const EventChangesSchema = z.object({
         .optional()
         .transform((v) => (v ? v.split(',').filter(Boolean) : undefined))
         .openapi({ param: { name: 'groupIds', in: 'query' } }),
+    includeAncestorGroups: IncludeAncestorGroupsSchema,
     /** How far back to look, in days, on the detection date. */
     days: z.coerce.number().int().positive().max(90).default(14),
     /**

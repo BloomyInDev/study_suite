@@ -2,9 +2,11 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { assignments, discordGuilds, discordRoleMappings, studentGroups } from '@studysuite/db'
 import { asc, eq } from 'drizzle-orm'
 import { db } from '../db.js'
+import { expandGroupIds } from '../lib/group-ancestors.js'
 import { requireBot } from '../middleware/auth.js'
+import { IncludeAncestorGroupsSchema } from '../schemas/query.js'
 import { AssignmentDtoSchema, dataResponse, errorResponse } from '../schemas/responses.js'
-import { assignmentToDto, getAncestorGroupIds, withRelations } from './assignments.js'
+import { assignmentToDto, withRelations } from './assignments.js'
 
 /**
  * What the Discord bot reads as itself, acting for no member: the routes that
@@ -41,8 +43,9 @@ const BotAssignmentsQuerySchema = z.object({
         .openapi({
             param: { name: 'groupIds', in: 'query' },
             description:
-                'Comma-separated group ids. Homework set on a parent group (the whole year) comes back for its children too, as it does for a student.',
+                'Comma-separated group ids. Homework set on a parent group (the whole year) comes back for its children too, as it does for a student, unless `includeAncestorGroups` is `false`.',
         }),
+    includeAncestorGroups: IncludeAncestorGroupsSchema,
     from: z.coerce.date().optional().openapi({ description: 'Due on or after (a real instant)' }),
     to: z.coerce.date().optional().openapi({ description: 'Due on or before (a real instant)' }),
 })
@@ -119,17 +122,13 @@ app.openapi(
         },
     }),
     async (c) => {
-        const { groupIds, from, to } = c.req.valid('query')
-
-        const scope = new Set(groupIds)
-        for (const id of groupIds) {
-            ;(await getAncestorGroupIds(id)).forEach((a) => scope.add(a))
-        }
+        const { groupIds, includeAncestorGroups, from, to } = c.req.valid('query')
+        const scope = await expandGroupIds(groupIds, includeAncestorGroups)
 
         const rows = await db.query.assignments.findMany({
             where: (a, { and, inArray, gte, lte }) =>
                 and(
-                    inArray(a.studentGroupId, [...scope]),
+                    inArray(a.studentGroupId, scope),
                     from ? gte(a.dueDate, from) : undefined,
                     to ? lte(a.dueDate, to) : undefined,
                 ),

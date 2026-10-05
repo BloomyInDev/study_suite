@@ -307,6 +307,29 @@ Hono server on Bun, port 3000.
 
 Event timestamps are Paris wall-clock stored as UTC (the scraper builds them with `Date.UTC` from what the page displays), so `lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` with the UTC components and ships a `VTIMEZONE`. Emitting them as `Z` instants would shift every course by one or two hours.
 
+### Group filters include ancestors
+
+A course is tagged with the widest group it is for: a promo-wide lecture carries
+the promo, a semester meeting the semester, never each TD group underneath. A
+filter on one TD group alone therefore misses them, and `Q3`'s feed had no
+"Réunion d'information" addressed to `A2-Semestre-3`.
+
+So every route that filters by group also matches the group's ancestors, at any
+depth, unless told `includeAncestorGroups=false`: `/api/events` (`groupId`),
+`/api/events/upcoming` and `/api/events/changes` (`groupIds`),
+`/api/calendar.ics` (`groupId`), `/api/groups/:id/events` and
+`/api/bot/assignments`. `expandGroupIds()` (`lib/group-ancestors.ts`) does it;
+the walk itself lives in `lib/ancestor-walk.ts`, free of the database so it can
+be tested. The param is an enum of `true`/`false`/`1`/`0` rather than
+`z.coerce.boolean()`, which reads the string `"false"` as true.
+
+On is the default because the exact group is almost never what a caller wants,
+and one iCal subscription should be a student's whole timetable. The web app
+still sends the ancestors itself (`groups.withAncestors`), which is now
+redundant and harmless. `GET /api/assignments` is not concerned: its groups are
+an access check, not a filter. Nor is `PUT /api/push/subscriptions`, whose
+`groupIds` are stored as sent.
+
 ### Hidden courses
 
 A student can hide a course they do not attend. The list is per browser
