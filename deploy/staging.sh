@@ -21,6 +21,13 @@ exec 9>/tmp/study_staging-deploy.lock
 flock -w 300 9
 
 docker compose -p study_staging pull --quiet
+
+# Everything that reads or writes events goes down before `up` runs the new
+# migrations. `up` alone leaves the old containers running until `migrate` has
+# finished, and an old scraper reconciling against a schema or data newer than
+# itself rewrites every event: migration 0017 would have cost a wave of bogus
+# changes and every homework's link to its course.
+docker compose -p study_staging stop api scraper-ade
 docker compose -p study_staging up -d --remove-orphans --wait --wait-timeout 180
 
 # Dangling layers only: each deploy orphans the previous `:staging` images, and
