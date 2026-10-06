@@ -1,5 +1,6 @@
 import { and, asc, eq, gt, inArray, lt, lte, sql } from 'drizzle-orm'
 import { events, pushReminderSends, pushSubscriptions } from '@studysuite/db'
+import { parisParts } from '@studysuite/shared/time'
 import { db } from '../db.js'
 import { withEventRelations } from './serialize.js'
 import { pushConfigured, sendReminder } from './push.js'
@@ -114,7 +115,7 @@ export function startReminderTick(): void {
         void runReminderTick(now).catch((err) => console.error('[push] tick failed', err))
         // Hourly, not every tick: the retention window is a week, so there is
         // nothing to gain from chasing it 1440 times a day.
-        if (now.getUTCMinutes() === 0) {
+        if (parisParts(now).minute === 0) {
             void pruneSends().catch((err) => console.error('[push] prune failed', err))
         }
     }, TICK_MS)

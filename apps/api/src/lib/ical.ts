@@ -44,10 +44,8 @@ function localStamp(d: Date): string {
 
 /** UTC form, which is what DTSTAMP and LAST-MODIFIED are required to be in. */
 function utcStamp(d: Date): string {
-    return (
-        `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
-        `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
-    )
+    // `2026-10-06T06:00:00.000Z` without its punctuation and milliseconds.
+    return `${d.toISOString().replace(/[-:]/g, '').slice(0, 15)}Z`
 }
 
 function escapeText(value: string): string {

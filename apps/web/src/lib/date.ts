@@ -102,6 +102,7 @@ export const formatDueRelative = (iso: string, from: Date = new Date()): string 
  */
 export const toCalendarLocalDate = (date: Date): Date => {
     const { year, month, day, hour, minute, second } = parisParts(date)
+    // eslint-disable-next-line no-restricted-syntax -- the one place a local reading is wanted
     return new Date(year, month - 1, day, hour, minute, second)
 }
 
