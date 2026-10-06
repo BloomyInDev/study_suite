@@ -3,8 +3,8 @@ import { parseInstant } from '@studysuite/shared/time'
 
 /**
  * How event timestamps are rendered on the wire. `unix-instant` and
- * `unix-ms-instant` are aliases of `unix` and `unix-ms`, kept for the clients
- * that already send them.
+ * `unix-ms-instant` are deprecated aliases of `unix` and `unix-ms`, kept for
+ * the clients that already send them.
  */
 export const DateFormatSchema = z
     .enum(['iso', 'iso-offset', 'unix', 'unix-ms', 'unix-instant', 'unix-ms-instant'])
@@ -12,7 +12,7 @@ export const DateFormatSchema = z
     .openapi({
         param: { name: 'dateFormat', in: 'query' },
         description:
-            'How `startDate` / `endDate` are written. `iso` is UTC (`2026-09-01T06:30:00.000Z`), `iso-offset` carries the Paris offset (`2026-09-01T08:30:00.000+02:00`), `unix` is epoch seconds and `unix-ms` epoch milliseconds. `unix-instant` and `unix-ms-instant` are aliases of the last two.',
+            'How `startDate` / `endDate` are written. `iso` is UTC (`2026-09-01T06:30:00.000Z`), `iso-offset` carries the Paris offset (`2026-09-01T08:30:00.000+02:00`), `unix` is epoch seconds and `unix-ms` epoch milliseconds. `unix-instant` and `unix-ms-instant` are deprecated aliases of the last two.',
         example: 'iso',
     })
 export type DateFormat = z.infer<typeof DateFormatSchema>
@@ -25,11 +25,11 @@ const instantParam = (name: string, what: string) =>
     z
         .string()
         .transform((v, ctx) => {
-            const d = /^\d+$/.test(v) ? new Date(Number(v)) : parseInstant(v)
-            if (!d || Number.isNaN(d.getTime())) {
+            const d = parseInstant(v)
+            if (!d) {
                 ctx.addIssue({
                     code: z.ZodIssueCode.custom,
-                    message: 'Expected an ISO 8601 timestamp or epoch milliseconds',
+                    message: 'Expected an ISO 8601 timestamp or a Unix epoch',
                 })
                 return z.NEVER
             }
@@ -37,12 +37,12 @@ const instantParam = (name: string, what: string) =>
         })
         .openapi({
             param: { name, in: 'query' },
-            description: `${what} ISO 8601, or epoch milliseconds. A value naming no offset (\`2026-09-07\`, \`2026-09-07T08:00\`) is read in Europe/Paris.`,
+            description: `${what} ISO 8601, or a Unix epoch in seconds or milliseconds. A value naming no offset (\`2026-09-07\`, \`2026-09-07T08:00\`) is read in Europe/Paris.`,
             example: '2026-09-07T08:00:00.000+02:00',
         })
 
-const fromParam = () => instantParam('from', 'Only events starting at or after this.')
-const toParam = () => instantParam('to', 'Only events starting before this.')
+export const fromParam = () => instantParam('from', 'Only events starting at or after this.')
+export const toParam = () => instantParam('to', 'Only events starting before this.')
 
 /**
  * Course titles to leave out, matched exactly. Repeated rather than
@@ -140,9 +140,6 @@ export const SearchSchema = z.object({
     q: z.string().min(1),
     dateFormat: DateFormatSchema,
 })
-
-export const calendarFromParam = () => fromParam().optional()
-export const calendarToParam = () => toParam().optional()
 
 export const EventChangesSchema = z.object({
     /** Comma-separated group ids; only changes touching those groups come back. */

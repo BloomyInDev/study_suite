@@ -163,8 +163,27 @@ describe('parseInstant', () => {
         expect(parseInstant(text)?.toISOString()).toBe(expected)
     })
 
-    it('rejects what is not a timestamp', () => {
-        expect(parseInstant('tomorrow')).toBeNull()
-        expect(parseInstant('2026-13-45T99:00:00Z')).toBeNull()
+    it.each([
+        ['1788760800', '2026-09-07T06:00:00.000Z'],
+        ['1788760800000', '2026-09-07T06:00:00.000Z'],
+    ])('reads the epoch %s in the unit its size gives away', (text, expected) => {
+        expect(parseInstant(text)?.toISOString()).toBe(expected)
+    })
+
+    it.each([
+        'tomorrow',
+        '2026-13-45T99:00:00Z',
+        '2026-02-31',
+        '2026-02-31T08:00:00Z',
+        '2026-09-07T24:00',
+        '2026-09-07T08:60:00+02:00',
+    ])('rejects %s', (text) => {
+        expect(parseInstant(text)).toBeNull()
+    })
+
+    it('still takes the hour a clock change skips', () => {
+        // 02:30 on the spring-forward day is on no Paris clock, but it is a
+        // well-formed date, and refusing it would be a surprise.
+        expect(parseInstant('2026-03-29T02:30')).not.toBeNull()
     })
 })

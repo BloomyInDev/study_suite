@@ -1,3 +1,5 @@
+import { addParisDays } from '@studysuite/shared/time'
+
 /**
  * How far back the iCal feed reaches when no explicit `from` is given. Calendar
  * clients re-fetch the whole document, so an unbounded history would grow the
@@ -6,5 +8,5 @@
 export const DEFAULT_PAST_DAYS = 60
 
 export function defaultCalendarFrom(now: Date = new Date()): Date {
-    return new Date(now.getTime() - DEFAULT_PAST_DAYS * 24 * 60 * 60 * 1000)
+    return addParisDays(now, -DEFAULT_PAST_DAYS)
 }

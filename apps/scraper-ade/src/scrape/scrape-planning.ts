@@ -9,8 +9,6 @@ import type { Config } from '../config.js'
 
 type Db = ReturnType<typeof createDb>
 
-const DAY_MS = 24 * 60 * 60 * 1000
-
 export interface ScrapeResult {
     added: number
     removed: number
@@ -28,8 +26,8 @@ export async function scrapePlanning(config: Config, db: Db): Promise<ScrapeResu
     if (!dataParam) throw new Error('scrape.url has no ?data= parameter')
 
     const now = new Date()
-    const from = new Date(now.getTime() - config.scrape.pastDays * DAY_MS)
-    const to = new Date(now.getTime() + config.scrape.futureDays * DAY_MS)
+    const from = addParisDays(now, -config.scrape.pastDays)
+    const to = addParisDays(now, config.scrape.futureDays)
 
     const session = await login(origin, dataParam)
     console.log(`[scraper] Signed in, ${session.resources.length} resources`)

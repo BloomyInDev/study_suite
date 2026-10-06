@@ -136,31 +136,52 @@ export function toParisOffsetIso(instant: Date): string {
     return `${shown.toISOString().slice(0, 23)}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
 }
 
-/** `2026-09-07T08:00:00Z`, `...+02:00`, `...+0200`: a timestamp that names its own offset. */
-const HAS_OFFSET = /(?:Z|[+-]\d{2}:?\d{2})$/i
-const LOCAL_STAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?$/
+const STAMP =
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?(Z|[+-]\d{2}:?\d{2})?$/i
+
+/**
+ * Epochs below this are seconds, the rest milliseconds. As milliseconds it is
+ * 1973 and as seconds the year 5138, so no date the planning holds is ambiguous.
+ */
+const SECONDS_BELOW = 1e11
 
 /**
  * Parses a timestamp a client sent. One that carries `Z` or an offset is the
  * instant it says. One that does not (`2026-09-07`, `2026-09-07T08:00`) is a
  * Paris date or hour: `new Date()` would read the first as UTC midnight and the
- * second in the process timezone. Returns null for anything else.
+ * second in the process timezone. Bare digits are a Unix epoch. Returns null
+ * for anything else, a date that does not exist included: `new Date()` and
+ * `parisDate` would both turn 31 February into 3 March.
  */
 export function parseInstant(text: string): Date | null {
     const s = text.trim()
-    if (HAS_OFFSET.test(s)) {
-        const d = new Date(s)
+    if (/^\d+$/.test(s)) {
+        const n = Number(s)
+        const d = new Date(n < SECONDS_BELOW ? n * 1000 : n)
         return Number.isNaN(d.getTime()) ? null : d
     }
-    const m = LOCAL_STAMP.exec(s)
+
+    const m = STAMP.exec(s)
     if (!m) return null
-    const d = parisDate(
-        Number(m[1]),
-        Number(m[2]),
-        Number(m[3]),
-        Number(m[4] ?? 0),
-        Number(m[5] ?? 0),
-        Number(m[6] ?? 0),
-    )
+    const [year, month, day, hour, minute, second] = m.slice(1, 7).map((v) => Number(v ?? 0)) as [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+    ]
+    const fields = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
+    const exists =
+        fields.getUTCMonth() === month - 1 &&
+        fields.getUTCDate() === day &&
+        fields.getUTCHours() === hour &&
+        fields.getUTCMinutes() === minute &&
+        fields.getUTCSeconds() === second
+    if (!exists) return null
+
+    const d = m[7]
+        ? new Date(s.replace(' ', 'T'))
+        : parisDate(year, month, day, hour, minute, second)
     return Number.isNaN(d.getTime()) ? null : d
 }

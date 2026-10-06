@@ -78,8 +78,13 @@ formatting. Its tests, and the api's, must pass under any `TZ`.
   one. That value is for the calendar alone and is no longer the instant.
 - A `from` / `to` query value that names no offset (`2026-09-07`,
   `2026-09-07T08:00`) is read in Paris, not in UTC or the process timezone.
-- `dateFormat=unix-instant` and `unix-ms-instant` are aliases of `unix` and
-  `unix-ms`, kept for clients that already send them.
+  Bare digits are an epoch, in seconds below 1e11 and milliseconds above, so
+  both `unix` and `unix-ms` output can be sent back.
+- `dateFormat=unix-instant` and `unix-ms-instant` are deprecated aliases of
+  `unix` and `unix-ms`, kept for clients that already send them.
+- eslint bans the `Date` getters, `Date.UTC` and `new Date(y, m, d)` in `.ts`
+  files outside `shared/time`. `.vue` files are not linted, so the views rely
+  on review.
 - **An image built before migration `0017` must never run against a migrated
   database.** Until then timestamps were Paris wall-clock labelled UTC; such a
   scraper would reconcile every course as moved by an hour or two and fill
@@ -624,7 +629,13 @@ TLS-terminating proxy it would point back at `http://`.
 **Staging deploys itself.** After a push to `staging` builds, the
 `deploy-staging` job opens an SSH connection to the host and the preview stack
 pulls and restarts. **Production does not**: someone runs
-`docker compose pull && docker compose up -d` in its directory.
+`docker compose pull && docker compose stop api scraper scraper-ade && docker compose up -d`
+in its directory.
+
+The `stop` is not optional, and `deploy/staging.sh` does the same. `up -d` alone
+leaves the old api and scrapers running until `migrate` has finished, and an old
+scraper reconciling against data newer than itself rewrites every event, which
+also nulls every homework's link to its course.
 
 The job's key is a dedicated one whose line in root's `authorized_keys` carries
 a forced command, `deploy/staging.sh` (installed on the host as

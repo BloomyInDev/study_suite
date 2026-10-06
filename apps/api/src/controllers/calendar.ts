@@ -8,10 +8,10 @@ import { expandGroupIds } from '../lib/group-ancestors.js'
 import { buildCalendar } from '../lib/ical.js'
 import { withEventRelations } from '../lib/serialize.js'
 import {
-    calendarFromParam,
-    calendarToParam,
     ExcludeTitleSchema,
+    fromParam,
     IncludeAncestorGroupsSchema,
+    toParam,
 } from '../schemas/query.js'
 
 const CalendarQuerySchema = z.object({
@@ -19,8 +19,8 @@ const CalendarQuerySchema = z.object({
     includeAncestorGroups: IncludeAncestorGroupsSchema,
     teacherId: z.string().uuid().optional(),
     roomId: z.string().uuid().optional(),
-    from: calendarFromParam(),
-    to: calendarToParam(),
+    from: fromParam().optional(),
+    to: toParam().optional(),
     excludeTitle: ExcludeTitleSchema,
 })
 
