@@ -26,10 +26,6 @@ export interface UpcomingEvent {
     eventStudentGroups: { studentGroup: { id: string } }[]
 }
 
-/**
- * The hour the planning shows. The zone is named: without it the api container,
- * which runs in UTC, announces a 10h00 course at 08h00.
- */
 export function formatHour(instant: Date): string {
     return instant.toLocaleTimeString('fr-FR', {
         hour: '2-digit',

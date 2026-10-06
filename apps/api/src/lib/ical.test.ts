@@ -16,8 +16,6 @@ const lines = (e: CalendarEvent) =>
     buildCalendar([e], { name: 'Planning', domain: 'example.test' }).split('\r\n')
 
 describe('buildCalendar', () => {
-    // Must hold under any `TZ`: the api container runs in UTC, and reading the
-    // hour with the local getters there would publish 08h00 as 06h00.
     it.each([
         ['summer', '2026-10-06T06:00:00.000Z', '2026-10-06T07:30:00.000Z', '20261006T080000'],
         ['winter', '2026-01-15T07:00:00.000Z', '2026-01-15T08:30:00.000Z', '20260115T080000'],

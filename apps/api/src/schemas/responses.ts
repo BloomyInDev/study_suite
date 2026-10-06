@@ -68,13 +68,11 @@ export const EventDtoSchema = z
         id: uuid('2a7c9e1b-5d3f-4a8b-9c2e-6f0a1b3c5d7e'),
         title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
         startDate: z.union([z.string(), z.number()]).openapi({
-            description:
-                'A real instant, in the shape the `dateFormat` param asks for: UTC by default, so a course the planning shows at 08h30 in September reads `06:30:00.000Z`. Pass `dateFormat=iso-offset` to get it spelled with the Paris offset (`2026-09-01T08:30:00.000+02:00`).',
+            description: 'In the shape the `dateFormat` param asks for.',
             example: '2026-09-01T06:30:00.000Z',
         }),
         endDate: z.union([z.string(), z.number()]).openapi({
-            description:
-                'A real instant, in the shape the `dateFormat` param asks for: UTC by default, so a course the planning shows at 08h30 in September reads `06:30:00.000Z`. Pass `dateFormat=iso-offset` to get it spelled with the Paris offset (`2026-09-01T08:30:00.000+02:00`).',
+            description: 'In the shape the `dateFormat` param asks for.',
             example: '2026-09-01T08:30:00.000Z',
         }),
         source: z.string().openapi({ example: 'prose' }),
@@ -206,7 +204,7 @@ export const EventChangeDtoSchema = z
         title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
         startDate: z.union([z.string(), z.number()]).openapi({
             description:
-                'The slot the event held when it was last seen. For a `moved` change, that is the old one. A real instant, in the shape the `dateFormat` param asks for: UTC by default, so a course the planning shows at 08h30 in September reads `06:30:00.000Z`. Pass `dateFormat=iso-offset` to get it spelled with the Paris offset (`2026-09-01T08:30:00.000+02:00`).',
+                'The slot the event held when it was last seen. For a `moved` change, that is the old one. In the shape the `dateFormat` param asks for.',
         }),
         endDate: z.union([z.string(), z.number()]),
         /** Present on `moved` only: where the event went. */
@@ -229,7 +227,6 @@ export const EventChangeDtoSchema = z
             })
             .nullable(),
         detectedAt: z.string().openapi({
-            description: 'When the scraper noticed the change',
             example: '2026-09-05T18:02:11.000Z',
         }),
     })

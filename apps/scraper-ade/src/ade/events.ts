@@ -22,9 +22,6 @@ const HOURS = /^(\d{1,2})h(\d{2}) - (\d{1,2})h(\d{2})$/
  * `columns` is the date under each day column, left to right. A column is
  * `PX_PER_DAY` wide and starts one pixel early (its border), so `left + 1`
  * falls inside the column the event belongs to.
- *
- * The planning prints Paris hours, so each one is resolved through
- * Europe/Paris into the instant it denotes (see AGENTS.md, Time).
  */
 export function toEvents(squares: readonly SquareEvent[], columns: readonly string[]): AdeEvent[] {
     // Some events are drawn several times over (`Tutorat` once per group

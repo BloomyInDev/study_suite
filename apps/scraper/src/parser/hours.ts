@@ -8,8 +8,6 @@ export function parseHours(raw: string, dayDdMmYyyy: string): { start: Date; end
 
     const [, sh, sm, eh, em] = match
     const [d, mo, y] = dayDdMmYyyy.split('/').map((s) => parseInt(s, 10))
-    // The page prints Paris hours. `Date.UTC` here stored 08h00 as `08:00Z`,
-    // one or two hours after the course really starts.
     const start = parisDate(y!, mo!, d!, +sh!, +sm!)
     const end = parisDate(y!, mo!, d!, +eh!, +em!)
 

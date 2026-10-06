@@ -5,7 +5,6 @@
  */
 export const DEFAULT_PAST_DAYS = 60
 
-/** The feed's default lower bound, compared against `events.startDate`. */
 export function defaultCalendarFrom(now: Date = new Date()): Date {
     return new Date(now.getTime() - DEFAULT_PAST_DAYS * 24 * 60 * 60 * 1000)
 }

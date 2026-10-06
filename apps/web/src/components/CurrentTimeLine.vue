@@ -17,7 +17,7 @@ const props = defineProps<{
 }>()
 
 // The calendar was handed `toCalendarLocalDate`d dates, so the day it reports
-// is the Paris day, and so is the one `now` is read on.
+// is the Paris day.
 const top = computed(() => {
     const { year, month, day, timeToY, intervalRange } = props.day
     const now = parisParts(props.now)

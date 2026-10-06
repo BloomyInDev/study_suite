@@ -2,12 +2,9 @@ import { z } from '@hono/zod-openapi'
 import { parseInstant } from '@studysuite/shared/time'
 
 /**
- * How event timestamps are rendered on the wire. Every format is the same real
- * instant; they differ in spelling only.
- *
- * `unix-instant` and `unix-ms-instant` date from when `unix` and `unix-ms`
- * carried a Paris wall-clock label instead, and are kept as aliases for the
- * clients that asked for them to get the truth.
+ * How event timestamps are rendered on the wire. `unix-instant` and
+ * `unix-ms-instant` are aliases of `unix` and `unix-ms`, kept for the clients
+ * that already send them.
  */
 export const DateFormatSchema = z
     .enum(['iso', 'iso-offset', 'unix', 'unix-ms', 'unix-instant', 'unix-ms-instant'])
@@ -15,18 +12,14 @@ export const DateFormatSchema = z
     .openapi({
         param: { name: 'dateFormat', in: 'query' },
         description:
-            'How `startDate` / `endDate` are written. All six are the same instant. `iso` is UTC (`2026-09-01T06:30:00.000Z`), `iso-offset` carries the Paris offset (`2026-09-01T08:30:00.000+02:00`), `unix` is epoch seconds and `unix-ms` epoch milliseconds. `unix-instant` and `unix-ms-instant` are aliases of the last two.',
+            'How `startDate` / `endDate` are written. `iso` is UTC (`2026-09-01T06:30:00.000Z`), `iso-offset` carries the Paris offset (`2026-09-01T08:30:00.000+02:00`), `unix` is epoch seconds and `unix-ms` epoch milliseconds. `unix-instant` and `unix-ms-instant` are aliases of the last two.',
         example: 'iso',
     })
 export type DateFormat = z.infer<typeof DateFormatSchema>
 
 /**
- * A timestamp bound in the query string, parsed to the instant it denotes.
- *
  * Not `z.coerce.date()`: `new Date()` reads a string without an offset in the
- * process timezone and a bare date as UTC midnight, and the planning's days are
- * Paris days. `parseInstant` settles both, so `from=2026-09-07` means the same
- * thing in the api container as on a laptop.
+ * process timezone and a bare date as UTC midnight, where a Paris day is meant.
  */
 const instantParam = (name: string, what: string) =>
     z
@@ -44,7 +37,7 @@ const instantParam = (name: string, what: string) =>
         })
         .openapi({
             param: { name, in: 'query' },
-            description: `${what} An instant: ISO 8601 with \`Z\` or an offset, exactly as \`startDate\` comes back in the \`iso\` and \`iso-offset\` formats, or epoch milliseconds. A value naming no offset (\`2026-09-07\`, \`2026-09-07T08:00\`) is read in Europe/Paris.`,
+            description: `${what} ISO 8601, or epoch milliseconds. A value naming no offset (\`2026-09-07\`, \`2026-09-07T08:00\`) is read in Europe/Paris.`,
             example: '2026-09-07T08:00:00.000+02:00',
         })
 
@@ -94,8 +87,7 @@ export const DateParamSchema = z.object({
         .date()
         .openapi({
             param: { name: 'date', in: 'query' },
-            description:
-                'A calendar day in Europe/Paris, `YYYY-MM-DD`. The day, or the week, runs from midnight to midnight Paris time.',
+            description: 'A calendar day in Europe/Paris, `YYYY-MM-DD`.',
             example: '2026-09-07',
         }),
     excludeTitle: ExcludeTitleSchema,
@@ -149,7 +141,6 @@ export const SearchSchema = z.object({
     dateFormat: DateFormatSchema,
 })
 
-/** The optional window of the iCal feed, same reading as the event routes'. */
 export const calendarFromParam = () => fromParam().optional()
 export const calendarToParam = () => toParam().optional()
 

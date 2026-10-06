@@ -21,8 +21,7 @@ const comparisonGroupIds = ref<string[]>([])
 const myEvents = ref<Event[]>([])
 const otherEventsMap = ref<Record<string, Event[]>>({})
 
-// The calendar reads `model-value` with the *local* getters, so it gets the
-// same Paris-as-local reading as the events (see `toCalendarLocalDate`).
+// See `toCalendarLocalDate`: the grid must get the same reading as the events.
 const calendarDate = computed(() => toCalendarLocalDate(date.value))
 const loadingMy = ref(false)
 const loadingOther = ref(false)

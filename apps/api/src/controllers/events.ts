@@ -49,8 +49,7 @@ export default new OpenAPIHono()
             path: '/week',
             operationId: 'getWeekEvents',
             summary: 'List a week of events',
-            description:
-                'Returns the Monday-to-Sunday week containing `date`, with both read in Europe/Paris.',
+            description: 'Returns the Monday-to-Sunday week containing `date`.',
             tags: ['Events'],
             request: { query: DateParamSchema },
             responses: {

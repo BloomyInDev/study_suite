@@ -42,9 +42,6 @@ describe('toEvents', () => {
         })
     })
 
-    // The planning prints Paris hours, so 08h00 is a different instant either
-    // side of the clock change. Resolving it through the process timezone
-    // would get this right on a laptop in Paris and nowhere else.
     it.each([
         ['2026-09-28', '2026-09-28T06:00:00Z'],
         ['2026-12-14', '2026-12-14T07:00:00Z'],

@@ -3,10 +3,8 @@ import { PLANNING_TZ, parisParts } from '@studysuite/shared/time'
 /**
  * Minimal RFC 5545 writer, enough for a read-only subscription feed.
  *
- * Courses go out as `DTSTART;TZID=Europe/Paris` with the hour the planning
- * shows, not as `Z` instants. Both denote the same moment; the zoned form is
- * the one a calendar client keeps showing at 08h00 to someone who travels, and
- * it is what subscribers have been receiving all along.
+ * Courses go out as `DTSTART;TZID=Europe/Paris` rather than `Z` instants, so a
+ * calendar client keeps them at their Paris hour.
  */
 
 const TZID = PLANNING_TZ

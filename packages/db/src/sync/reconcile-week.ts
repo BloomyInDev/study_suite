@@ -267,7 +267,6 @@ export async function applyWeekEvents(
     weekMonday: Date,
     scraped: ParsedEvent[],
 ): Promise<WeekDiff> {
-    // Not `+ 7 * 24h`: the week a clock changes in is an hour shorter or longer.
     const weekEnd = addParisDays(weekMonday, 7)
 
     return db.transaction(async (tx) => {

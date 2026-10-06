@@ -8,12 +8,6 @@ export const withEventRelations = {
     eventStudentGroups: { with: { studentGroup: true as const } },
 }
 
-/**
- * Every format is the same instant. `iso-offset` spells it with the Paris
- * offset so the hour in the string is the one on the planning; the `-instant`
- * pair are aliases left from when `unix` and `unix-ms` carried a wall-clock
- * label instead.
- */
 export function formatDate(d: Date, fmt: DateFormat): string | number {
     switch (fmt) {
         case 'iso':

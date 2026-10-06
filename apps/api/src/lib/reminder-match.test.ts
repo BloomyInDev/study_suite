@@ -32,8 +32,6 @@ const subscriber = (over: Partial<Subscriber> = {}): Subscriber => ({
 })
 
 describe('formatHour', () => {
-    // The bug this guards: formatting in the process timezone, which is UTC in
-    // the api container, announces a 10h00 course at 08h00 or 09h00.
     it.each([
         [SUMMER, '10:00'],
         [WINTER, '10:00'],

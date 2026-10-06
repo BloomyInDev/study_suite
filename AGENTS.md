@@ -63,64 +63,27 @@ npm scope is `@studysuite`. When an app declares `"@studysuite/shared": "workspa
 
 ---
 
-## Time: instants, read in Paris
+## Time: the calendar is Paris's
 
-Every event timestamp is a real instant. That covers `events.start_date`,
-`events.end_date`, the slot columns of `event_changes`, and the `startDate` and
-`endDate` an api response carries. A course the planning shows at 10h00 in
-September is stored and served as `08:00:00Z`, and compares with `new Date()`
-directly.
+Event timestamps are ordinary instants. Their day, week and displayed hour are
+Europe/Paris ones whatever machine asks, and the `Date` getters cannot answer
+that: the local ones read the process timezone (Europe/Paris on a laptop, UTC in
+the api container), the UTC ones put a 00h30 course on the previous day. Use
+`@studysuite/shared/time` (`parisDate`, `parisParts`, `parisDayStart`,
+`parisWeekStart`, `addParisDays`, ...) and `timeZone: 'Europe/Paris'` when
+formatting. Its tests, and the api's, must pass under any `TZ`.
 
-It was not always so. Until migration `0017` the scrapers built timestamps with
-`Date.UTC` from the displayed hour, so 10h00 Paris was stored as `10:00:00Z`: a
-label, not an instant. Everything that crossed that boundary had to convert,
-every availability feature was at some point wrong by the Paris offset, and the
-api's default JSON said `Z` while meaning Paris, which put an external calendar
-sync two hours late. See `packages/db/migrations/0017_event_timestamps_to_instants.sql`.
-
-What still needs care is the **calendar**: which day an instant falls on, where
-a week starts, what hour to print. Those are Paris questions whatever machine
-asks them, and `@studysuite/shared/time` is the only place they are answered:
-
-| Helper                                          | Use                                                       |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| `parisDate(y, m, d, h?, min?)`                  | the instant a Paris wall shows that date and hour         |
-| `parisParts(instant)`                           | the Paris year, month, day, hour, minute, weekday         |
-| `parisDayStart(instant?)` / `parisDayEnd(...)`  | the Paris day's bounds; `...End` is exclusive             |
-| `parisWeekStart(instant?)`                      | Monday 00h00 of the Paris week                            |
-| `addParisDays(instant, n)`                      | the same Paris hour `n` days away, across a clock change  |
-| `parisDayKey(instant)` / `parisDayFromKey(key)` | `YYYY-MM-DD` and back                                     |
-| `toParisOffsetIso(instant)`                     | the instant spelled `+02:00`, for the wire                |
-| `parseInstant(text)`                            | a client's timestamp; one with no offset is read in Paris |
-
-It resolves the offset through an explicit `Europe/Paris` `Intl.DateTimeFormat`,
-never the `Date` getters. The local ones read the process timezone, which is
-Europe/Paris on a laptop and UTC in the api container: right in dev, two hours
-out in production. The UTC ones put a 00h30 course on the previous day.
-
-Rules of thumb:
-
-- No `getHours()`, `getDay()`, `setDate()` or `getUTC*()` on an event timestamp,
-  and no `+ 7 * 24h` to reach next week. Use the helpers. Displaying one means
-  `timeZone: 'Europe/Paris'`, which is what `apps/web/src/lib/date.ts` does
-  throughout, so a student abroad still reads the hour on the door of the room.
 - `v-calendar` only knows the browser's local getters. `toCalendarLocalDate`
-  hands it a date whose local reading is the Paris one. That value is for the
-  calendar alone and is no longer the instant.
-- Query params `from` / `to` on the event routes are instants, parsed by
-  `parseInstant`, so what a response hands out can be sent straight back. `date`
-  on `/week` and `/day` is a Paris calendar day.
-- Every `dateFormat` is the same instant: `iso` (the default, UTC),
-  `iso-offset`, `unix`, `unix-ms`. `unix-instant` and `unix-ms-instant` are
-  aliases kept for clients that asked for them when the plain pair was wrong.
-- `packages/shared/src/time/index.test.ts` pins the offsets either side of both
-  DST transitions, and `apps/api/src/lib/serialize.test.ts` asserts every format
-  agrees on the instant. Both must pass under any `TZ`, which is the bug they
-  exist for.
-- **An image built before `0017` must never run against a migrated database.**
-  It reads and writes labels: its scraper would reconcile every course as moved
-  by an hour or two and fill `event_changes`, and its api would serve times one
-  or two hours early. Rolling back the code means restoring the database too.
+  (`apps/web/src/lib/date.ts`) hands it a date whose local reading is the Paris
+  one. That value is for the calendar alone and is no longer the instant.
+- A `from` / `to` query value that names no offset (`2026-09-07`,
+  `2026-09-07T08:00`) is read in Paris, not in UTC or the process timezone.
+- `dateFormat=unix-instant` and `unix-ms-instant` are aliases of `unix` and
+  `unix-ms`, kept for clients that already send them.
+- **An image built before migration `0017` must never run against a migrated
+  database.** Until then timestamps were Paris wall-clock labelled UTC; such a
+  scraper would reconcile every course as moved by an hour or two and fill
+  `event_changes`. Rolling back the code means restoring the database too.
 
 ## packages/shared
 
@@ -310,7 +273,7 @@ Hono server on Bun, port 3000.
 
 `GET /api/calendar.ics` returns an RFC 5545 document for calendar clients to subscribe to. Same filters as `GET /api/events` (`groupId`, `teacherId`, `roomId`, `from`, `to`); without `from` it reaches 60 days back, so the payload does not grow forever. No auth, like the rest of the event routes.
 
-`lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` with the hour the planning shows, read through `parisParts`, and ships a `VTIMEZONE`. A plain `Z` instant would denote the same moment; the zoned form is what subscribers have always received, and it keeps a course at 08h00 on the phone of someone travelling.
+`lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` and ships a `VTIMEZONE`, rather than `Z` instants, so a calendar client keeps a course at its Paris hour.
 
 ### Group filters include ancestors
 
@@ -385,12 +348,9 @@ Three things about it are not obvious:
   Never early, and still true if a tick was missed, so a restart or a slow query
   delays a reminder instead of losing it. The claim table is what makes that safe
   to repeat.
-- **The hour in the notification names its zone.** `now` is `new Date()` and
-  the window arithmetic is plain instants, but `formatHour` prints with
-  `timeZone: 'Europe/Paris'`. The api container runs in UTC, so without it a
-  10h00 course is announced at 08h00. `lib/reminder-match.ts` holds that logic
-  free of the database and the config so it can be tested, and
-  `reminder-match.test.ts` pins both DST seasons.
+
+`lib/reminder-match.ts` holds the matching free of the database and the config
+so it can be tested.
 
 **Configuration.** Optional, like `iut`: with no keypair the routes answer 503,
 the ticker never starts, and `GET /api/config` reports `push.enabled: false` so
@@ -726,6 +686,5 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
 - The push service worker must stay cache-free. See
   [The push service worker](#the-push-service-worker). Adding Workbox precaching
   would serve the pre-substitution `__SITE_URL__` build.
-- Event timestamps are instants, but their day, week and hour are Paris ones.
-  See [Time](#time-instants-read-in-paris), and use `@studysuite/shared/time`
-  rather than the `Date` getters.
+- Never read an event timestamp's day or hour with the `Date` getters. See
+  [Time](#time-the-calendar-is-pariss).

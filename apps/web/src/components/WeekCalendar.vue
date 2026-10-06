@@ -25,7 +25,6 @@ const props = withDefaults(
     { loading: false, keyboardNav: true, height: undefined, minHeight: 400 },
 )
 
-// Any instant of the Paris day being shown.
 const date = defineModel<Date>({ required: true })
 
 const { mobile } = useDisplay()
@@ -43,9 +42,7 @@ watch(
     { immediate: true },
 )
 
-// The calendar reads `model-value` with the *local* getters, so it gets the
-// same Paris-as-local reading as the events, or the grid and the events would
-// disagree on the day in any browser that is not in Paris.
+// See `toCalendarLocalDate`: the grid must get the same reading as the events.
 const calendarDate = computed(() => toCalendarLocalDate(date.value))
 
 const calendarEvents = computed(() =>

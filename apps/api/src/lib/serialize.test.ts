@@ -28,9 +28,6 @@ describe('formatDate', () => {
         expect(DateFormatSchema.parse(undefined)).toBe('iso')
     })
 
-    // The bug this guards: `iso`, `unix` and `unix-ms` used to carry a Paris
-    // wall-clock label, one or two hours ahead of the instant, and a client
-    // doing date arithmetic on the default format put every course late.
     it.each([
         ['summer', SUMMER],
         ['winter', WINTER],

@@ -13,8 +13,7 @@ import {
     toParisOffsetIso,
 } from './index.js'
 
-// Everything here must pass under any `TZ`: reading the process timezone is the
-// bug this module exists for.
+// Everything here must pass under any `TZ`.
 
 // Paris switches on the last Sunday of March and October, at 01:00 UTC.
 const SPRING_FORWARD = [2026, 3, 29] as const // 02:00 -> 03:00, the 02:xx hour does not exist

@@ -7,9 +7,6 @@ import {
     parisWeekStart,
 } from '@studysuite/shared/time'
 
-// Event timestamps are real instants. What a student reads is the Paris hour,
-// so everything below names the zone instead of trusting the browser's: the
-// planning of a student abroad still shows the hours on the door of the room.
 export {
     addParisDays,
     parisDayEnd,
@@ -26,7 +23,7 @@ export const formatTime = (date: Date): string =>
         timeZone: PLANNING_TZ,
     })
 
-/** `lun. 15 sept.`: a Paris day, without its hour. */
+/** `lun. 15 sept.` */
 export const formatShortDay = (date: Date): string =>
     date.toLocaleDateString('fr-FR', {
         weekday: 'short',
@@ -110,7 +107,6 @@ export const toCalendarLocalDate = (date: Date): Date => {
 
 export const mondayOfWeek = (date: Date): Date => parisWeekStart(date)
 
-/** The Paris day of an instant, `YYYY-MM-DD`: what the api's `date` param takes. */
 export const toIsoDateString = (date: Date): string => parisDayKey(date)
 
 // `timestamp.date` is the calendar's own `YYYY-MM-DD`, a day with no zone, so
@@ -120,8 +116,6 @@ export const weekdayFormat = (timestamp: { date: string }): string =>
 
 const isParisSunday = (date: Date): boolean => parisParts(date).weekday === 0
 
-// Paging moves by Paris days: adding 24h steps would drift an hour across a
-// clock change, and around midnight that is the wrong day.
 export const nextDay = (date: Ref<Date>, increment: number): void => {
     const d = addParisDays(date.value, increment)
     date.value = isParisSunday(d) ? addParisDays(d, 1) : d

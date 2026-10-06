@@ -1,15 +1,8 @@
 /**
- * The planning's calendar, read in Europe/Paris.
- *
- * Every event timestamp is a real instant: the scrapers resolve the hour the
- * planning displays through `parisDate`, so a course at 10h00 Paris in summer
- * is stored as `08:00:00Z` and compares with `new Date()` directly.
- *
- * What still needs care is the *calendar*: which day an instant falls on, where
- * a week starts, what "the same hour tomorrow" is. Those are Paris questions,
- * and the helpers below are the only place they are answered. The `Date`
- * getters cannot: the local ones read the process timezone and the UTC ones put
- * a 00h30 course on the previous day.
+ * The planning's calendar, read in Europe/Paris: which day an instant falls on,
+ * where a week starts, what "the same hour tomorrow" is. The `Date` getters
+ * cannot answer that. The local ones read the process timezone and the UTC ones
+ * put a 00h30 course on the previous day.
  */
 
 export const PLANNING_TZ = 'Europe/Paris'
@@ -133,11 +126,7 @@ export function parisDayFromKey(key: string): Date {
     return parisDate(year, month, day)
 }
 
-/**
- * An instant as an RFC 3339 timestamp carrying the Paris offset:
- * `2026-09-07T08:00:00.000+02:00`. The same instant as `toISOString()`, spelled
- * so that the hour a student reads is the one in the string.
- */
+/** An instant as RFC 3339 with the Paris offset: `2026-09-07T08:00:00.000+02:00`. */
 export function toParisOffsetIso(instant: Date): string {
     const offset = offsetMinutesAt(instant)
     const sign = offset < 0 ? '-' : '+'
