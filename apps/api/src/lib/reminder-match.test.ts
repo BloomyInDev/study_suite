@@ -8,11 +8,8 @@ import {
     type UpcomingEvent,
 } from './reminder-match.js'
 
-/** A wall-clock label: the hour the planning displays, encoded with `Date.UTC`. */
-const label = (s: string) => new Date(`${s}Z`)
-
-const SUMMER = label('2026-09-07T10:00:00.000') // 10h00 Paris, CEST
-const WINTER = label('2026-01-15T10:00:00.000') // 10h00 Paris, CET
+const SUMMER = new Date('2026-09-07T08:00:00.000Z') // 10h00 Paris, CEST
+const WINTER = new Date('2026-01-15T09:00:00.000Z') // 10h00 Paris, CET
 
 const minutesBefore = (start: Date, m: number) => new Date(start.getTime() - m * 60_000)
 
@@ -35,13 +32,13 @@ const subscriber = (over: Partial<Subscriber> = {}): Subscriber => ({
 })
 
 describe('formatHour', () => {
-    // The bug this guards: reading a wall-clock label in Europe/Paris applies
-    // the offset a second time, and a 10h00 course is announced as 12h00.
+    // The bug this guards: formatting in the process timezone, which is UTC in
+    // the api container, announces a 10h00 course at 08h00 or 09h00.
     it.each([
         [SUMMER, '10:00'],
         [WINTER, '10:00'],
-    ])('shows the hour the planning shows, either side of DST (%s)', (wall, expected) => {
-        expect(formatHour(wall)).toBe(expected)
+    ])('shows the hour the planning shows, either side of DST (%s)', (start, expected) => {
+        expect(formatHour(start)).toBe(expected)
     })
 })
 
@@ -102,7 +99,7 @@ describe('duePairs', () => {
 })
 
 describe('buildPayload', () => {
-    it('counts the minutes in label space, so DST cannot shift them', () => {
+    it('counts the minutes and reads the hour the same in both seasons', () => {
         for (const start of [SUMMER, WINTER]) {
             const payload = buildPayload(event({ startDate: start }), minutesBefore(start, 15))
             expect(payload.body).toBe('Dans 15 min · 10:00 · Salle 007 · DUPONT Jean')

@@ -1,4 +1,5 @@
 import type { ParsedEvent } from '@studysuite/shared'
+import { parisDate } from '@studysuite/shared/time'
 import { categorizeLines, roomsWithPath } from '../parser/lines.js'
 import { PX_PER_DAY, type SquareEvent } from './planning.js'
 
@@ -22,8 +23,8 @@ const HOURS = /^(\d{1,2})h(\d{2}) - (\d{1,2})h(\d{2})$/
  * `PX_PER_DAY` wide and starts one pixel early (its border), so `left + 1`
  * falls inside the column the event belongs to.
  *
- * Times are **wall-clock labels**: `Date.UTC` over the hour the planning
- * prints, as the rest of the app expects (see AGENTS.md, Time).
+ * The planning prints Paris hours, so each one is resolved through
+ * Europe/Paris into the instant it denotes (see AGENTS.md, Time).
  */
 export function toEvents(squares: readonly SquareEvent[], columns: readonly string[]): AdeEvent[] {
     // Some events are drawn several times over (`Tutorat` once per group
@@ -51,8 +52,7 @@ export function toEvents(squares: readonly SquareEvent[], columns: readonly stri
         }
 
         const [y, m, d] = day.split('-').map(Number) as [number, number, number]
-        const at = (h: string, min: string) =>
-            new Date(Date.UTC(y, m - 1, d, Number(h), Number(min)))
+        const at = (h: string, min: string) => parisDate(y, m, d, Number(h), Number(min))
         const { rooms, teachers, groups } = categorizeLines(lines.slice(1, -1), knownRooms)
 
         return {

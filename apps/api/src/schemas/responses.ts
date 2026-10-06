@@ -69,13 +69,13 @@ export const EventDtoSchema = z
         title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
         startDate: z.union([z.string(), z.number()]).openapi({
             description:
-                'Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC.** It is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
-            example: '2026-09-01T08:30:00.000Z',
+                'A real instant, in the shape the `dateFormat` param asks for: UTC by default, so a course the planning shows at 08h30 in September reads `06:30:00.000Z`. Pass `dateFormat=iso-offset` to get it spelled with the Paris offset (`2026-09-01T08:30:00.000+02:00`).',
+            example: '2026-09-01T06:30:00.000Z',
         }),
         endDate: z.union([z.string(), z.number()]).openapi({
             description:
-                'Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC.** It is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
-            example: '2026-09-01T10:30:00.000Z',
+                'A real instant, in the shape the `dateFormat` param asks for: UTC by default, so a course the planning shows at 08h30 in September reads `06:30:00.000Z`. Pass `dateFormat=iso-offset` to get it spelled with the Paris offset (`2026-09-01T08:30:00.000+02:00`).',
+            example: '2026-09-01T08:30:00.000Z',
         }),
         source: z.string().openapi({ example: 'prose' }),
         color: z.string().nullable().openapi({
@@ -206,7 +206,7 @@ export const EventChangeDtoSchema = z
         title: z.string().openapi({ example: 'R5.05 — Programmation système' }),
         startDate: z.union([z.string(), z.number()]).openapi({
             description:
-                'The slot the event held when it was last seen. For a `moved` change, that is the old one. Paris wall-clock, in the shape the `dateFormat` param asks for. **`iso` ends in `Z` but is not UTC.** It is the hour displayed on the planning, and `unix` / `unix-ms` are the same label as an epoch, so both are off by the Paris offset (1h winter, 2h summer). For a real instant pass `dateFormat=iso-offset` (`2026-09-01T08:30:00.000+02:00`), `unix-instant` or `unix-ms-instant`.',
+                'The slot the event held when it was last seen. For a `moved` change, that is the old one. A real instant, in the shape the `dateFormat` param asks for: UTC by default, so a course the planning shows at 08h30 in September reads `06:30:00.000Z`. Pass `dateFormat=iso-offset` to get it spelled with the Paris offset (`2026-09-01T08:30:00.000+02:00`).',
         }),
         endDate: z.union([z.string(), z.number()]),
         /** Present on `moved` only: where the event went. */
@@ -229,7 +229,7 @@ export const EventChangeDtoSchema = z
             })
             .nullable(),
         detectedAt: z.string().openapi({
-            description: 'A real UTC instant, unlike the wall-clock fields above',
+            description: 'When the scraper noticed the change',
             example: '2026-09-05T18:02:11.000Z',
         }),
     })

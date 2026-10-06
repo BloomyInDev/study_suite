@@ -1,14 +1,15 @@
+import { PLANNING_TZ, parisParts } from '@studysuite/shared/time'
+
 /**
  * Minimal RFC 5545 writer, enough for a read-only subscription feed.
  *
- * Event timestamps are stored as Paris wall-clock labelled UTC (the scraper
- * builds them with `Date.UTC` from what the planning page displays), so the
- * UTC getters give back the hour a student actually reads on the site. They are
- * emitted with `TZID=Europe/Paris` rather than as `Z` instants, which is what
- * that hour means; a `Z` would shift every course by one or two hours.
+ * Courses go out as `DTSTART;TZID=Europe/Paris` with the hour the planning
+ * shows, not as `Z` instants. Both denote the same moment; the zoned form is
+ * the one a calendar client keeps showing at 08h00 to someone who travels, and
+ * it is what subscribers have been receiving all along.
  */
 
-const TZID = 'Europe/Paris'
+const TZID = PLANNING_TZ
 
 const VTIMEZONE = [
     'BEGIN:VTIMEZONE',
@@ -35,17 +36,20 @@ function pad(n: number): string {
     return String(n).padStart(2, '0')
 }
 
-/** Local date-time form (no trailing Z): pairs with a TZID parameter. */
+/** Paris date-time form (no trailing Z): pairs with the TZID parameter. */
 function localStamp(d: Date): string {
+    const p = parisParts(d)
     return (
-        `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
-        `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`
+        `${p.year}${pad(p.month)}${pad(p.day)}` + `T${pad(p.hour)}${pad(p.minute)}${pad(p.second)}`
     )
 }
 
-/** UTC form, for the properties that are true instants (DTSTAMP, LAST-MODIFIED). */
+/** UTC form, which is what DTSTAMP and LAST-MODIFIED are required to be in. */
 function utcStamp(d: Date): string {
-    return `${localStamp(d)}Z`
+    return (
+        `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}` +
+        `T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`
+    )
 }
 
 function escapeText(value: string): string {

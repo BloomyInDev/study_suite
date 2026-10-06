@@ -7,14 +7,8 @@ import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { Duration, type Event } from '../lib/types.js'
 import CalendarEvent from '../components/CalendarEvent.vue'
 import CurrentTimeLine from '../components/CurrentTimeLine.vue'
-import {
-    nextDay,
-    previousDay,
-    toCalendarLocalDate,
-    wallClockNow,
-    weekdayFormat,
-} from '../lib/date.js'
-import { useWallClockNow } from '../lib/use-wall-clock-now.js'
+import { nextDay, previousDay, toCalendarLocalDate, weekdayFormat } from '../lib/date.js'
+import { useNow } from '../lib/use-now.js'
 
 const groupsStore = useGroupsStore()
 const eventsStore = useEventsStore()
@@ -22,18 +16,13 @@ const eventsStore = useEventsStore()
 // with are shown whole.
 const hiddenCourses = useHiddenCoursesStore()
 
-// See PlanningView: a real instant lands on the previous day before 02h Paris.
-const date = ref(wallClockNow())
+const date = ref(new Date())
 const comparisonGroupIds = ref<string[]>([])
 const myEvents = ref<Event[]>([])
 const otherEventsMap = ref<Record<string, Event[]>>({})
 
-// The calendar reads `model-value` with the *local* getters, while `date` is a
-// wall-clock label, so handing it over raw applies the Paris offset a second
-// time and the grid runs 2h ahead of the events, which go through
-// `toCalendarLocalDate`. Past 22h wall-clock that rolled the view onto the next
-// day, and on a Sunday night onto next week, while the fetch stayed on the
-// current one.
+// The calendar reads `model-value` with the *local* getters, so it gets the
+// same Paris-as-local reading as the events (see `toCalendarLocalDate`).
 const calendarDate = computed(() => toCalendarLocalDate(date.value))
 const loadingMy = ref(false)
 const loadingOther = ref(false)
@@ -80,8 +69,7 @@ const allCalendarEvents = computed(() => {
 
 const loading = computed(() => loadingMy.value || loadingOther.value)
 
-// Ticks in wall-clock time, like the grid it is drawn on.
-const now = useWallClockNow()
+const now = useNow()
 
 watch(
     [date, () => groupsStore.effectiveGroupIds, () => hiddenCourses.key],
@@ -158,7 +146,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                 <v-btn icon variant="text" @click="previous"
                     ><v-icon>mdi-chevron-left</v-icon></v-btn
                 >
-                <v-btn variant="outlined" class="mx-2" @click="date = wallClockNow()"
+                <v-btn variant="outlined" class="mx-2" @click="date = new Date()"
                     >Aujourd'hui</v-btn
                 >
                 <v-btn icon variant="text" @click="next"><v-icon>mdi-chevron-right</v-icon></v-btn>

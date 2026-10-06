@@ -9,10 +9,9 @@ import {
     previousDay,
     skipSunday,
     toCalendarLocalDate,
-    wallClockNow,
     weekdayFormat,
 } from '../lib/date.js'
-import { useWallClockNow } from '../lib/use-wall-clock-now.js'
+import { useNow } from '../lib/use-now.js'
 
 const props = withDefaults(
     defineProps<{
@@ -26,12 +25,11 @@ const props = withDefaults(
     { loading: false, keyboardNav: true, height: undefined, minHeight: 400 },
 )
 
-// The paged date is a Paris wall-clock label, like the event timestamps it is
-// compared to. Never `new Date()`.
+// Any instant of the Paris day being shown.
 const date = defineModel<Date>({ required: true })
 
 const { mobile } = useDisplay()
-const now = useWallClockNow()
+const now = useNow()
 
 // A Sunday renders as Mon–Sat of the ended week plus the next Monday, and pages
 // a week away from what the parent fetches (see `skipSunday`). Snap whatever
@@ -45,10 +43,9 @@ watch(
     { immediate: true },
 )
 
-// The calendar reads `model-value` with the *local* getters, while `date` is a
-// wall-clock label, so handing it over raw applies the Paris offset a second
-// time and the grid runs ahead of the events, which go through
-// `toCalendarLocalDate`.
+// The calendar reads `model-value` with the *local* getters, so it gets the
+// same Paris-as-local reading as the events, or the grid and the events would
+// disagree on the day in any browser that is not in Paris.
 const calendarDate = computed(() => toCalendarLocalDate(date.value))
 
 const calendarEvents = computed(() =>
@@ -94,7 +91,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             <v-btn
                 variant="outlined"
                 :class="mobile ? '' : 'mx-4'"
-                @click="date = skipSunday(wallClockNow())"
+                @click="date = skipSunday(new Date())"
             >
                 Aujourd'hui
             </v-btn>

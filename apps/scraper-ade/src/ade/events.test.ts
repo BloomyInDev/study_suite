@@ -33,8 +33,8 @@ describe('toEvents', () => {
         expect(one()).toEqual({
             adeId: 1,
             title: 'Communication professionnelle',
-            startDate: new Date('2026-09-28T08:00:00Z'),
-            endDate: new Date('2026-09-28T09:30:00Z'),
+            startDate: new Date('2026-09-28T06:00:00Z'),
+            endDate: new Date('2026-09-28T07:30:00Z'),
             rooms: [{ name: 'K018' }],
             teachers: [{ lastName: 'BAHRI', firstName: 'Delphine' }],
             groups: [{ internalName: 'Q4' }],
@@ -42,21 +42,21 @@ describe('toEvents', () => {
         })
     })
 
-    // Times are Paris wall-clock labels: the hour the planning prints, as UTC.
-    // A conversion through the process timezone would shift them by one or two
-    // hours depending on the season, and only outside Europe/Paris.
+    // The planning prints Paris hours, so 08h00 is a different instant either
+    // side of the clock change. Resolving it through the process timezone
+    // would get this right on a laptop in Paris and nowhere else.
     it.each([
-        ['2026-09-28', '2026-09-28T08:00:00Z'],
-        ['2026-12-14', '2026-12-14T08:00:00Z'],
-    ])('keeps 08h00 as 08:00 on %s, whatever the season', (day, expected) => {
+        ['2026-09-28', '2026-09-28T06:00:00Z'],
+        ['2026-12-14', '2026-12-14T07:00:00Z'],
+    ])('reads 08h00 on %s as the instant Paris means by it', (day, expected) => {
         expect(toEvents([square()], [day])[0]!.startDate).toEqual(new Date(expected))
     })
 
     it('places an event by its column, the border pixel included', () => {
         // Columns start one pixel early: 999 is the second day, not the first.
-        expect(one({ left: 999, width: 48 }).startDate).toEqual(new Date('2026-09-29T08:00:00Z'))
+        expect(one({ left: 999, width: 48 }).startDate).toEqual(new Date('2026-09-29T06:00:00Z'))
         expect(one({ left: 998 - 48, width: 48 }).startDate).toEqual(
-            new Date('2026-09-28T08:00:00Z'),
+            new Date('2026-09-28T06:00:00Z'),
         )
     })
 

@@ -103,8 +103,8 @@ describe('projectWeeks', () => {
             `[3]${week(1, d(0), 'S34-17 août 26')}${week(2, d(1), 'S35-24 août 26')}${week(3, d(2), 'S36-31 août 26')}` +
             `[1]{"0""August 2026"[2]${week(1, d(0), 'S34-17 août 26')}${week(2, d(1), 'S35-24 août 26')}`
         expect(projectWeeks(blob)).toEqual([
-            { index: 0, monday: new Date('2026-08-17T00:00:00Z') },
-            { index: 1, monday: new Date('2026-08-24T00:00:00Z') },
+            { index: 0, monday: new Date('2026-08-16T22:00:00Z') },
+            { index: 1, monday: new Date('2026-08-23T22:00:00Z') },
         ])
     })
 
@@ -112,7 +112,7 @@ describe('projectWeeks', () => {
         // 00:00 Paris in summer is 22:00 UTC on the Sunday.
         const sundayEvening = d(0) - 2 * 3_600_000
         const blob = `[1]${week(1, sundayEvening, 'S34-17 août 26')}[1]${week(1, sundayEvening, 'S34-17 août 26')}`
-        expect(projectWeeks(blob)[0]!.monday).toEqual(new Date('2026-08-17T00:00:00Z'))
+        expect(projectWeeks(blob)[0]!.monday).toEqual(new Date('2026-08-16T22:00:00Z'))
     })
 })
 

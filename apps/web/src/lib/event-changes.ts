@@ -13,7 +13,7 @@ export const changeTypeItems = (Object.keys(CHANGE_TYPES) as ChangeType[]).map((
     title: CHANGE_TYPES[value].label,
 }))
 
-/** `detectedAt` is a real instant, so it is the local clock that formats it. */
+/** When the scraper noticed, which is about the reader: their own clock formats it. */
 export const formatDetected = (iso: string): string =>
     new Date(iso).toLocaleString('fr-FR', {
         weekday: 'long',
@@ -23,7 +23,7 @@ export const formatDetected = (iso: string): string =>
         minute: '2-digit',
     })
 
-/** The slot an event held, as one line. Wall-clock, hence the UTC formatters. */
+/** The slot an event held, as one line, in Paris time like the planning. */
 export const formatSlot = (start: Date, end: Date): string =>
     `${formatFullDate(start)} – ${formatTime(end)}`
 
