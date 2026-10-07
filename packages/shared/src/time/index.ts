@@ -1,17 +1,8 @@
 /**
- * The planning is stored as Paris wall-clock labelled UTC.
- *
- * The scraper builds every timestamp with `Date.UTC` from the hour the Prose
- * Consult page displays (`apps/scraper/src/parser/hours.ts`), so a course at
- * 10h00 Paris lands in the database as `10:00:00Z`. It is a *label*, not an
- * instant: reading it back with the UTC getters gives the hour a student
- * actually sees, which is why the api formats it that way and `lib/ical.ts`
- * emits it under `TZID=Europe/Paris`.
- *
- * So a real instant such as `new Date()` cannot be compared with one of those
- * timestamps directly. Doing so is off by the Paris UTC offset, one hour in
- * winter and two in summer. Convert it first with `toWallClock`, or take the
- * current moment from `wallClockNow`.
+ * The planning's calendar, read in Europe/Paris: which day an instant falls on,
+ * where a week starts, what "the same hour tomorrow" is. The `Date` getters
+ * cannot answer that. The local ones read the process timezone and the UTC ones
+ * put a 00h30 course on the previous day.
  */
 
 export const PLANNING_TZ = 'Europe/Paris'
@@ -19,7 +10,7 @@ export const PLANNING_TZ = 'Europe/Paris'
 /**
  * Deliberately not `date.getHours()`: that reads the *process* timezone, which
  * is Europe/Paris on a developer's laptop and UTC in the api container, so the
- * comparison silently worked in dev and drifted in production.
+ * result silently worked in dev and drifted in production.
  */
 const partsFormatter = new Intl.DateTimeFormat('en-US', {
     timeZone: PLANNING_TZ,
@@ -32,87 +23,165 @@ const partsFormatter = new Intl.DateTimeFormat('en-US', {
     second: '2-digit',
 })
 
-interface WallClockParts {
+export interface ParisParts {
     year: number
+    /** 1 to 12. */
     month: number
     day: number
     hour: number
     minute: number
     second: number
+    /** 0 = Sunday, like `Date.prototype.getDay`. */
+    weekday: number
 }
 
-function partsOf(instant: Date): WallClockParts {
+/** What a clock and a calendar on a Paris wall show at `instant`. */
+export function parisParts(instant: Date): ParisParts {
     const parts = partsFormatter.formatToParts(instant)
     const value = (type: Intl.DateTimeFormatPartTypes): number =>
         Number(parts.find((p) => p.type === type)?.value)
+    const year = value('year')
+    const month = value('month')
+    const day = value('day')
     return {
-        year: value('year'),
-        month: value('month'),
-        day: value('day'),
+        year,
+        month,
+        day,
         hour: value('hour'),
         minute: value('minute'),
         second: value('second'),
+        weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
     }
-}
-
-/** A real instant, re-encoded the way planning timestamps are stored. */
-export function toWallClock(instant: Date): Date {
-    const { year, month, day, hour, minute, second } = partsOf(instant)
-    return new Date(
-        Date.UTC(year, month - 1, day, hour, minute, second, instant.getUTCMilliseconds()),
-    )
-}
-
-/** Now, comparable with an event's `startDate` / `endDate`. */
-export function wallClockNow(): Date {
-    return toWallClock(new Date())
-}
-
-/** Midnight opening the Paris day that contains `instant`, in that encoding. */
-export function wallClockDayStart(instant: Date = new Date()): Date {
-    const { year, month, day } = partsOf(instant)
-    return new Date(Date.UTC(year, month - 1, day))
-}
-
-/** The midnight closing it. Exclusive, so pair it with a strict `<`. */
-export function wallClockDayEnd(instant: Date = new Date()): Date {
-    const end = wallClockDayStart(instant)
-    end.setUTCDate(end.getUTCDate() + 1)
-    return end
 }
 
 /** The Europe/Paris offset, in minutes east of UTC, at a real instant. */
 function offsetMinutesAt(instant: Date): number {
-    return (toWallClock(instant).getTime() - instant.getTime()) / 60000
+    const { year, month, day, hour, minute, second } = parisParts(instant)
+    const shown = Date.UTC(year, month - 1, day, hour, minute, second)
+    return Math.round((shown - instant.getTime()) / 60000)
 }
 
 /**
- * The real instant a wall-clock label denotes, the inverse of `toWallClock`.
+ * The instant at which a Paris wall shows the given date and hour. `month` is
+ * 1 to 12, and the fields overflow the way `Date.UTC`'s do, so day 32 is the
+ * 1st of the next month.
  *
  * The offset depends on the instant, which is what we are solving for, so the
- * label is first read as if it were UTC to get a candidate offset, then the
+ * fields are first read as if they were UTC to get a candidate offset, then the
  * result is re-measured once: within an hour of a DST transition the first
  * guess lands on the wrong side of it and the second pass corrects that.
  */
-export function fromWallClock(wallClock: Date): Date {
-    const guess = new Date(wallClock.getTime() - offsetMinutesAt(wallClock) * 60000)
-    return new Date(wallClock.getTime() - offsetMinutesAt(guess) * 60000)
+export function parisDate(
+    year: number,
+    month: number,
+    day: number,
+    hour = 0,
+    minute = 0,
+    second = 0,
+): Date {
+    const shown = Date.UTC(year, month - 1, day, hour, minute, second)
+    const guess = new Date(shown - offsetMinutesAt(new Date(shown)) * 60000)
+    return new Date(shown - offsetMinutesAt(guess) * 60000)
+}
+
+/** Midnight opening the Paris day that contains `instant`. */
+export function parisDayStart(instant: Date = new Date()): Date {
+    const { year, month, day } = parisParts(instant)
+    return parisDate(year, month, day)
+}
+
+/** The midnight closing it. Exclusive, so pair it with a strict `<`. */
+export function parisDayEnd(instant: Date = new Date()): Date {
+    const { year, month, day } = parisParts(instant)
+    return parisDate(year, month, day + 1)
 }
 
 /**
- * A wall-clock label as an RFC 3339 timestamp carrying the real Paris offset:
- * `2026-09-07T08:00:00.000+02:00`.
- *
- * Unlike `toISOString()` on the same value, this denotes the instant a student
- * experiences, so a consumer that does date arithmetic on it gets the right
- * answer without knowing anything about how the planning is stored.
+ * The same Paris hour, `days` days later. Not `+ days * 24h`: the day a clock
+ * changes is 23 or 25 hours long, and adding milliseconds across it lands an
+ * hour off.
  */
-export function wallClockToOffsetIso(wallClock: Date): string {
-    const offset = offsetMinutesAt(fromWallClock(wallClock))
+export function addParisDays(instant: Date, days: number): Date {
+    const { year, month, day, hour, minute, second } = parisParts(instant)
+    return parisDate(year, month, day + days, hour, minute, second)
+}
+
+/** Monday 00h00 of the Paris week that contains `instant`. A Sunday closes its week. */
+export function parisWeekStart(instant: Date = new Date()): Date {
+    const { year, month, day, weekday } = parisParts(instant)
+    return parisDate(year, month, day - ((weekday + 6) % 7))
+}
+
+const pad = (n: number, width = 2): string => String(n).padStart(width, '0')
+
+/** The Paris day of `instant` as `YYYY-MM-DD`. */
+export function parisDayKey(instant: Date): string {
+    const { year, month, day } = parisParts(instant)
+    return `${pad(year, 4)}-${pad(month)}-${pad(day)}`
+}
+
+/** The inverse of `parisDayKey`: the midnight opening a `YYYY-MM-DD` Paris day. */
+export function parisDayFromKey(key: string): Date {
+    const [year, month, day] = key.split('-').map(Number) as [number, number, number]
+    return parisDate(year, month, day)
+}
+
+/** An instant as RFC 3339 with the Paris offset: `2026-09-07T08:00:00.000+02:00`. */
+export function toParisOffsetIso(instant: Date): string {
+    const offset = offsetMinutesAt(instant)
     const sign = offset < 0 ? '-' : '+'
     const abs = Math.abs(offset)
-    const hh = String(Math.floor(abs / 60)).padStart(2, '0')
-    const mm = String(abs % 60).padStart(2, '0')
+    const shown = new Date(instant.getTime() + offset * 60000)
     // `slice(0, 23)` keeps `YYYY-MM-DDTHH:mm:ss.sss`, dropping only the `Z`.
-    return `${wallClock.toISOString().slice(0, 23)}${sign}${hh}:${mm}`
+    return `${shown.toISOString().slice(0, 23)}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
+}
+
+const STAMP =
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?(Z|[+-]\d{2}:?\d{2})?$/i
+
+/**
+ * Epochs below this are seconds, the rest milliseconds. As milliseconds it is
+ * 1973 and as seconds the year 5138, so no date the planning holds is ambiguous.
+ */
+const SECONDS_BELOW = 1e11
+
+/**
+ * Parses a timestamp a client sent. One that carries `Z` or an offset is the
+ * instant it says. One that does not (`2026-09-07`, `2026-09-07T08:00`) is a
+ * Paris date or hour: `new Date()` would read the first as UTC midnight and the
+ * second in the process timezone. Bare digits are a Unix epoch. Returns null
+ * for anything else, a date that does not exist included: `new Date()` and
+ * `parisDate` would both turn 31 February into 3 March.
+ */
+export function parseInstant(text: string): Date | null {
+    const s = text.trim()
+    if (/^\d+$/.test(s)) {
+        const n = Number(s)
+        const d = new Date(n < SECONDS_BELOW ? n * 1000 : n)
+        return Number.isNaN(d.getTime()) ? null : d
+    }
+
+    const m = STAMP.exec(s)
+    if (!m) return null
+    const [year, month, day, hour, minute, second] = m.slice(1, 7).map((v) => Number(v ?? 0)) as [
+        number,
+        number,
+        number,
+        number,
+        number,
+        number,
+    ]
+    const fields = new Date(Date.UTC(year, month - 1, day, hour, minute, second))
+    const exists =
+        fields.getUTCMonth() === month - 1 &&
+        fields.getUTCDate() === day &&
+        fields.getUTCHours() === hour &&
+        fields.getUTCMinutes() === minute &&
+        fields.getUTCSeconds() === second
+    if (!exists) return null
+
+    const d = m[7]
+        ? new Date(s.replace(' ', 'T'))
+        : parisDate(year, month, day, hour, minute, second)
+    return Number.isNaN(d.getTime()) ? null : d
 }

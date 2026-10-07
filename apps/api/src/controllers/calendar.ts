@@ -7,15 +7,20 @@ import { eventFilterConditions } from '../lib/event-filters.js'
 import { expandGroupIds } from '../lib/group-ancestors.js'
 import { buildCalendar } from '../lib/ical.js'
 import { withEventRelations } from '../lib/serialize.js'
-import { ExcludeTitleSchema, IncludeAncestorGroupsSchema } from '../schemas/query.js'
+import {
+    ExcludeTitleSchema,
+    fromParam,
+    IncludeAncestorGroupsSchema,
+    toParam,
+} from '../schemas/query.js'
 
 const CalendarQuerySchema = z.object({
     groupId: z.string().uuid().optional(),
     includeAncestorGroups: IncludeAncestorGroupsSchema,
     teacherId: z.string().uuid().optional(),
     roomId: z.string().uuid().optional(),
-    from: z.coerce.date().optional(),
-    to: z.coerce.date().optional(),
+    from: fromParam().optional(),
+    to: toParam().optional(),
     excludeTitle: ExcludeTitleSchema,
 })
 
@@ -66,8 +71,6 @@ export default new OpenAPIHono().openapi(
     async (c) => {
         const filters = c.req.valid('query')
         const { groupId, includeAncestorGroups, ...rest } = filters
-        // A wall-clock label, like `events.startDate` it is compared with.
-        // `Date.now()` here shifted the cutoff by the Paris offset.
         const from = filters.from ?? defaultCalendarFrom()
         const rows = await db.query.events.findMany({
             where: and(

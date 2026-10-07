@@ -4,7 +4,7 @@ import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
 import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import type { Event } from '../lib/types.js'
-import { wallClockNow } from '../lib/date.js'
+import { parisParts } from '../lib/date.js'
 
 const eventsStore = useEventsStore()
 const groups = useGroupsStore()
@@ -16,7 +16,7 @@ const loading = ref(true)
 async function load() {
     try {
         events.value = await eventsStore.fetchWeekEvents(
-            wallClockNow(),
+            new Date(),
             groups.effectiveGroupIds,
             hiddenCourses.titles,
         )
@@ -35,13 +35,13 @@ watch(
 const DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
 const stats = computed(() => {
-    const now = wallClockNow()
+    const now = new Date()
     const hours = (list: Event[]) =>
         list.reduce((sum, e) => sum + (e.end.getTime() - e.start.getTime()) / 3_600_000, 0)
 
     const perDay = new Map<number, Event[]>()
     for (const e of events.value) {
-        const day = e.start.getUTCDay()
+        const day = parisParts(e.start).weekday
         perDay.set(day, [...(perDay.get(day) ?? []), e])
     }
     let busiest: { day: number; hours: number } | null = null

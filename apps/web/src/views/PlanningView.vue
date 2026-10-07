@@ -10,7 +10,7 @@ import { useGroupOverride } from '../lib/group-override.js'
 import { groupLabel } from '../lib/group-label.js'
 import type { Event, Teacher } from '../lib/types.js'
 import WeekCalendar from '../components/WeekCalendar.vue'
-import { mondayOfWeek, skipSunday, wallClockNow } from '../lib/date.js'
+import { mondayOfWeek, skipSunday } from '../lib/date.js'
 
 const { mobile } = useDisplay()
 // Carried onto the changes page so `?group=` survives the jump.
@@ -62,10 +62,7 @@ const ownPlanning = computed(() => !teacherId.value && !override.isActive.value)
 const hiddenTitles = computed(() => (ownPlanning.value ? hiddenCourses.titles : []))
 provide(CAN_HIDE_COURSES, ownPlanning)
 const events = ref<Event[]>([])
-// Wall-clock, not `new Date()`: `mondayOfWeek` reads the UTC getters, so a real
-// instant between midnight and 02h Paris still falls on the previous day and the
-// view opened on last week.
-const date = ref(skipSunday(wallClockNow()))
+const date = ref(skipSunday(new Date()))
 const loading = ref(false)
 
 // Switching between a teacher and a group, or paging faster than the api

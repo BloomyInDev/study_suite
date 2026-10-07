@@ -1,4 +1,5 @@
 import type { ParsedEvent } from '@studysuite/shared'
+import { addParisDays } from '@studysuite/shared/time'
 import { and, eq, gte, inArray, lt } from 'drizzle-orm'
 import type { createDb } from '../client.js'
 import {
@@ -266,7 +267,7 @@ export async function applyWeekEvents(
     weekMonday: Date,
     scraped: ParsedEvent[],
 ): Promise<WeekDiff> {
-    const weekEnd = new Date(weekMonday.getTime() + 7 * 24 * 60 * 60 * 1000)
+    const weekEnd = addParisDays(weekMonday, 7)
 
     return db.transaction(async (tx) => {
         const existingEvents = await tx.query.events.findMany({

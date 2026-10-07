@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, lt, lte, sql } from 'drizzle-orm'
 import { events, pushReminderSends, pushSubscriptions } from '@studysuite/db'
-import { wallClockNow } from '@studysuite/shared/time'
+import { parisParts } from '@studysuite/shared/time'
 import { db } from '../db.js'
 import { withEventRelations } from './serialize.js'
 import { pushConfigured, sendReminder } from './push.js'
@@ -23,7 +23,7 @@ const SEND_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
  * the events of the next hour, so the matching runs in JS rather than as a join
  * against a `uuid[]` column.
  */
-export async function runReminderTick(now: Date = wallClockNow()): Promise<number> {
+export async function runReminderTick(now: Date = new Date()): Promise<number> {
     if (!pushConfigured) return 0
 
     const subs = await db.select().from(pushSubscriptions)
@@ -111,11 +111,11 @@ export function startReminderTick(): void {
     console.log('[push] course reminders on, ticking every 60s')
 
     setInterval(() => {
-        const now = wallClockNow()
+        const now = new Date()
         void runReminderTick(now).catch((err) => console.error('[push] tick failed', err))
         // Hourly, not every tick: the retention window is a week, so there is
         // nothing to gain from chasing it 1440 times a day.
-        if (now.getUTCMinutes() === 0) {
+        if (parisParts(now).minute === 0) {
             void pruneSends().catch((err) => console.error('[push] prune failed', err))
         }
     }, TICK_MS)

@@ -7,7 +7,7 @@ import { useNotificationsStore } from '../stores/notifications.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useEventsStore } from '../stores/events.js'
 import type { Assignment, Event } from '../lib/types.js'
-import { formatShortDay, formatTime, fromWallClock, wallClockDayStart } from '../lib/date.js'
+import { addParisDays, formatShortDay, formatTime, parisDayStart } from '../lib/date.js'
 
 const props = defineProps<{
     modelValue: boolean
@@ -117,9 +117,8 @@ async function loadCourses() {
     }
     loadingCourses.value = true
     try {
-        const from = wallClockDayStart()
-        const to = new Date(from)
-        to.setUTCDate(to.getUTCDate() + COURSE_WINDOW_DAYS)
+        const from = parisDayStart()
+        const to = addParisDays(from, COURSE_WINDOW_DAYS)
         // A promo-wide lecture is tagged on the parent group, not on the class.
         const list = await eventsStore.fetchRange(groups.withAncestors([groupId]), from, to)
 
@@ -154,10 +153,7 @@ function onCourseSelected(id: string | null) {
     form.value.eventId = id
     const course = courses.value.find((e) => e.id === id)
     if (!course) return
-    // A course's timestamps are Paris wall-clock labels while a due date is a
-    // real instant, and the field reads the browser's timezone, so the label
-    // has to be resolved before it is filled in.
-    form.value.dueDate = toDatetimeLocal(fromWallClock(course.start))
+    form.value.dueDate = toDatetimeLocal(course.start)
     if (!form.value.subject.trim()) form.value.subject = course.title
 }
 

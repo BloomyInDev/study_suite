@@ -153,9 +153,12 @@ export default new OpenAPIHono()
         }),
         async (c) => {
             const { id } = c.req.valid('param')
-            const { from, to, includeAncestorGroups, dateFormat } = c.req.valid('query')
-            const fromDate = from ? new Date(from) : undefined
-            const toDate = to ? new Date(to) : undefined
+            const {
+                from: fromDate,
+                to: toDate,
+                includeAncestorGroups,
+                dateFormat,
+            } = c.req.valid('query')
             const [group] = await db.select().from(studentGroups).where(eq(studentGroups.id, id))
             if (!group)
                 return c.json({ error: { code: 'NOT_FOUND', message: 'Group not found' } }, 404)

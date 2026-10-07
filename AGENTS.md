@@ -63,59 +63,32 @@ npm scope is `@studysuite`. When an app declares `"@studysuite/shared": "workspa
 
 ---
 
-## Time: Paris wall-clock labelled UTC
+## Time: the calendar is Paris's
 
-Every event timestamp is a label, not an instant. That covers `events.start_date`,
-`events.end_date`, and the `startDate` and `endDate` an api response carries. The
-scraper builds them with `Date.UTC` from the hour the Prose Consult page displays, so
-a course at 10h00 Paris is stored as `10:00:00Z`. Reading it back with the UTC getters
-gives the hour a student actually sees.
+Event timestamps are ordinary instants. Their day, week and displayed hour are
+Europe/Paris ones whatever machine asks, and the `Date` getters cannot answer
+that: the local ones read the process timezone (Europe/Paris on a laptop, UTC in
+the api container), the UTC ones put a 00h30 course on the previous day. Use
+`@studysuite/shared/time` (`parisDate`, `parisParts`, `parisDayStart`,
+`parisWeekStart`, `addParisDays`, ...) and `timeZone: 'Europe/Paris'` when
+formatting. Its tests, and the api's, must pass under any `TZ`.
 
-So `new Date()` cannot be compared with one of them. Doing so is off by the Paris UTC
-offset, one hour in winter and two in summer. Every availability feature was wrong by
-that amount for exactly this reason: "Disponibles maintenant", free rooms, teacher
-busy/free, current-or-next event.
-
-`@studysuite/shared/time` is the only correct way across that boundary:
-
-| Helper                                                      | Use                                                         |
-| ----------------------------------------------------------- | ----------------------------------------------------------- |
-| `wallClockNow()`                                            | "now", comparable with an event timestamp                   |
-| `toWallClock(instant)`                                      | convert a real instant you already hold                     |
-| `wallClockDayStart(instant?)` / `wallClockDayEnd(instant?)` | the Paris day's bounds; `...End` is exclusive               |
-| `fromWallClock(label)`                                      | the real instant a label denotes (inverse of `toWallClock`) |
-| `wallClockToOffsetIso(label)`                               | that instant as `+02:00`, for the wire                      |
-
-It resolves the offset through an explicit `Europe/Paris` `Intl.DateTimeFormat`, never
-the local getters. Its predecessor `dateToUTC` read the process timezone instead, which
-is Europe/Paris on a laptop and UTC in the api container. Availability was right in dev
-and two hours out in production.
-
-Rules of thumb:
-
-- Query params `from` / `to` on the event routes are wall-clock too, matching the
-  responses. Sending `new Date().toISOString()` shifts the window.
-- Timestamps that are genuinely instants stay real dates and compare with `new Date()`:
-  `users.updated_at`, `discord_token_expires_at`, `assignments.due_date`, iCal's
-  `DTSTAMP`. `HomeView` holds both kinds and keeps them apart as `now` and `wallNow`.
-- Displaying an event time means UTC getters or `timeZone: 'UTC'`, which is what
-  `apps/web/src/lib/date.ts` does throughout.
-- **The api's JSON says `Z` while meaning Paris.** Every event route takes a
-  `dateFormat` param. The default `iso`, plus `unix` and `unix-ms`, all hand out
-  the raw wall-clock label, so `iso` carries a `Z` it does not mean and the two
-  numeric formats are off by the Paris offset. An external consumer doing date
-  arithmetic on them lands one or two hours early. A transit lookup for an 08:00
-  class targeted a 06:00Z arrival. The numeric pair are the worse half, because
-  an epoch has no label reading at all, so a consumer cannot compensate the way
-  it can once it knows about the `Z`. `iso-offset`, `unix-instant` and
-  `unix-ms-instant` emit the true instant, and any client outside this repo
-  should ask for those. The wrong three stay on purpose: `apps/web` and existing
-  consumers already read them that way, and correcting them in place would break
-  those silently. `packages/shared/src/time/index.test.ts` pins the offsets
-  either side of both DST transitions, and `apps/api/src/lib/serialize.test.ts`
-  asserts the legacy three stay wrong by exactly the offset. That is a
-  regression guard, not an aspiration. Both must pass under any `TZ`, which is
-  the bug they exist for.
+- `v-calendar` only knows the browser's local getters. `toCalendarLocalDate`
+  (`apps/web/src/lib/date.ts`) hands it a date whose local reading is the Paris
+  one. That value is for the calendar alone and is no longer the instant.
+- A `from` / `to` query value that names no offset (`2026-09-07`,
+  `2026-09-07T08:00`) is read in Paris, not in UTC or the process timezone.
+  Bare digits are an epoch, in seconds below 1e11 and milliseconds above, so
+  both `unix` and `unix-ms` output can be sent back.
+- `dateFormat=unix-instant` and `unix-ms-instant` are deprecated aliases of
+  `unix` and `unix-ms`, kept for clients that already send them.
+- eslint bans the `Date` getters, `Date.UTC` and `new Date(y, m, d)` in `.ts`
+  files outside `shared/time`. `.vue` files are not linted, so the views rely
+  on review.
+- **An image built before migration `0017` must never run against a migrated
+  database.** Until then timestamps were Paris wall-clock labelled UTC; such a
+  scraper would reconcile every course as moved by an hour or two and fill
+  `event_changes`. Rolling back the code means restoring the database too.
 
 ## packages/shared
 
@@ -305,7 +278,7 @@ Hono server on Bun, port 3000.
 
 `GET /api/calendar.ics` returns an RFC 5545 document for calendar clients to subscribe to. Same filters as `GET /api/events` (`groupId`, `teacherId`, `roomId`, `from`, `to`); without `from` it reaches 60 days back, so the payload does not grow forever. No auth, like the rest of the event routes.
 
-Event timestamps are Paris wall-clock stored as UTC (the scraper builds them with `Date.UTC` from what the page displays), so `lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` with the UTC components and ships a `VTIMEZONE`. Emitting them as `Z` instants would shift every course by one or two hours.
+`lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` and ships a `VTIMEZONE`, rather than `Z` instants, so a calendar client keeps a course at its Paris hour.
 
 ### Group filters include ancestors
 
@@ -380,14 +353,9 @@ Three things about it are not obvious:
   Never early, and still true if a tick was missed, so a restart or a slow query
   delays a reminder instead of losing it. The claim table is what makes that safe
   to repeat.
-- **`now` is `wallClockNow()`.** Event timestamps are Paris wall-clock labels
-  (see [Time](#time-paris-wall-clock-labelled-utc)), so the comparison, the
-  minute count and the hour in the notification body all stay in label space,
-  where the offset cancels. `formatHour` reads the label with `timeZone: 'UTC'`;
-  formatting it in `Europe/Paris` would apply the offset twice and announce a
-  10h00 course at 12h00. `lib/reminder-match.ts` holds that logic free of the
-  database and the config so it can be tested, and `reminder-match.test.ts` pins
-  both DST seasons.
+
+`lib/reminder-match.ts` holds the matching free of the database and the config
+so it can be tested.
 
 **Configuration.** Optional, like `iut`: with no keypair the routes answer 503,
 the ticker never starts, and `GET /api/config` reports `push.enabled: false` so
@@ -661,7 +629,13 @@ TLS-terminating proxy it would point back at `http://`.
 **Staging deploys itself.** After a push to `staging` builds, the
 `deploy-staging` job opens an SSH connection to the host and the preview stack
 pulls and restarts. **Production does not**: someone runs
-`docker compose pull && docker compose up -d` in its directory.
+`docker compose pull && docker compose stop api scraper scraper-ade && docker compose up -d`
+in its directory.
+
+The `stop` is not optional, and `deploy/staging.sh` does the same. `up -d` alone
+leaves the old api and scrapers running until `migrate` has finished, and an old
+scraper reconciling against data newer than itself rewrites every event, which
+also nulls every homework's link to its course.
 
 The job's key is a dedicated one whose line in root's `authorized_keys` carries
 a forced command, `deploy/staging.sh` (installed on the host as
@@ -723,6 +697,5 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
 - The push service worker must stay cache-free. See
   [The push service worker](#the-push-service-worker). Adding Workbox precaching
   would serve the pre-substitution `__SITE_URL__` build.
-- Never compare `new Date()` with an event timestamp. See
-  [Time](#time-paris-wall-clock-labelled-utc), and use `wallClockNow()` from
-  `@studysuite/shared/time`.
+- Never read an event timestamp's day or hour with the `Date` getters. See
+  [Time](#time-the-calendar-is-pariss).

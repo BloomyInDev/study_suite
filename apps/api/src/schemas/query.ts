@@ -1,22 +1,48 @@
 import { z } from '@hono/zod-openapi'
+import { parseInstant } from '@studysuite/shared/time'
 
 /**
- * How event timestamps are rendered on the wire.
- *
- * `iso`, `unix` and `unix-ms` all carry the Paris *wall-clock label* the
- * planning is stored as, so `iso` ends in `Z` while denoting local time and the
- * two numeric formats are the same label as an epoch, off by the Paris offset,
- * with nothing in the value to signal it. They stay, `iso` as the default,
- * because clients already depend on them.
- *
- * `iso-offset`, `unix-instant` and `unix-ms-instant` are the honest three: the
- * real instant the label denotes, with `+01:00` / `+02:00` resolved per
- * timestamp. Prefer them in any new client.
+ * How event timestamps are rendered on the wire. `unix-instant` and
+ * `unix-ms-instant` are deprecated aliases of `unix` and `unix-ms`, kept for
+ * the clients that already send them.
  */
 export const DateFormatSchema = z
     .enum(['iso', 'iso-offset', 'unix', 'unix-ms', 'unix-instant', 'unix-ms-instant'])
     .default('iso')
+    .openapi({
+        param: { name: 'dateFormat', in: 'query' },
+        description:
+            'How `startDate` / `endDate` are written. `iso` is UTC (`2026-09-01T06:30:00.000Z`), `iso-offset` carries the Paris offset (`2026-09-01T08:30:00.000+02:00`), `unix` is epoch seconds and `unix-ms` epoch milliseconds. `unix-instant` and `unix-ms-instant` are deprecated aliases of the last two.',
+        example: 'iso',
+    })
 export type DateFormat = z.infer<typeof DateFormatSchema>
+
+/**
+ * Not `z.coerce.date()`: `new Date()` reads a string without an offset in the
+ * process timezone and a bare date as UTC midnight, where a Paris day is meant.
+ */
+const instantParam = (name: string, what: string) =>
+    z
+        .string()
+        .transform((v, ctx) => {
+            const d = parseInstant(v)
+            if (!d) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'Expected an ISO 8601 timestamp or a Unix epoch',
+                })
+                return z.NEVER
+            }
+            return d
+        })
+        .openapi({
+            param: { name, in: 'query' },
+            description: `${what} ISO 8601, or a Unix epoch in seconds or milliseconds. A value naming no offset (\`2026-09-07\`, \`2026-09-07T08:00\`) is read in Europe/Paris.`,
+            example: '2026-09-07T08:00:00.000+02:00',
+        })
+
+export const fromParam = () => instantParam('from', 'Only events starting at or after this.')
+export const toParam = () => instantParam('to', 'Only events starting before this.')
 
 /**
  * Course titles to leave out, matched exactly. Repeated rather than
@@ -56,20 +82,27 @@ export const IncludeAncestorGroupsSchema = z
     })
 
 export const DateParamSchema = z.object({
-    date: z.string().date(),
+    date: z
+        .string()
+        .date()
+        .openapi({
+            param: { name: 'date', in: 'query' },
+            description: 'A calendar day in Europe/Paris, `YYYY-MM-DD`.',
+            example: '2026-09-07',
+        }),
     excludeTitle: ExcludeTitleSchema,
     dateFormat: DateFormatSchema,
 })
 
 export const DateRangeSchema = z.object({
-    from: z.string(),
-    to: z.string(),
+    from: instantParam('from', 'Start of the range.'),
+    to: instantParam('to', 'End of the range.'),
     dateFormat: DateFormatSchema,
 })
 
 export const FilteredEventsSchema = z.object({
-    from: z.coerce.date(),
-    to: z.coerce.date(),
+    from: fromParam(),
+    to: toParam(),
     teacherId: z.string().uuid().optional(),
     roomId: z.string().uuid().optional(),
     groupId: z.string().uuid().optional(),
@@ -92,15 +125,9 @@ export const LimitSchema = z.object({
     dateFormat: DateFormatSchema,
 })
 
-// Accepts ISO date strings, unix timestamps in milliseconds
-const TimestampSchema = z.coerce
-    .date()
-    .or(z.number().int().positive())
-    .or(z.string().regex(/^\d+$/).transform(Number))
-
 export const OptionalDateRangeSchema = z.object({
-    from: TimestampSchema.optional(),
-    to: TimestampSchema.optional(),
+    from: fromParam().optional(),
+    to: toParam().optional(),
     dateFormat: DateFormatSchema,
 })
 

@@ -7,7 +7,7 @@ import {
     type Event,
     type EventChange,
 } from '../lib/types.js'
-import { mondayOfWeek, toIsoDateString } from '../lib/date.js'
+import { addParisDays, mondayOfWeek, toIsoDateString } from '../lib/date.js'
 
 interface CachedEvents {
     events: Event[]
@@ -16,11 +16,6 @@ interface CachedEvents {
 
 const CACHE_TTL = 5 * 60 * 1000
 
-const pad = (n: number) => n.toString().padStart(2, '0')
-
-const toUtcDateKey = (d: Date) =>
-    `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
-
 const buildCacheKey = (
     groupIds: string[],
     duration: Duration,
@@ -28,7 +23,7 @@ const buildCacheKey = (
     excludeTitles: string[],
 ): string => {
     const gKey = [...groupIds].sort().join(',')
-    const dKey = duration === Duration.WEEK ? toUtcDateKey(mondayOfWeek(date)) : toUtcDateKey(date)
+    const dKey = toIsoDateString(duration === Duration.WEEK ? mondayOfWeek(date) : date)
     const tKey = [...excludeTitles].sort().join('\n')
     return `${gKey}-${duration}-${dKey}-${tKey}`
 }
@@ -137,37 +132,29 @@ export const useEventsStore = defineStore('events', {
 
         /**
          * A teacher's events for the week `date` falls in, or `null` when the
-         * teacher does not exist. `date` is wall-clock, like the bounds the api
-         * compares with. Not cached: the callers guard against stale responses.
+         * teacher does not exist. Not cached: the callers guard against stale
+         * responses.
          */
         async fetchTeacherWeekEvents(teacherId: string, date: Date): Promise<Event[] | null> {
             const monday = mondayOfWeek(date)
-            const nextMonday = new Date(monday.getTime())
-            nextMonday.setUTCDate(nextMonday.getUTCDate() + 7)
+            const nextMonday = addParisDays(monday, 7)
             const res = await backend.api.teachers[':id'].events.$get({
                 param: { id: teacherId },
-                query: { from: monday.getTime(), to: nextMonday.getTime() },
+                query: { from: monday.toISOString(), to: nextMonday.toISOString() },
             })
             const body = await res.json()
             return 'data' in body ? (body.data ?? []).map(enhanceEvent) : null
         },
 
         /**
-         * Every event of some groups between two wall-clock bounds, merged and
+         * Every event of some groups between two instants, merged and
          * de-duplicated. A course shared by two of the ids comes back once.
          *
          * Not cached: the assignment form asks for an arbitrary window, unlike
-         * the day and week pages the cache is keyed for. `from` / `to` are
-         * wall-clock labels like the timestamps they filter, so the caller
-         * passes `wallClockDayStart()` and not `new Date()`.
+         * the day and week pages the cache is keyed for.
          */
         async fetchRange(groupIds: string[], from: Date, to: Date): Promise<Event[]> {
-            // The route coerces its bounds with `z.coerce.date()`, so the
-            // generated client asks for a `Date`. Handing it one, though, lets
-            // `String()` render the label in the browser's timezone and shift
-            // the window by the Paris offset. The ISO text is what must travel.
-            const asParam = (d: Date) => d.toISOString() as unknown as Date
-            const window = { from: asParam(from), to: asParam(to) }
+            const window = { from: from.toISOString(), to: to.toISOString() }
             // The api filters on one group at a time, and a class inherits its
             // ancestors' courses, so this is one request per id.
             const responses = await Promise.all(

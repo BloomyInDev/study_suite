@@ -2,9 +2,8 @@ import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
 import { eventChanges, events, studentGroups } from '@studysuite/db'
 import { eventStudentGroups } from '@studysuite/db'
 import { and, arrayOverlaps, asc, desc, eq, gt, gte, inArray, lt, sql } from 'drizzle-orm'
-import { wallClockNow } from '@studysuite/shared/time'
+import { addParisDays, parisDayFromKey, parisWeekStart } from '@studysuite/shared/time'
 import { db } from '../db.js'
-import { dayEndUTC, dayStartUTC, weekMondayUTC } from '../lib/date.js'
 import { eventFilterConditions, excludeTitlesCondition } from '../lib/event-filters.js'
 import { expandGroupIds } from '../lib/group-ancestors.js'
 import { eventChangeToDto, eventToDto, withEventRelations } from '../lib/serialize.js'
@@ -59,8 +58,8 @@ export default new OpenAPIHono()
         }),
         async (c) => {
             const { date, excludeTitle, dateFormat } = c.req.valid('query')
-            const from = weekMondayUTC(new Date(date))
-            const to = new Date(from.getTime() + 7 * 24 * 60 * 60 * 1000)
+            const from = parisWeekStart(parisDayFromKey(date))
+            const to = addParisDays(from, 7)
             const rows = await db.query.events.findMany({
                 where: and(
                     gte(events.startDate, from),
@@ -87,8 +86,8 @@ export default new OpenAPIHono()
         }),
         async (c) => {
             const { date, excludeTitle, dateFormat } = c.req.valid('query')
-            const from = dayStartUTC(new Date(date))
-            const to = dayEndUTC(new Date(date))
+            const from = parisDayFromKey(date)
+            const to = addParisDays(from, 1)
             const rows = await db.query.events.findMany({
                 where: and(
                     gte(events.startDate, from),
@@ -127,7 +126,7 @@ export default new OpenAPIHono()
                     // On `endDate`, not `startDate`: the homepage asks this route for
                     // "what is on now, or next", and a class already under way is
                     // the honest answer to that.
-                    gte(events.endDate, wallClockNow()),
+                    gte(events.endDate, new Date()),
                     // Filter here, not client-side: limiting first would return
                     // other groups' events and leave the user with an empty list.
                     scope
@@ -184,8 +183,6 @@ export default new OpenAPIHono()
                 if (groupNames.length === 0) return c.json({ data: [] }, 200)
             }
 
-            // `detectedAt` is a real instant, not a wall-clock label, so it
-            // compares with `new Date()`, unlike the event timestamps below.
             // A poller passing `since` reads forward from its cursor, so it gets
             // the oldest first and can advance to the last row it handled.
             const rows = await db.query.eventChanges.findMany({
