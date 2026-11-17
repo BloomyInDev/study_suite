@@ -74,6 +74,11 @@ services:
             PORT: 3000
             CORS_ORIGIN: '*'
             CONFIG_PATH: /config.yaml
+            # Pages are rendered here at request time (apps/api/src/lib/ssr.ts).
+            # Must match web's SITE_URL: both come from the same variable.
+            SITE_URL: ${SITE_URL:-https://study-staging.bastienluben.dev}
+            # Where the template and the ssr manifest are fetched from.
+            SSR_WEB_ORIGIN: http://web
         volumes:
             # Its own file, not production's: a different jwt.secret and the
             # preview's own OAuth redirect URIs.
