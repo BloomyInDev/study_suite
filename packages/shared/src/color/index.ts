@@ -8,7 +8,8 @@ export function scrapedColor(color?: string | null): string | null {
 const linear = (v: number) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
 
 /**
- * Black or white, whichever WCAG contrasts better with `hex`.
+ * Black or white, whichever WCAG contrasts better with `hex`. Shared by the
+ * planning and the api's planning card, so both pick the same.
  *
  * Vuetify derives a card's text colour from the theme for its own palette only.
  * Handed an arbitrary colour it paints the background and leaves the text at the
