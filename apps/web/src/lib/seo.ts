@@ -3,6 +3,7 @@ import { useHead, useSeoMeta } from '@unhead/vue'
 import { useRoute } from 'vue-router'
 import { DEFAULT_DESCRIPTION, OG_IMAGE_PATH, SITE_NAME, pageSeo, pageTitle } from './pages.js'
 import { useGroupOverride } from './group-override.js'
+import { parisDayKey } from '@studysuite/shared/time'
 
 /**
  * Absolute origin the og: tags point at, baked in at build time from
@@ -44,14 +45,21 @@ export function usePageSeo() {
             ? `L'emploi du temps de ${groupNames.value}, semaine par semaine.`
             : (page.value.description ?? DEFAULT_DESCRIPTION),
     )
+    // The card draws that day of the planning (apps/api/src/lib/day-card.ts).
+    // The day is in the url so a link shared tomorrow unfurls tomorrow's
+    // card: Discord and the like cache an image by its url.
     const image = computed(() => {
         if (groups.value.length === 0) return OG_IMAGE
-        const names = groups.value.map(override.urlName).join(',')
-        return `${SITE_URL}/api/og/planning.png?group=${encodeURIComponent(names)}`
+        const names = encodeURIComponent(groups.value.map(override.urlName).join(','))
+        return `${SITE_URL}/api/og/planning.png?group=${names}&date=${parisDayKey(new Date())}`
     })
+    // Portrait for the day card, the generic image's landscape otherwise.
+    const imageSize = computed(() =>
+        groups.value.length > 0 ? { width: 900, height: 1600 } : { width: 1200, height: 630 },
+    )
     const imageAlt = computed(() =>
         groups.value.length > 0
-            ? `Planning ${groupNames.value}, ${SITE_NAME}`
+            ? `Le planning du jour de ${groupNames.value}`
             : `${SITE_NAME} — ${DEFAULT_DESCRIPTION}`,
     )
     // Query params are view state (the week being looked at, a selected group),
@@ -72,8 +80,8 @@ export function usePageSeo() {
         ogLocale: 'fr_FR',
         ogImage: image,
         ogImageType: 'image/png',
-        ogImageWidth: 1200,
-        ogImageHeight: 630,
+        ogImageWidth: computed(() => imageSize.value.width),
+        ogImageHeight: computed(() => imageSize.value.height),
         ogImageAlt: imageAlt,
         twitterCard: 'summary_large_image',
         twitterTitle: title,
