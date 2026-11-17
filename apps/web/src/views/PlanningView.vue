@@ -5,6 +5,7 @@ import { useDisplay } from 'vuetify'
 import { backend } from '../lib/api.js'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
+import { useNotificationsStore } from '../stores/notifications.js'
 import { CAN_HIDE_COURSES, useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { useGroupOverride } from '../lib/group-override.js'
 import { groupLabel } from '../lib/group-label.js'
@@ -114,6 +115,43 @@ watch(
     },
     { immediate: true, deep: true },
 )
+
+const notifications = useNotificationsStore()
+
+/**
+ * The link to what is on screen, for someone else to open: the teacher, or the
+ * groups by the names `?group=` reads. A group link unfurls as the group's day
+ * (see lib/seo.ts), which is the point of sharing it rather than the address
+ * bar, which for a student's own planning carries no group at all.
+ */
+const sharePath = computed(() => {
+    if (teacherId.value) return `/planning?teacher=${encodeURIComponent(teacherId.value)}`
+    const shown = override.isActive.value ? override.matched.value : groups.selectedGroups
+    if (shown.length === 0) return null
+    return `/planning?group=${encodeURIComponent(shown.map(override.urlName).join(','))}`
+})
+
+async function share() {
+    if (!sharePath.value) return
+    // Read on click: the page also renders on a server, which has no window.
+    const url = window.location.origin + sharePath.value
+    // The system share sheet where there is one (phones), the clipboard elsewhere.
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: document.title, url })
+            return
+        } catch (err) {
+            // Closing the sheet is not a failure.
+            if (err instanceof DOMException && err.name === 'AbortError') return
+        }
+    }
+    try {
+        await navigator.clipboard.writeText(url)
+        notifications.success('Lien copié')
+    } catch {
+        notifications.error('Impossible de copier le lien')
+    }
+}
 </script>
 
 <template>
@@ -234,6 +272,18 @@ watch(
                             :to="{ path: '/planning/changes', query: route.query }"
                             icon="mdi-history"
                             :size="mobile ? 'small' : undefined"
+                        />
+                    </template>
+                </v-tooltip>
+                <v-tooltip text="Partager" location="start">
+                    <template #activator="{ props }">
+                        <v-btn
+                            v-bind="props"
+                            variant="tonal"
+                            icon="mdi-share-variant"
+                            :size="mobile ? 'small' : undefined"
+                            :disabled="!sharePath"
+                            @click="share"
                         />
                     </template>
                 </v-tooltip>
