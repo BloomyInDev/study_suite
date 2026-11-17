@@ -10,7 +10,6 @@ import { useRemindersStore } from './stores/reminders.js'
 import { useHiddenCoursesStore } from './stores/hidden-courses.js'
 import { useTermsStore } from './stores/terms.js'
 import TermsBanner from './components/TermsBanner.vue'
-import GroupPickerDialog from './components/GroupPickerDialog.vue'
 import { usePageSeo } from './lib/seo.js'
 
 const { mobile } = useDisplay()
@@ -29,7 +28,6 @@ const terms = useTermsStore()
 usePageSeo()
 
 const drawerOpen = ref(false)
-const pickerOpen = ref(false)
 
 const isDark = ref(localStorage.getItem('study_suite_theme') === 'dark')
 theme.change(isDark.value ? 'dark' : 'light')
@@ -59,10 +57,6 @@ onMounted(async () => {
     // has since been approved. Re-read it before anything branches on it.
     await auth.refresh()
     await groupsStore.onLoad()
-    // A signed-in student already has a class; only visitors need to pick one.
-    if (!groupsStore.usesAccountGroup && groupsStore.selectedGroupIds.length === 0) {
-        pickerOpen.value = true
-    }
     // CGU accepted as a visitor, before signing in: put them on the account.
     void terms.syncAccount()
 
@@ -108,7 +102,6 @@ const navItems = [
 
 <template>
     <v-app>
-        <GroupPickerDialog v-model="pickerOpen" />
         <TermsBanner />
 
         <v-navigation-drawer v-if="mobile" v-model="drawerOpen" temporary>

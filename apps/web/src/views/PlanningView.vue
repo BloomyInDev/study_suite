@@ -10,6 +10,7 @@ import { useGroupOverride } from '../lib/group-override.js'
 import { groupLabel } from '../lib/group-label.js'
 import type { Event, Teacher } from '../lib/types.js'
 import WeekCalendar from '../components/WeekCalendar.vue'
+import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import { mondayOfWeek, skipSunday } from '../lib/date.js'
 
 const { mobile } = useDisplay()
@@ -18,6 +19,7 @@ const route = useRoute()
 const router = useRouter()
 const groups = useGroupsStore()
 const override = useGroupOverride()
+const pickerOpen = ref(false)
 
 // `?teacher=<id>` shows that teacher's timetable, and wins over `?group=`: it is
 // where the teacher dialog's "full planning" button lands.
@@ -116,6 +118,7 @@ watch(
 
 <template>
     <v-container fluid class="pa-4">
+        <GroupPickerDialog v-model="pickerOpen" />
         <v-alert
             v-if="teacher"
             type="info"
@@ -175,6 +178,22 @@ watch(
             class="mb-4"
         >
             Groupe introuvable : {{ override.unknownNames.value.join(', ') }}.
+        </v-alert>
+        <v-alert
+            v-else-if="!teacherId && groups.activeGroupIds.length === 0"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+            icon="mdi-account-group"
+        >
+            <div class="d-flex align-center ga-2 flex-wrap">
+                <span>Choisis tes groupes pour voir ton emploi du temps.</span>
+                <v-spacer />
+                <v-btn size="small" variant="text" @click="pickerOpen = true">
+                    Choisir mes groupes
+                </v-btn>
+            </div>
         </v-alert>
         <WeekCalendar v-model="date" :events="events" :loading="loading">
             <template #prepend>
