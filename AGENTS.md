@@ -230,49 +230,50 @@ the table is empty, so a fresh database still bootstraps.
 
 Hono server on Bun, port 3000.
 
-**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional. Leave it out and the api boots with the IUT routes answering 503. The `push` block (`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`) is optional the same way, and so is the `bot` block (`BOT_API_KEYS`, comma-separated). See [Discord bot access](#discord-bot-access).
+**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional. Leave it out and the api boots with the IUT routes answering 503. The `push` block (`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`) is optional the same way, and so is the `bot` block (`BOT_API_KEYS`, comma-separated). See [Discord bot access](#discord-bot-access). So is the `ssr` block (`SITE_URL`, `SSR_WEB_ORIGIN`, `SSR_BUNDLE_PATH`); see [Request-time rendering](#request-time-rendering).
 
 ### Route table
 
-| Method | Path                                        | Auth  | Description                                                          |
-| ------ | ------------------------------------------- | ----- | -------------------------------------------------------------------- |
-| GET    | `/api/health`                               | none  | Health check                                                         |
-| GET    | `/api/config`                               | none  | Login providers, their labels, and the push public key               |
-| GET    | `/api/auth/discord`                         | none  | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`)   |
-| GET    | `/api/auth/discord/callback`                | none  | Exchange code, upsert user, issue JWT                                |
-| GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                      |
-| GET    | `/api/auth/iut`                             | none  | Redirect to the IUT bridge (PKCE); `?token=` links instead           |
-| GET    | `/api/auth/iut/callback`                    | none  | Verify the ID token, upsert or link the identity, issue JWT          |
-| GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                      |
-| GET    | `/api/events/week`                          | none  | Events for a week (`?date=`)                                         |
-| GET    | `/api/events/day`                           | none  | Events for a day (`?date=`)                                          |
-| GET    | `/api/events/upcoming`                      | none  | Next N events (`?limit=`)                                            |
-| GET    | `/api/events`                               | none  | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)           |
-| GET    | `/api/events/:id`                           | none  | Single event                                                         |
-| GET    | `/api/calendar.ics`                         | none  | iCal feed (`?groupId=&teacherId=&roomId=&from=&to=`)                 |
-| PUT    | `/api/push/subscriptions`                   | opt.  | Register this browser for course reminders                           |
-| GET    | `/api/push/subscriptions`                   | opt.  | Read back what a browser is registered for (`?endpoint=`)            |
-| DELETE | `/api/push/subscriptions`                   | opt.  | Unregister a browser (`?endpoint=`)                                  |
-| POST   | `/api/push/test`                            | opt.  | Push a notification to a browser now (`?endpoint=`)                  |
-| GET    | `/api/bot/guilds/:discordGuildId/mappings`  | bot   | A server's Discord role → student group mappings                     |
-| GET    | `/api/bot/assignments`                      | bot   | Homework of some groups and their ancestors (`?groupIds=&from=&to=`) |
-| GET    | `/api/teachers`                             | none  | All teachers                                                         |
-| GET    | `/api/rooms`                                | none  | All rooms                                                            |
-| GET    | `/api/groups`                               | none  | All groups with parent/child hierarchy                               |
-| GET    | `/api/groups/:id`                           | none  | Single group with hierarchy                                          |
-| GET    | `/api/groups/:id/events`                    | none  | Events for a group                                                   |
-| POST   | `/api/groups/:id/parents`                   | none  | Add parent relation                                                  |
-| DELETE | `/api/groups/:id/parents/:parentId`         | none  | Remove parent relation                                               |
-| GET    | `/api/admin/users`                          | admin | List all users                                                       |
-| PATCH  | `/api/admin/users/:id`                      | admin | Update user (status, role, group, isAdmin)                           |
-| GET    | `/api/admin/guilds`                         | admin | List guilds with nested role mappings                                |
-| POST   | `/api/admin/guilds`                         | admin | Create guild                                                         |
-| DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                         |
-| POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                               |
-| DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                       |
-| GET    | `/api/admin/iut-mappings`                   | admin | List IUT directory group mappings                                    |
-| POST   | `/api/admin/iut-mappings`                   | admin | Map an IUT group to a role and a class                               |
-| DELETE | `/api/admin/iut-mappings/:id`               | admin | Remove an IUT group mapping                                          |
+| Method | Path                                        | Auth  | Description                                                                |
+| ------ | ------------------------------------------- | ----- | -------------------------------------------------------------------------- |
+| GET    | `/api/health`                               | none  | Health check                                                               |
+| GET    | `/api/config`                               | none  | Login providers, their labels, and the push public key                     |
+| GET    | `/api/auth/discord`                         | none  | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`)         |
+| GET    | `/api/auth/discord/callback`                | none  | Exchange code, upsert user, issue JWT                                      |
+| GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                            |
+| GET    | `/api/auth/iut`                             | none  | Redirect to the IUT bridge (PKCE); `?token=` links instead                 |
+| GET    | `/api/auth/iut/callback`                    | none  | Verify the ID token, upsert or link the identity, issue JWT                |
+| GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                            |
+| GET    | `/api/events/week`                          | none  | Events for a week (`?date=`)                                               |
+| GET    | `/api/events/day`                           | none  | Events for a day (`?date=`)                                                |
+| GET    | `/api/events/upcoming`                      | none  | Next N events (`?limit=`)                                                  |
+| GET    | `/api/events`                               | none  | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)                 |
+| GET    | `/api/events/:id`                           | none  | Single event                                                               |
+| GET    | `/api/calendar.ics`                         | none  | iCal feed (`?groupId=&teacherId=&roomId=&from=&to=`)                       |
+| PUT    | `/api/push/subscriptions`                   | opt.  | Register this browser for course reminders                                 |
+| GET    | `/api/push/subscriptions`                   | opt.  | Read back what a browser is registered for (`?endpoint=`)                  |
+| DELETE | `/api/push/subscriptions`                   | opt.  | Unregister a browser (`?endpoint=`)                                        |
+| POST   | `/api/push/test`                            | opt.  | Push a notification to a browser now (`?endpoint=`)                        |
+| GET    | `/api/bot/guilds/:discordGuildId/mappings`  | bot   | A server's Discord role → student group mappings                           |
+| GET    | `/api/bot/assignments`                      | bot   | Homework of some groups and their ancestors (`?groupIds=&from=&to=`)       |
+| GET    | `/api/teachers`                             | none  | All teachers                                                               |
+| GET    | `/api/rooms`                                | none  | All rooms                                                                  |
+| GET    | `/api/groups`                               | none  | All groups with parent/child hierarchy                                     |
+| GET    | `/api/groups/:id`                           | none  | Single group with hierarchy                                                |
+| GET    | `/api/groups/:id/events`                    | none  | Events for a group                                                         |
+| POST   | `/api/groups/:id/parents`                   | none  | Add parent relation                                                        |
+| DELETE | `/api/groups/:id/parents/:parentId`         | none  | Remove parent relation                                                     |
+| GET    | `/api/admin/users`                          | admin | List all users                                                             |
+| PATCH  | `/api/admin/users/:id`                      | admin | Update user (status, role, group, isAdmin)                                 |
+| GET    | `/api/admin/guilds`                         | admin | List guilds with nested role mappings                                      |
+| POST   | `/api/admin/guilds`                         | admin | Create guild                                                               |
+| DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                               |
+| POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                                     |
+| DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                             |
+| GET    | `/api/admin/iut-mappings`                   | admin | List IUT directory group mappings                                          |
+| POST   | `/api/admin/iut-mappings`                   | admin | Map an IUT group to a role and a class                                     |
+| DELETE | `/api/admin/iut-mappings/:id`               | admin | Remove an IUT group mapping                                                |
+| GET    | any path outside `/api`                     | none  | The page, rendered (see [Request-time rendering](#request-time-rendering)) |
 
 ### iCal feed
 
@@ -573,7 +574,7 @@ so the head follows the route. The views themselves carry no head code.
 `pnpm build` runs vite-ssg, which renders each route to its own HTML file
 (`dist/planning/index.html` and so on) with those tags already in it. A crawler
 does not run JavaScript and would otherwise see the same tags on every URL.
-nginx's `try_files $uri $uri/ /index.html` serves them before the SPA fallback.
+nginx serves them when request-time rendering (below) is unavailable.
 
 Consequences to keep in mind:
 
@@ -617,6 +618,44 @@ TLS-terminating proxy it would point back at `http://`.
 
 `public/og-image.png` (1200×630) is generated from `public/og-image.svg` with
 `rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png`.
+
+### Request-time rendering
+
+The static pages cannot vary with the query string, so `/planning?group=S1`
+gets the same head as `/planning`. Pages are therefore also rendered per
+request, by the api, and the static ones stay as the fallback.
+
+- **nginx** serves any file that exists and sends every other GET to the api
+  (`@ssr`). A 5xx, a timeout or the api being down serves the vite-ssg page
+  instead (`@static`), so the worst case is the site as it was before.
+  `location = /` reaches `@ssr` through an `error_page`, since try_files counts
+  the root directory as found, and needs `recursive_error_pages` for the
+  fallback to follow.
+- **The renderer** is `apps/web/src/entry-server.ts`, built by
+  `pnpm -F @studysuite/web build:ssr` into one self-contained file
+  (`dist-server/entry-server.js`, every dependency bundled), which the api image
+  builds in a stage of its own. It assembles the page the way vite-ssg does:
+  the same template, preload links and head. Plugin setup is shared with
+  `main.ts` through `src/setup.ts`.
+- **The api** (`lib/ssr.ts`) catches every GET outside `/api` and renders it. It
+  fetches the template (`/ssr-template.html`, written by vite-ssg's
+  `onBeforePageRender`) and `/.vite/ssr-manifest.json` **from the web
+  container**, revalidating by ETag on each request. Baking them into the api
+  image would name hashed assets from the api's build, which nginx may not be
+  serving.
+- **The browser does not hydrate.** vite-ssg's client calls `createApp` and
+  renders over the server markup from scratch, as it always did over the static
+  pages. Turning hydration on means fixing real mismatches first: the server
+  cannot see the theme, the picked groups or the token in `localStorage`.
+- **The server has no `localStorage`.** `entry-server.ts` installs an empty one
+  that drops writes, as a process global, so the render is a first-time
+  visitor's. Immediate watchers that fetch return early under
+  `import.meta.env.SSR`, and setup code must not read `window`.
+- **Config:** the api's `ssr` block, set by compose from `SITE_URL` (the same
+  variable web uses) and `SSR_WEB_ORIGIN=http://web`. Without it the api
+  answers 503 and nginx serves the static pages.
+- **Memory:** the bundle costs the api about 110 MB of RSS, steady after a few
+  thousand renders.
 
 ---
 
