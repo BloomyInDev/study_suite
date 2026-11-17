@@ -9,6 +9,7 @@ import { listGroups } from './lib/groups.js'
 import authController from './controllers/auth.js'
 import configController from './controllers/config.js'
 import calendarController from './controllers/calendar.js'
+import ogController from './controllers/og.js'
 import assignmentsController from './controllers/assignments.js'
 import botController from './controllers/bot.js'
 import eventsController from './controllers/events.js'
@@ -71,7 +72,9 @@ const app = _app
             .route('/push', pushController)
             .route('/bot', botController)
             // Calendar clients key off the .ics suffix, so it is part of the path.
-            .route('/calendar.ics', calendarController),
+            .route('/calendar.ics', calendarController)
+            // The embed image of a shared planning link.
+            .route('/og', ogController),
     )
     // Transitional: Discord may still call back on the pre-/api path until the
     // developer portal entry is updated. Remove once that is done. The plain
