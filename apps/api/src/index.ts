@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
 import { startReminderTick } from './lib/reminder-tick.js'
+import { createSsrHandler, ssrDisabled } from './lib/ssr.js'
 import authController from './controllers/auth.js'
 import configController from './controllers/config.js'
 import calendarController from './controllers/calendar.js'
@@ -84,6 +85,20 @@ const app = _app
             .route('/guilds', adminGuildsController)
             .route('/iut-mappings', adminIutMappingsController),
     )
+
+// Every other GET is a page: nginx sends here whatever is not a file. Registered
+// on `_app` after the typed chain, so it stays out of AppType and only catches
+// what no route above matched.
+_app.get(
+    '*',
+    config.ssr
+        ? createSsrHandler({
+              siteUrl: config.ssr.siteUrl,
+              webOrigin: config.ssr.webOrigin,
+              bundlePath: config.ssr.bundlePath,
+          })
+        : ssrDisabled,
+)
 
 // The course-reminder ticker. Lives in the api rather than a service of its
 // own because it needs exactly what the api already has: the database and a

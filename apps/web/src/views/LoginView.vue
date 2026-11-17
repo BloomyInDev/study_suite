@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { API_URL } from '../lib/api-url'
+import { SITE_URL } from '../lib/seo.js'
 import { useProvidersStore } from '../stores/providers.js'
 
 const route = useRoute()
@@ -15,7 +16,9 @@ const STYLES: Record<string, { color: string; icon: string; variant?: 'tonal' }>
     iut: { color: 'primary', icon: 'mdi-school', variant: 'tonal' },
 }
 
-const callbackUri = encodeURIComponent(window.location.origin + '/auth/callback')
+// The server has no window; the configured origin is what the browser will be on.
+const origin = import.meta.env.SSR ? SITE_URL : window.location.origin
+const callbackUri = encodeURIComponent(origin + '/auth/callback')
 
 const buttons = computed(() =>
     providers.providers.map((p) => ({

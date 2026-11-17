@@ -25,6 +25,7 @@ jobs:
                 include:
                     - name: api
                       dockerfile: apps/api/Dockerfile
+                      build-args: VITE_GIT_COMMIT_HASH=${{ github.sha }}
                     - name: web
                       dockerfile: apps/web/Dockerfile
                       build-args: VITE_GIT_COMMIT_HASH=${{ github.sha }}

@@ -1,6 +1,7 @@
 .git
 **/node_modules
 apps/web/dist
+apps/web/dist-server
 data/
 *.log
 .env*

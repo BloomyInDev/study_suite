@@ -1,10 +1,12 @@
 {
     "name": "@studysuite/web",
     "version": "0.0.1",
+    "license": "Apache-2.0",
     "type": "module",
     "scripts": {
         "dev": "vite",
         "build": "vue-tsc && vite-ssg build",
+        "build:ssr": "vite build --ssr src/entry-server.ts --mode ssr-bundle",
         "preview": "vite preview",
         "typecheck": "vue-tsc --noEmit"
     },

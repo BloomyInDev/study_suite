@@ -73,6 +73,8 @@ const now = useNow()
 watch(
     [date, () => groupsStore.effectiveGroupIds, () => hiddenCourses.key],
     async ([newDate, newGroupIds], _, onCleanup) => {
+        // The server render has no api to talk to; the client fetches on mount.
+        if (import.meta.env.SSR) return
         let cancelled = false
         onCleanup(() => {
             cancelled = true
@@ -101,6 +103,7 @@ watch(
     // fetch, and until it does withAncestors can only return the id itself.
     [date, comparisonGroupIds, () => groupsStore.allGroups],
     async ([newDate, newGroupIds], _, onCleanup) => {
+        if (import.meta.env.SSR) return
         let cancelled = false
         onCleanup(() => {
             cancelled = true

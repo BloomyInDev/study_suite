@@ -31,3 +31,7 @@ docker compose up -d
 | `pnpm -F @studysuite/db db:generate` | Génère les migrations Drizzle      |
 | `pnpm -F @studysuite/db db:migrate`  | Applique les migrations            |
 | `pnpm -F @studysuite/db db:studio`   | Ouvre Drizzle Studio               |
+
+## Licence
+
+Distribué sous licence [Apache 2.0](LICENSE).

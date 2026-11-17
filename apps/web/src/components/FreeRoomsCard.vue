@@ -25,7 +25,9 @@ onMounted(async () => {
             // Every group's events: occupancy is not about the user's own classes.
             eventsStore.fetchDayEvents(new Date(), []),
         ])
-        rooms.value = (await roomsRes.json()).data
+        // A stale token gets a 401 here, whose body has no `data`; the card
+        // then shows no free rooms instead of throwing.
+        if (roomsRes.ok) rooms.value = (await roomsRes.json()).data
         events.value = dayEvents
     } finally {
         loading.value = false
