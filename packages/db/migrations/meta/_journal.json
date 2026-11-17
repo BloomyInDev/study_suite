@@ -127,6 +127,13 @@
       "when": 1791284289367,
       "tag": "0017_event_timestamps_to_instants",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1794928061737,
+      "tag": "0018_terms_acceptance",
+      "breakpoints": true
     }
   ]
 }

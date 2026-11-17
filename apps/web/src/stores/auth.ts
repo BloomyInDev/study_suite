@@ -23,6 +23,8 @@ export interface AuthUser {
     studentGroupId: string | null
     assignedGroupId: string | null
     teacherId: string | null
+    /** Absent on a user cached before the field existed: treat it as null. */
+    termsAcceptedVersion?: string | null
 }
 
 type LegacyUser = Omit<AuthUser, 'displayName' | 'avatarUrl' | 'identities'> & {
