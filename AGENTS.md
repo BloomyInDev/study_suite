@@ -669,15 +669,27 @@ names, so nothing typed into the url reaches the head or the card.
   same resolution the page itself uses. For the server render to resolve it,
   the api passes the group list to `render()` when the url carries `?group=`,
   and `entry-server.ts` seeds the groups store with it.
-- **The image** is `GET /api/og/planning.png?group=` (`controllers/og.ts`): the
-  design of `public/og-image.svg` with the group names, rendered by
-  `lib/og-card.ts`. A name it does not know redirects to `/og-image.png`.
-  It uses `@resvg/resvg-wasm`, not the native `@resvg/resvg-js`, because the
-  api's `node_modules` are installed on Alpine and run on Debian, where a native
-  addon built for the other libc does not load. resvg has no system fonts, so
-  DejaVu Sans, which the static image was drawn with, ships in
-  `apps/api/assets/fonts`. Cards are cached in memory by headline, and served
-  with a day of `Cache-Control`.
+- **The image** is `GET /api/og/planning.png?group=&date=` (`controllers/og.ts`):
+  that Paris day of the groups' planning, ancestors included, drawn like the
+  planning's day view on a phone (`lib/day-card.ts`, pure SVG layout, tested
+  without a database). Portrait 9:16, laid out on 450×800 and rendered at
+  900×1600. `date` is in the url so a link shared tomorrow unfurls tomorrow's
+  day, since unfurlers cache an image by its url; the head puts today's date
+  there. A name it does not know redirects to `/og-image.png`.
+- **Rendering** is `lib/og-card.ts`, with `@resvg/resvg-wasm`, not the native
+  `@resvg/resvg-js`: the api's `node_modules` are installed on Alpine and run on
+  Debian, where a native addon built for the other libc does not load. resvg
+  has no system fonts, so DejaVu Sans ships in `apps/api/assets/fonts`. SVG has
+  no text overflow, so `day-card.ts` estimates widths per character class and
+  clips with an ellipsis.
+- **Caching:** cards are kept in memory by a hash of what they show, so a moved
+  course draws a new card and an unchanged day costs one query. Today's card is
+  served with 5 minutes of `Cache-Control`, a past day's with a day.
+- **Colours** come from `@studysuite/shared/color`, shared with the planning,
+  so a block and its text pick the same colours on both.
+- **The share button** on `/planning` builds the link to what is on screen (the
+  teacher, or the groups by the names `?group=` reads) and hands it to the
+  system share sheet, or the clipboard where there is none.
 
 ---
 
