@@ -190,6 +190,13 @@ const navItems = [
                     >Bloomy</a
                 >
             </div>
+            <nav class="text-caption d-flex flex-wrap justify-center ga-3 mb-1">
+                <router-link to="/legal" class="text-medium-emphasis">Mentions légales</router-link>
+                <router-link to="/privacy" class="text-medium-emphasis"
+                    >Confidentialité</router-link
+                >
+                <router-link to="/terms" class="text-medium-emphasis">CGU</router-link>
+            </nav>
             <div class="text-caption text-medium-emphasis">
                 Commit Hash:
                 <a

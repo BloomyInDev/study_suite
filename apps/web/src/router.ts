@@ -40,6 +40,9 @@ export const routes: RouteRecordRaw[] = [
     // No auth: a visitor's group selection lives here too, and the view
     // already picks the right card for account holders and visitors alike.
     { path: '/profile', component: () => import('./views/ProfileView.vue') },
+    { path: '/legal', component: () => import('./views/LegalNoticeView.vue') },
+    { path: '/privacy', component: () => import('./views/PrivacyView.vue') },
+    { path: '/terms', component: () => import('./views/TermsView.vue') },
     {
         path: '/admin',
         component: () => import('./layouts/AdminLayout.vue'),
@@ -61,6 +64,8 @@ export const routes: RouteRecordRaw[] = [
     },
 ]
 
+const LEGAL_PATHS = ['/legal', '/privacy', '/terms']
+
 export function registerGuards(router: Router) {
     router.beforeEach((to) => {
         const auth = useAuthStore()
@@ -71,6 +76,9 @@ export function registerGuards(router: Router) {
         }
 
         if (to.path === '/pending' || to.path === '/auth/callback') return true
+
+        // A pending or rejected account still gets to read what it agreed to.
+        if (LEGAL_PATHS.includes(to.path)) return true
 
         if (to.meta.requiresAuth && !auth.isAuthenticated) return '/login'
 
