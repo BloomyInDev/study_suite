@@ -131,20 +131,12 @@ const sharePath = computed(() => {
     return `/planning?group=${encodeURIComponent(shown.map(override.urlName).join(','))}`
 })
 
-async function share() {
+// Always the clipboard, never navigator.share: desktop browsers have the
+// system share sheet too now, and a link to paste is what people want there.
+async function copyLink() {
     if (!sharePath.value) return
     // Read on click: the page also renders on a server, which has no window.
     const url = window.location.origin + sharePath.value
-    // The system share sheet where there is one (phones), the clipboard elsewhere.
-    if (navigator.share) {
-        try {
-            await navigator.share({ title: document.title, url })
-            return
-        } catch (err) {
-            // Closing the sheet is not a failure.
-            if (err instanceof DOMException && err.name === 'AbortError') return
-        }
-    }
     try {
         await navigator.clipboard.writeText(url)
         notifications.success('Lien copié')
@@ -275,15 +267,15 @@ async function share() {
                         />
                     </template>
                 </v-tooltip>
-                <v-tooltip text="Partager" location="start">
+                <v-tooltip text="Copier le lien" location="start">
                     <template #activator="{ props }">
                         <v-btn
                             v-bind="props"
                             variant="tonal"
-                            icon="mdi-share-variant"
+                            icon="mdi-link-variant"
                             :size="mobile ? 'small' : undefined"
                             :disabled="!sharePath"
-                            @click="share"
+                            @click="copyLink"
                         />
                     </template>
                 </v-tooltip>

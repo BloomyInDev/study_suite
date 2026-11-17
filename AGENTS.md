@@ -687,9 +687,10 @@ names, so nothing typed into the url reaches the head or the card.
   served with 5 minutes of `Cache-Control`, a past day's with a day.
 - **Colours** come from `@studysuite/shared/color`, shared with the planning,
   so a block and its text pick the same colours on both.
-- **The share button** on `/planning` builds the link to what is on screen (the
-  teacher, or the groups by the names `?group=` reads) and hands it to the
-  system share sheet, or the clipboard where there is none.
+- **The copy-link button** on `/planning` builds the link to what is on screen
+  (the teacher, or the groups by the names `?group=` reads) and copies it.
+  Always the clipboard, never `navigator.share`: desktop browsers have the
+  share sheet too, and there a link to paste is what people want.
 
 ---
 
