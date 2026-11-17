@@ -102,8 +102,6 @@ const navItems = [
 
 <template>
     <v-app>
-        <TermsBanner />
-
         <v-navigation-drawer v-if="mobile" v-model="drawerOpen" temporary>
             <v-list nav>
                 <v-list-item
@@ -212,6 +210,8 @@ const navItems = [
                 >
             </div>
         </v-footer>
+
+        <TermsBanner />
 
         <template v-for="notif in notifs.notifications" :key="notif.id">
             <v-snackbar
