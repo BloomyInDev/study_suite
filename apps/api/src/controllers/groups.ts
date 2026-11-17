@@ -10,6 +10,7 @@ import {
 import { and, asc, eq, gt, inArray, lt } from 'drizzle-orm'
 import { db } from '../db.js'
 import { expandGroupIds } from '../lib/group-ancestors.js'
+import { groupToDto, listGroups, withHierarchy } from '../lib/groups.js'
 import { requireAdmin, requireAuth } from '../middleware/auth.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { GroupEventsQuerySchema } from '../schemas/query.js'
@@ -61,36 +62,6 @@ const IdParentIdParamSchema = z.object({
         .openapi({ param: { name: 'parentId', in: 'path' } }),
 })
 
-const withHierarchy = {
-    parentMemberships: { with: { child: true as const } },
-    childMemberships: { with: { parent: true as const } },
-}
-
-type GroupRef = { id: string; internalName: string; displayName: string | null }
-type GroupWithHierarchy = {
-    id: string
-    internalName: string
-    displayName: string | null
-    hidden: boolean
-    parentMemberships: { child: GroupRef }[]
-    childMemberships: { parent: GroupRef }[]
-}
-
-const toRef = (g: GroupRef) => ({
-    id: g.id,
-    internalName: g.internalName,
-    displayName: g.displayName,
-})
-
-const groupToDto = (row: GroupWithHierarchy) => ({
-    id: row.id,
-    internalName: row.internalName,
-    displayName: row.displayName,
-    hidden: row.hidden,
-    children: row.parentMemberships.map((m) => toRef(m.child)),
-    parents: row.childMemberships.map((m) => toRef(m.parent)),
-})
-
 export default new OpenAPIHono()
     .openapi(
         createRoute({
@@ -106,12 +77,7 @@ export default new OpenAPIHono()
         }),
         async (c) => {
             const { includeHidden } = c.req.valid('query')
-            const rows = await db.query.studentGroups.findMany({
-                where: includeHidden ? undefined : eq(studentGroups.hidden, false),
-                with: withHierarchy,
-                orderBy: asc(studentGroups.internalName),
-            })
-            return c.json({ data: rows.map(groupToDto) }, 200)
+            return c.json({ data: await listGroups(includeHidden) }, 200)
         },
     )
     .openapi(
