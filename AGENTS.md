@@ -273,6 +273,7 @@ Hono server on Bun, port 3000.
 | GET    | `/api/admin/iut-mappings`                   | admin | List IUT directory group mappings                                          |
 | POST   | `/api/admin/iut-mappings`                   | admin | Map an IUT group to a role and a class                                     |
 | DELETE | `/api/admin/iut-mappings/:id`               | admin | Remove an IUT group mapping                                                |
+| GET    | `/api/og/planning.png`                      | none  | Embed image of a shared planning link (`?group=`)                          |
 | GET    | any path outside `/api`                     | none  | The page, rendered (see [Request-time rendering](#request-time-rendering)) |
 
 ### iCal feed
@@ -655,7 +656,28 @@ request, by the api, and the static ones stay as the fallback.
   variable web uses) and `SSR_WEB_ORIGIN=http://web`. Without it the api
   answers 503 and nginx serves the static pages.
 - **Memory:** the bundle costs the api about 110 MB of RSS, steady after a few
-  thousand renders.
+  thousand renders. The og card renderer below adds 50 to 80 MB once it has
+  drawn a few cards: wasm memory grows and is never handed back.
+
+### Shared planning links
+
+`/planning?group=S1` unfurls as the group's planning: title, description and
+`og:image` name it. Only groups that resolve count, under their canonical
+names, so nothing typed into the url reaches the head or the card.
+
+- **The head** is `usePageSeo` (`lib/seo.ts`), through `useGroupOverride`, the
+  same resolution the page itself uses. For the server render to resolve it,
+  the api passes the group list to `render()` when the url carries `?group=`,
+  and `entry-server.ts` seeds the groups store with it.
+- **The image** is `GET /api/og/planning.png?group=` (`controllers/og.ts`): the
+  design of `public/og-image.svg` with the group names, rendered by
+  `lib/og-card.ts`. A name it does not know redirects to `/og-image.png`.
+  It uses `@resvg/resvg-wasm`, not the native `@resvg/resvg-js`, because the
+  api's `node_modules` are installed on Alpine and run on Debian, where a native
+  addon built for the other libc does not load. resvg has no system fonts, so
+  DejaVu Sans, which the static image was drawn with, ships in
+  `apps/api/assets/fonts`. Cards are cached in memory by headline, and served
+  with a day of `Cache-Control`.
 
 ---
 
