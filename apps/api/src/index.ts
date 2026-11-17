@@ -5,6 +5,7 @@ import { cors } from 'hono/cors'
 import { config } from './config.js'
 import { startReminderTick } from './lib/reminder-tick.js'
 import { createSsrHandler, ssrDisabled } from './lib/ssr.js'
+import { listGroups } from './lib/groups.js'
 import authController from './controllers/auth.js'
 import configController from './controllers/config.js'
 import calendarController from './controllers/calendar.js'
@@ -96,6 +97,7 @@ _app.get(
               siteUrl: config.ssr.siteUrl,
               webOrigin: config.ssr.webOrigin,
               bundlePath: config.ssr.bundlePath,
+              loadGroups: () => listGroups(true),
           })
         : ssrDisabled,
 )

@@ -14,7 +14,8 @@ import { fa } from 'vuetify/iconsets/fa'
  * stylesheet, so the caller installs unhead first.
  */
 export function installPlugins(app: App, theme: string) {
-    app.use(createPinia())
+    const pinia = createPinia()
+    app.use(pinia)
     app.use(
         createVuetify({
             // The markup is rendered on a server first (build time and request
@@ -28,4 +29,5 @@ export function installPlugins(app: App, theme: string) {
             },
         }),
     )
+    return { pinia }
 }

@@ -98,6 +98,31 @@ describe('createSsrHandler', () => {
         expect((await a.request('/')).status).toBe(500)
         expect((await a.request('/')).status).toBe(200)
     })
+
+    it('loads the groups only for a url that names one', async () => {
+        const groups = [{ id: 'g1', internalName: 'S1' }]
+        const loadGroups = vi.fn(async () => groups)
+        const render = vi.fn<(url: string, assets: RenderAssets) => Promise<string>>(
+            async () => 'page',
+        )
+        const handler = createSsrHandler({
+            siteUrl: 'https://site.test',
+            webOrigin: 'http://web',
+            bundlePath: '/bundle.js',
+            loadGroups,
+            fetch: fakeWeb().fetch,
+            importBundle: async () => ({ render }),
+        })
+        const a = new Hono().get('*', handler)
+
+        await a.request('/planning')
+        expect(loadGroups).not.toHaveBeenCalled()
+        expect(render.mock.calls[0][1].groups).toBeUndefined()
+
+        await a.request('/planning?group=S1')
+        expect(loadGroups).toHaveBeenCalledTimes(1)
+        expect(render.mock.calls[1][1].groups).toBe(groups)
+    })
 })
 
 describe('ssrDisabled', () => {

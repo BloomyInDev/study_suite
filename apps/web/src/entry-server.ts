@@ -5,6 +5,8 @@ import { createHead, transformHtmlTemplate } from '@unhead/vue/server'
 import App from './App.vue'
 import { routes } from './router.js'
 import { installPlugins } from './setup.js'
+import { useGroupsStore } from './stores/groups.js'
+import type { Group } from './lib/types.js'
 
 /**
  * Request-time rendering, run by the api (apps/api/src/lib/ssr.ts) from a
@@ -40,6 +42,13 @@ export interface RenderAssets {
     manifest: Record<string, string[]>
     /** The public origin, replacing the `__SITE_URL__` the build was given. */
     siteUrl: string
+    /**
+     * Every group, hidden ones included, as `GET /api/groups?includeHidden=true`
+     * returns them. Seeded into the store so a `?group=` link resolves as it
+     * does in the browser, and its head can name the group. Optional: without
+     * it the page renders as for no group.
+     */
+    groups?: Group[]
 }
 
 const CONTAINER = '<div id="app"></div>'
@@ -51,7 +60,8 @@ export async function render(url: string, assets: RenderAssets): Promise<string>
     const head = createHead()
     app.use(head)
     // The theme is a choice stored in the browser; the client applies it.
-    installPlugins(app, 'light')
+    const { pinia } = installPlugins(app, 'light')
+    if (assets.groups) useGroupsStore(pinia).allGroups = assets.groups
     const router = createRouter({ history: createMemoryHistory(), routes })
     app.use(router)
     // No route guard: it answers for a visitor with no account, which would

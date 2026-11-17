@@ -20,6 +20,8 @@ export interface RenderAssets {
     template: string
     manifest: Record<string, string[]>
     siteUrl: string
+    /** Opaque here: the web side seeds its groups store with them. */
+    groups?: unknown[]
 }
 
 type Render = (url: string, assets: RenderAssets) => Promise<string>
@@ -28,6 +30,12 @@ export interface SsrOptions {
     siteUrl: string
     webOrigin: string
     bundlePath: string
+    /**
+     * Every group, hidden ones included, so a `?group=` link resolves while
+     * rendering and its head can name the group. Only called for urls that
+     * carry one.
+     */
+    loadGroups?: () => Promise<unknown[]>
     /** Injected by the tests. */
     fetch?: typeof fetch
     importBundle?: (path: string) => Promise<{ render: Render }>
@@ -79,18 +87,21 @@ export function createSsrHandler(options: SsrOptions) {
         if (url.pathname === '/api' || url.pathname.startsWith('/api/')) return c.notFound()
 
         try {
-            const [render, template, manifest] = await Promise.all([
+            const { loadGroups } = options
+            const [render, template, manifest, groups] = await Promise.all([
                 loadRenderer(),
                 fromWeb('/ssr-template.html', (s) => s),
                 fromWeb(
                     '/.vite/ssr-manifest.json',
                     (s) => JSON.parse(s) as Record<string, string[]>,
                 ),
+                url.searchParams.has('group') && loadGroups ? loadGroups() : undefined,
             ])
             const html = await render(url.pathname + url.search, {
                 template,
                 manifest,
                 siteUrl: options.siteUrl,
+                groups,
             })
             // Like the static pages: stored, but revalidated before reuse.
             return c.html(html, 200, { 'Cache-Control': 'no-cache' })

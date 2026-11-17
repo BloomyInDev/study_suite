@@ -104,5 +104,5 @@ export function useGroupOverride() {
      */
     const pickedIds = computed(() => matched.value.map((g) => g.id))
 
-    return { groupIds, isActive, labels, unknownNames, pickedIds, clear, set }
+    return { groupIds, isActive, matched, labels, urlName, unknownNames, pickedIds, clear, set }
 }
