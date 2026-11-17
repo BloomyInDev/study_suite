@@ -85,7 +85,9 @@ services:
             - ./api.config.yaml:/config.yaml:ro
         expose:
             - '3000'
-        mem_limit: 256m
+        # The page renderer's bundle adds about 110 MB of RSS (see AGENTS.md,
+        # Request-time rendering).
+        mem_limit: 384m
         depends_on:
             postgres:
                 condition: service_healthy
