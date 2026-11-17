@@ -56,3 +56,15 @@ push:
 bot:
     # apiKeys:
     #     - "a_random_key_at_least_32_characters_long"
+
+# Request-time page rendering. Leave the block out and every page path answers
+# 503, which nginx turns into the static page vite-ssg built: the site works
+# exactly as it did without it. compose.yml sets both keys through the
+# environment (SITE_URL, SSR_WEB_ORIGIN), so this is for running outside it.
+ssr:
+    # The public origin, for the og: tags and the canonical link.
+    # siteUrl: "https://study.example.com"
+    # The web container, where the template and the ssr manifest are fetched.
+    # webOrigin: "http://web"
+    # Defaults to apps/web/dist-server/entry-server.js (pnpm -F @studysuite/web build:ssr).
+    # bundlePath: "/app/apps/web/dist-server/entry-server.js"

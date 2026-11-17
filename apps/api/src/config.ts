@@ -79,6 +79,38 @@ const schema = z.object({
         })
         // `nullish` for the same reason as `push`.
         .nullish(),
+    /**
+     * Request-time page rendering (see lib/ssr.ts). Optional: without it every
+     * path outside /api answers 503, and nginx serves the static page vite-ssg
+     * built instead, which is exactly what it did before this existed.
+     */
+    ssr: z
+        .object({
+            /** The public origin, for the og: tags and the canonical link. */
+            siteUrl: z
+                .string()
+                .url()
+                .transform((s) => s.replace(/\/+$/, '')),
+            /**
+             * Where the api fetches the template and the ssr manifest: the web
+             * container, so they always match the assets it serves.
+             */
+            webOrigin: z
+                .string()
+                .url()
+                .transform((s) => s.replace(/\/+$/, '')),
+            /** The bundle `pnpm -F @studysuite/web build:ssr` produces. */
+            bundlePath: z
+                .string()
+                .default(
+                    resolve(
+                        dirname(fileURLToPath(import.meta.url)),
+                        '../../web/dist-server/entry-server.js',
+                    ),
+                ),
+        })
+        // `nullish` for the same reason as `push`.
+        .nullish(),
 })
 
 export const config = loadConfig({
@@ -104,6 +136,9 @@ export const config = loadConfig({
         PUSH_VAPID_PRIVATE_KEY: 'push.privateKey',
         PUSH_VAPID_SUBJECT: 'push.subject',
         BOT_API_KEYS: 'bot.apiKeys',
+        SITE_URL: 'ssr.siteUrl',
+        SSR_WEB_ORIGIN: 'ssr.webOrigin',
+        SSR_BUNDLE_PATH: 'ssr.bundlePath',
     },
 })
 
