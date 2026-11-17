@@ -6,6 +6,7 @@ import { sign, verify } from 'hono/jwt'
 import { db } from '../db.js'
 import { users, discordGuilds, discordRoleMappings, iutGroupMappings } from '@studysuite/db'
 import { studentGroupMemberships, studentGroups, userStudents, userTeachers } from '@studysuite/db'
+import { TERMS_VERSION } from '@studysuite/shared/legal'
 import { config } from '../config.js'
 import { requireAuth, type AuthEnv, type JwtPayload } from '../middleware/auth.js'
 import { UserDtoSchema, dataResponse, errorResponse, jsonResponse } from '../schemas/responses.js'
@@ -103,6 +104,10 @@ async function getDescendantGroupIds(rootId: string): Promise<Set<string>> {
 }
 
 const StudentGroupBodySchema = z.object({ studentGroupId: z.string().uuid() })
+
+// Only the version on screen can be accepted: an older client sending its own
+// is told so, rather than recording terms the user never saw.
+const TermsBodySchema = z.object({ version: z.literal(TERMS_VERSION) })
 
 const MyGuildSchema = z
     .object({
@@ -474,6 +479,43 @@ app.openapi(
 
         const enriched = await fetchEnrichedUser(eq(users.id, payload.sub))
         return c.json({ data: userToDto(enriched!) }, 200)
+    },
+)
+
+app.openapi(
+    createRoute({
+        method: 'post',
+        path: '/me/terms',
+        operationId: 'acceptTerms',
+        summary: 'Record that you accept the current CGU',
+        tags: ['Auth'],
+        security: [{ Bearer: [] }],
+        middleware: [requireAuth] as const,
+        request: {
+            body: {
+                content: { 'application/json': { schema: TermsBodySchema } },
+                required: true,
+            },
+        },
+        responses: {
+            200: dataResponse(UserDtoSchema, 'Updated profile'),
+            404: errorResponse('Not found'),
+        },
+    }),
+    async (c) => {
+        const payload = c.get('user')
+        const { version } = c.req.valid('json')
+
+        await db
+            .update(users)
+            .set({ termsAcceptedVersion: version, termsAcceptedAt: new Date() })
+            .where(eq(users.id, payload.sub))
+
+        const enriched = await fetchEnrichedUser(eq(users.id, payload.sub))
+        if (!enriched) {
+            return c.json({ error: { code: 'NOT_FOUND', message: 'User not found' } }, 404)
+        }
+        return c.json({ data: userToDto(enriched) }, 200)
     },
 )
 

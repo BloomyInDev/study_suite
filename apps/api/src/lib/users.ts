@@ -24,6 +24,7 @@ export function userToDto(user: EnrichedUser) {
         studentGroupId: user.studentGroupId,
         assignedGroupId: user.assignedGroupId,
         teacherId: user.teacherId,
+        termsAcceptedVersion: user.termsAcceptedVersion,
     }
 }
 
@@ -36,6 +37,8 @@ type RawRow = {
     status: 'pending' | 'approved' | 'rejected'
     discordAccessToken: string | null
     discordTokenExpiresAt: Date | null
+    termsAcceptedVersion: string | null
+    termsAcceptedAt: Date | null
     createdAt: Date
     updatedAt: Date
     _studentUserId: string | null
@@ -68,6 +71,8 @@ const enrichedSelect = {
     status: users.status,
     discordAccessToken: users.discordAccessToken,
     discordTokenExpiresAt: users.discordTokenExpiresAt,
+    termsAcceptedVersion: users.termsAcceptedVersion,
+    termsAcceptedAt: users.termsAcceptedAt,
     createdAt: users.createdAt,
     updatedAt: users.updatedAt,
     _studentUserId: userStudents.userId,

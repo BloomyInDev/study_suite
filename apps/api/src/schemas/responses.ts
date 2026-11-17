@@ -194,6 +194,10 @@ export const UserDtoSchema = z
             description: 'Group the user picked themselves; overrides the Discord-derived one',
         }),
         teacherId: uuid('1c9e3f8a-2b4d-4e6f-9a1b-3c5d7e9f1a2b').nullable(),
+        termsAcceptedVersion: z.string().nullable().openapi({
+            description: 'The CGU version this account last accepted; null if never',
+            example: '2026-11-17',
+        }),
     })
     .openapi('User')
 

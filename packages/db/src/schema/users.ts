@@ -15,6 +15,9 @@ export const users = pgTable('users', {
         .default('pending'),
     discordAccessToken: text('discord_access_token'),
     discordTokenExpiresAt: timestamp('discord_token_expires_at', { withTimezone: true }),
+    /** The CGU version the account last accepted, and when. Null: never. */
+    termsAcceptedVersion: text('terms_accepted_version'),
+    termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
