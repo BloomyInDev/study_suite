@@ -8,6 +8,8 @@ import { useAuthStore } from './stores/auth.js'
 import { useProvidersStore } from './stores/providers.js'
 import { useRemindersStore } from './stores/reminders.js'
 import { useHiddenCoursesStore } from './stores/hidden-courses.js'
+import { useTermsStore } from './stores/terms.js'
+import TermsBanner from './components/TermsBanner.vue'
 import GroupPickerDialog from './components/GroupPickerDialog.vue'
 import { usePageSeo } from './lib/seo.js'
 
@@ -20,6 +22,7 @@ const notifs = useNotificationsStore()
 const auth = useAuthStore()
 const reminders = useRemindersStore()
 const hiddenCourses = useHiddenCoursesStore()
+const terms = useTermsStore()
 
 // The one place the head is wired up: every page's title and og: tags come from
 // lib/pages.ts and follow the route, so no view carries head code of its own.
@@ -60,6 +63,8 @@ onMounted(async () => {
     if (!groupsStore.usesAccountGroup && groupsStore.selectedGroupIds.length === 0) {
         pickerOpen.value = true
     }
+    // CGU accepted as a visitor, before signing in: put them on the account.
+    void terms.syncAccount()
 
     // A browser that subscribed to course reminders sends its groups to the api
     // once, at subscribe time. Re-sync them here, and on every later change: an
@@ -67,6 +72,12 @@ onMounted(async () => {
     // groups, would otherwise keep being reminded of their old timetable.
     await reminders.init()
 })
+
+// A login lands here without a reload, through the callback route.
+watch(
+    () => auth.user?.id,
+    (id) => id && void terms.syncAccount(),
+)
 
 watch(
     () => groupsStore.effectiveGroupIds,
@@ -98,6 +109,7 @@ const navItems = [
 <template>
     <v-app>
         <GroupPickerDialog v-model="pickerOpen" />
+        <TermsBanner />
 
         <v-navigation-drawer v-if="mobile" v-model="drawerOpen" temporary>
             <v-list nav>

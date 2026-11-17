@@ -5,7 +5,10 @@ import { PUBLISHER } from '../lib/legal.js'
 
 <template>
     <LegalPage title="Conditions générales d'utilisation">
-        <p>Tu les acceptes en utilisant le site.</p>
+        <p>
+            Tu les acceptes avec le bouton « Accepter » du bandeau en bas de page. Si tu es
+            connecté·e, la version acceptée et sa date sont gardées sur ton compte.
+        </p>
 
         <h2>1. Le service</h2>
         <p>
@@ -86,6 +89,7 @@ import { PUBLISHER } from '../lib/legal.js'
         <h2>9. Évolution des conditions</h2>
         <p>
             Ces conditions peuvent évoluer. La version en vigueur est datée en haut de cette page.
+            Une nouvelle version t'est présentée à ta visite suivante, dans le même bandeau.
         </p>
 
         <h2>10. Droit applicable et contact</h2>

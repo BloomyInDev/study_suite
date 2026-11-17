@@ -45,6 +45,7 @@ import { HOST, PUBLISHER } from '../lib/legal.js'
         <p>L'app garde aussi :</p>
         <ul>
             <li>l'état de ton compte (en attente, validé, refusé), ton rôle et ta classe ;</li>
+            <li>la version des conditions d'utilisation que tu as acceptée, et sa date ;</li>
             <li>
                 les devoirs que tu crées ou modifies (avec ton nom comme auteur) et ceux que tu
                 coches comme faits.
@@ -86,6 +87,10 @@ import { HOST, PUBLISHER } from '../lib/legal.js'
             <li>
                 Sécuriser le service et diagnostiquer les pannes (journaux techniques). Base légale
                 : intérêt légitime (art. 6.1.f).
+            </li>
+            <li>
+                Garder la preuve de ton acceptation des conditions d'utilisation. Base légale :
+                intérêt légitime (art. 6.1.f).
             </li>
         </ul>
         <p>Aucune publicité, aucun profilage, aucune revente.</p>
@@ -147,11 +152,12 @@ import { HOST, PUBLISHER } from '../lib/legal.js'
 
         <h2>Stockage local</h2>
         <p>
-            L'app garde dans ton navigateur (localStorage) ta session, ton thème, les groupes
-            choisis, les cours que tu as masqués et le délai de tes rappels. Rien n'en sort, sauf la
-            session, envoyée à l'app pour t'identifier. Un seul cookie, strictement nécessaire,
-            protège la connexion avec l'IUT et expire après 10 minutes. Aucun traceur, aucune mesure
-            d'audience : pas de consentement à recueillir.
+            L'app garde dans ton navigateur (localStorage) ta session, ton thème, ton acceptation
+            des conditions d'utilisation, les groupes choisis, les cours que tu as masqués et le
+            délai de tes rappels. Rien n'en sort, sauf la session, envoyée à l'app pour
+            t'identifier. Un seul cookie, strictement nécessaire, protège la connexion avec l'IUT et
+            expire après 10 minutes. Aucun traceur, aucune mesure d'audience : pas de consentement à
+            recueillir.
         </p>
 
         <h2>Tes droits</h2>
