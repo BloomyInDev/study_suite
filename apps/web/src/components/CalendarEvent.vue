@@ -3,7 +3,7 @@ import { groupLabel } from '../lib/group-label.js'
 import { computed } from 'vue'
 import type { Event } from '../lib/types.js'
 import { formatTime } from '../lib/date.js'
-import { scrapedColor, textOn } from '../lib/event-color.js'
+import { scrapedColor, textOn } from '@studysuite/shared/color'
 import EventDetailsDialog from './EventDetailsDialog.vue'
 
 const props = defineProps<{ event: { color?: string; name?: string; full?: Event } }>()
