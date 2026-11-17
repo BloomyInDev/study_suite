@@ -34,11 +34,17 @@ export interface DayCard {
     host?: string
 }
 
-const PRIMARY = '#1867c0'
+// Vuetify's default dark theme, which the app uses in dark mode: the card is
+// always dark, since an unfurler cannot tell which theme its reader has.
+const BACKGROUND = '#121212'
+const SURFACE = '#212121'
+const PRIMARY = '#2196f3'
 const ACCENT = '#ffb300'
-const INK = '#1f1f1f'
-const MUTED = '#616161'
-const RULE = '#e0e0e0'
+// White at the high and medium emphasis opacities (.87 and .6) on BACKGROUND,
+// and the .12 of a divider.
+const INK = '#e1e1e1'
+const MUTED = '#a0a0a0'
+const RULE = '#363636'
 
 const BAR_HEIGHT = 56
 const GRID_TOP = 150
@@ -209,12 +215,12 @@ export function dayCardSvg(card: DayCard): string {
     const parts: string[] = []
     const push = (s: string) => parts.push(s)
 
-    push(`<rect width="${CARD_WIDTH}" height="${CARD_HEIGHT}" fill="#ffffff" />`)
+    push(`<rect width="${CARD_WIDTH}" height="${CARD_HEIGHT}" fill="${BACKGROUND}" />`)
 
     // The app bar, with the favicon mark.
     push(`<rect width="${CARD_WIDTH}" height="${BAR_HEIGHT}" fill="${PRIMARY}" />`)
     push(`<g transform="translate(16 12) scale(0.5)">
-        <rect width="64" height="64" rx="14" fill="#2979d4" />
+        <rect width="64" height="64" rx="14" fill="#42a5f5" />
         <rect x="12" y="12" width="16" height="26" rx="4" fill="#ffffff" />
         <rect x="36" y="12" width="16" height="14" rx="4" fill="#ffffff" opacity=".6" />
         <rect x="12" y="44" width="16" height="8" rx="4" fill="#ffffff" opacity=".6" />
@@ -251,7 +257,7 @@ export function dayCardSvg(card: DayCard): string {
     if (card.events.length === 0) {
         const mid = (GRID_TOP + GRID_BOTTOM) / 2
         push(
-            `<rect x="${GUTTER + 24}" y="${mid - 34}" width="${GRID_RIGHT - GUTTER - 48}" height="68" rx="8" fill="#f5f5f5" />`,
+            `<rect x="${GUTTER + 24}" y="${mid - 34}" width="${GRID_RIGHT - GUTTER - 48}" height="68" rx="8" fill="${SURFACE}" />`,
         )
         push(
             `<text x="${(GUTTER + GRID_RIGHT) / 2}" y="${mid + 6}" fill="${MUTED}" font-size="17" text-anchor="middle">Pas de cours ce jour-là</text>`,

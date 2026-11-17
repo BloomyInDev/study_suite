@@ -106,7 +106,7 @@ describe('dayCardSvg', () => {
             events: [course(8, 10, { color: null, title: '<script>' })],
             host: 'study.example',
         })
-        expect(svg).toContain('fill="#1867c0"')
+        expect(svg).toContain('fill="#2196f3"')
         expect(svg).toContain('&#60;script&#62;')
         expect(svg).not.toContain('<script>')
         expect(svg).toContain('Planning A&#38;B')

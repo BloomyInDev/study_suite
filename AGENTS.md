@@ -671,8 +671,9 @@ names, so nothing typed into the url reaches the head or the card.
   and `entry-server.ts` seeds the groups store with it.
 - **The image** is `GET /api/og/planning.png?group=&date=` (`controllers/og.ts`):
   that Paris day of the groups' planning, ancestors included, drawn like the
-  planning's day view on a phone (`lib/day-card.ts`, pure SVG layout, tested
-  without a database). Portrait 9:16, laid out on 450×800 and rendered at
+  planning's day view on a phone in the dark theme (`lib/day-card.ts`, pure
+  SVG layout, tested without a database). Always dark: an unfurler fetches the
+  image once for every reader and cannot know their theme. Portrait 9:16, laid out on 450×800 and rendered at
   900×1600. `date` is in the url so a link shared tomorrow unfurls tomorrow's
   day, since unfurlers cache an image by its url; the head puts today's date
   there. A name it does not know redirects to `/og-image.png`.
