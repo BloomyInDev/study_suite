@@ -32,7 +32,8 @@ watch(
     async (id) => {
         teacher.value = null
         teacherNotFound.value = false
-        if (!id) return
+        // The server render has no api to talk to; the client fetches on mount.
+        if (!id || import.meta.env.SSR) return
         const res = await backend.api.teachers[':id'].$get({ param: { id }, query: {} })
         const body = await res.json()
         if (id !== teacherId.value) return
@@ -75,6 +76,7 @@ watch(
         [newTeacherId, newGroupIds, newDate, newHidden],
         [oldTeacherId, oldGroupIds, oldDate, oldHidden],
     ) => {
+        if (import.meta.env.SSR) return
         // Paging within a week shows the same events; a teacher or group change never does.
         const sameWeek =
             oldDate !== undefined &&
