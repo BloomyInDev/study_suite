@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { groupLabel } from '../lib/group-label.js'
 import { API_URL } from '../lib/api-url'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useEventsStore } from '../stores/events.js'
 import type { Assignment, Event } from '../lib/types.js'
 import { addParisDays, formatShortDay, formatTime, parisDayStart } from '../lib/date.js'
+import { fetchCourseTitles } from '../lib/course-titles.js'
 
 const props = defineProps<{
     modelValue: boolean
@@ -43,14 +44,6 @@ const loadingCourses = ref(false)
 // Only the newest load may write `courses`: switching group twice in a row
 // otherwise lets the slower first answer land last.
 let courseLoadToken = 0
-
-onMounted(async () => {
-    const res = await fetch(`${API_URL}/api/events/titles`)
-    if (res.ok) {
-        const body = (await res.json()) as { data: string[] }
-        subjectOptions.value = body.data
-    }
-})
 
 const form = ref({
     title: '',
@@ -104,6 +97,20 @@ watch(
     [() => props.modelValue, dueMode, () => form.value.studentGroupId],
     ([open]) => {
         if (open && dueMode.value === 'event') void loadCourses()
+    },
+    { immediate: true },
+)
+
+// The group's subjects only, reloaded when the group changes. Same
+// newest-load-wins guard as the course picker.
+let subjectLoadToken = 0
+watch(
+    [() => props.modelValue, () => form.value.studentGroupId],
+    async ([open, groupId]) => {
+        if (!open) return
+        const token = ++subjectLoadToken
+        const titles = await fetchCourseTitles(groupId ? [groupId] : [])
+        if (token === subjectLoadToken) subjectOptions.value = titles
     },
     { immediate: true },
 )
