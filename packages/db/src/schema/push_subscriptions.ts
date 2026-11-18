@@ -30,6 +30,11 @@ export const pushSubscriptions = pgTable(
          * `BUT1` never matches a subscriber who follows `S5`.
          */
         groupIds: uuid('group_ids').array().notNull().default([]),
+        /**
+         * Course titles the user hid, matched exactly. The list lives in the
+         * browser; this copy is what keeps the tick from announcing them.
+         */
+        excludedTitles: text('excluded_titles').array().notNull().default([]),
         /** How long before a course to notify. */
         leadMinutes: integer('lead_minutes').notNull().default(15),
         /** Consecutive send failures; a push service 410 deletes the row outright. */

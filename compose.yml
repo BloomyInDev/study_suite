@@ -43,6 +43,11 @@ services:
             PORT: 3000
             CORS_ORIGIN: '*'
             CONFIG_PATH: /config.yaml
+            # Pages are rendered here at request time (apps/api/src/lib/ssr.ts).
+            # Must match web's SITE_URL: both come from the same variable.
+            SITE_URL: ${SITE_URL:-http://localhost}
+            # Where the template and the ssr manifest are fetched from.
+            SSR_WEB_ORIGIN: http://web
         volumes:
             # Required — create api.config.yaml next to this file.
             # See apps/api/example.config.yaml. The api exits if it is missing.

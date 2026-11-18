@@ -4,15 +4,24 @@ import { and, asc, eq } from 'drizzle-orm'
 import { db } from '../db.js'
 import { defaultCalendarFrom } from '../lib/calendar-window.js'
 import { eventFilterConditions } from '../lib/event-filters.js'
+import { expandGroupIds } from '../lib/group-ancestors.js'
 import { buildCalendar } from '../lib/ical.js'
 import { withEventRelations } from '../lib/serialize.js'
+import {
+    ExcludeTitleSchema,
+    fromParam,
+    IncludeAncestorGroupsSchema,
+    toParam,
+} from '../schemas/query.js'
 
 const CalendarQuerySchema = z.object({
     groupId: z.string().uuid().optional(),
+    includeAncestorGroups: IncludeAncestorGroupsSchema,
     teacherId: z.string().uuid().optional(),
     roomId: z.string().uuid().optional(),
-    from: z.coerce.date().optional(),
-    to: z.coerce.date().optional(),
+    from: fromParam().optional(),
+    to: toParam().optional(),
+    excludeTitle: ExcludeTitleSchema,
 })
 
 /** Name shown by the calendar client, derived from whatever the feed filters on. */
@@ -61,11 +70,20 @@ export default new OpenAPIHono().openapi(
     }),
     async (c) => {
         const filters = c.req.valid('query')
-        // A wall-clock label, like `events.startDate` it is compared with.
-        // `Date.now()` here shifted the cutoff by the Paris offset.
+        const { groupId, includeAncestorGroups, ...rest } = filters
         const from = filters.from ?? defaultCalendarFrom()
         const rows = await db.query.events.findMany({
-            where: and(...eventFilterConditions({ ...filters, from })),
+            where: and(
+                ...eventFilterConditions({
+                    ...rest,
+                    from,
+                    // One subscription is then a student's whole timetable,
+                    // promo-wide lectures included.
+                    groupIds: groupId
+                        ? await expandGroupIds([groupId], includeAncestorGroups)
+                        : undefined,
+                }),
+            ),
             with: withEventRelations,
             orderBy: asc(events.startDate),
         })

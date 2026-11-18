@@ -7,7 +7,9 @@ import { useNotificationsStore } from './stores/notifications.js'
 import { useAuthStore } from './stores/auth.js'
 import { useProvidersStore } from './stores/providers.js'
 import { useRemindersStore } from './stores/reminders.js'
-import GroupPickerDialog from './components/GroupPickerDialog.vue'
+import { useHiddenCoursesStore } from './stores/hidden-courses.js'
+import { useTermsStore } from './stores/terms.js'
+import TermsBanner from './components/TermsBanner.vue'
 import { usePageSeo } from './lib/seo.js'
 
 const { mobile } = useDisplay()
@@ -18,13 +20,14 @@ const providersStore = useProvidersStore()
 const notifs = useNotificationsStore()
 const auth = useAuthStore()
 const reminders = useRemindersStore()
+const hiddenCourses = useHiddenCoursesStore()
+const terms = useTermsStore()
 
 // The one place the head is wired up: every page's title and og: tags come from
 // lib/pages.ts and follow the route, so no view carries head code of its own.
 usePageSeo()
 
 const drawerOpen = ref(false)
-const pickerOpen = ref(false)
 
 const isDark = ref(localStorage.getItem('study_suite_theme') === 'dark')
 theme.change(isDark.value ? 'dark' : 'light')
@@ -54,10 +57,8 @@ onMounted(async () => {
     // has since been approved. Re-read it before anything branches on it.
     await auth.refresh()
     await groupsStore.onLoad()
-    // A signed-in student already has a class; only visitors need to pick one.
-    if (!groupsStore.usesAccountGroup && groupsStore.selectedGroupIds.length === 0) {
-        pickerOpen.value = true
-    }
+    // CGU accepted as a visitor, before signing in: put them on the account.
+    void terms.syncAccount()
 
     // A browser that subscribed to course reminders sends its groups to the api
     // once, at subscribe time. Re-sync them here, and on every later change: an
@@ -66,10 +67,21 @@ onMounted(async () => {
     await reminders.init()
 })
 
+// A login lands here without a reload, through the callback route.
+watch(
+    () => auth.user?.id,
+    (id) => id && void terms.syncAccount(),
+)
+
 watch(
     () => groupsStore.effectiveGroupIds,
     () => void reminders.syncGroups(),
     { deep: true },
+)
+// Hiding a course has to reach the api too, or the reminder still fires.
+watch(
+    () => hiddenCourses.key,
+    () => void reminders.syncGroups(),
 )
 
 const commitHash = import.meta.env.VITE_GIT_COMMIT_HASH
@@ -90,8 +102,6 @@ const navItems = [
 
 <template>
     <v-app>
-        <GroupPickerDialog v-model="pickerOpen" />
-
         <v-navigation-drawer v-if="mobile" v-model="drawerOpen" temporary>
             <v-list nav>
                 <v-list-item
@@ -183,6 +193,13 @@ const navItems = [
                     >Bloomy</a
                 >
             </div>
+            <nav class="text-caption d-flex flex-wrap justify-center ga-3 mb-1">
+                <router-link to="/legal" class="text-medium-emphasis">Mentions légales</router-link>
+                <router-link to="/privacy" class="text-medium-emphasis"
+                    >Confidentialité</router-link
+                >
+                <router-link to="/terms" class="text-medium-emphasis">CGU</router-link>
+            </nav>
             <div class="text-caption text-medium-emphasis">
                 Commit Hash:
                 <a
@@ -193,6 +210,8 @@ const navItems = [
                 >
             </div>
         </v-footer>
+
+        <TermsBanner />
 
         <template v-for="notif in notifs.notifications" :key="notif.id">
             <v-snackbar

@@ -4,7 +4,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
 import { useAuthStore } from '../stores/auth.js'
-import { mondayOfWeek, toWallClock } from '../lib/date.js'
+import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
+import { addParisDays, mondayOfWeek } from '../lib/date.js'
 import type { Event, Assignment } from '../lib/types.js'
 import NoGroupsCard from '../components/NoGroupsCard.vue'
 import NextEventCard from '../components/NextEventCard.vue'
@@ -18,12 +19,11 @@ import FreeRoomsCard from '../components/FreeRoomsCard.vue'
 const groupStore = useGroupsStore()
 const eventsStore = useEventsStore()
 const auth = useAuthStore()
+const hiddenCourses = useHiddenCoursesStore()
 
 const events = ref<Event[]>([])
 const assignments = ref<Assignment[]>([])
 const loading = ref(true)
-// A real instant. Assignment due dates are real instants too. Event times are
-// not, so anything compared against those goes through `wallNow`.
 const now = ref(new Date())
 const pickerOpen = ref(false)
 const detailOpen = ref(false)
@@ -34,15 +34,21 @@ async function load() {
     loading.value = true
     try {
         const promises: Promise<void>[] = [
-            eventsStore.fetchUpcoming(groupStore.effectiveGroupIds, 10).then((e) => {
-                events.value = e
-            }),
+            eventsStore
+                .fetchUpcoming(groupStore.effectiveGroupIds, 10, hiddenCourses.titles)
+                .then((e) => {
+                    events.value = e
+                }),
         ]
         if (auth.isAuthenticated && groupStore.effectiveGroupIds.length > 0) {
-            const cutoff = new Date()
+            const from = new Date()
+            const cutoff = new Date(from)
             cutoff.setDate(cutoff.getDate() + 14)
+            // The api sorts oldest first, so without `from` the whole backlog
+            // of past homework came back ahead of what is still due.
             const params = new URLSearchParams({
                 groupIds: groupStore.effectiveGroupIds.join(','),
+                from: from.toISOString(),
                 to: cutoff.toISOString(),
             })
             promises.push(
@@ -51,7 +57,7 @@ async function load() {
                 })
                     .then((r) => (r.ok ? r.json() : { data: [] }))
                     .then((body: { data: Assignment[] }) => {
-                        assignments.value = body.data.slice(0, 5)
+                        assignments.value = body.data
                     })
                     .catch(() => {}),
             )
@@ -73,23 +79,19 @@ onUnmounted(() => {
     if (intervalId) clearInterval(intervalId)
 })
 
-const wallNow = computed(() => toWallClock(now.value))
-
 /** The api hands back the next events whenever they fall, so out of term the
  *  card happily announced a course a fortnight away as what is coming up. */
 const endOfWeek = computed(() => {
-    const end = mondayOfWeek(wallNow.value)
-    end.setUTCDate(end.getUTCDate() + 7)
-    return end
+    return addParisDays(mondayOfWeek(now.value), 7)
 })
 
 const currentOrNextEvent = computed(() => {
     const sorted = [...events.value]
         .filter((e) => e.start < endOfWeek.value)
         .sort((a, b) => a.start.getTime() - b.start.getTime())
-    const current = sorted.find((e) => wallNow.value >= e.start && wallNow.value <= e.end)
+    const current = sorted.find((e) => now.value >= e.start && now.value <= e.end)
     if (current) return { event: current, isCurrent: true }
-    const next = sorted.find((e) => e.start > wallNow.value)
+    const next = sorted.find((e) => e.start > now.value)
     if (next) return { event: next, isCurrent: false }
     return null
 })
@@ -99,13 +101,15 @@ const upcomingAssignments = computed(() =>
 )
 
 /** The homepage lists what is left to do; the homework page shows everything. */
-const todoAssignments = computed(() => upcomingAssignments.value.filter((a) => !a.completedByMe))
-const doneCount = computed(() => upcomingAssignments.value.length - todoAssignments.value.length)
+const todoAssignments = computed(() =>
+    upcomingAssignments.value.filter((a) => !a.completedByMe).slice(0, 5),
+)
+const doneCount = computed(() => upcomingAssignments.value.filter((a) => a.completedByMe).length)
 
 // allGroups loads after mount, so the ancestors, and with them the promo's
 // events, only join effectiveGroupIds a moment later.
 watch(
-    () => groupStore.effectiveGroupIds.join(','),
+    () => `${groupStore.effectiveGroupIds.join(',')}|${hiddenCourses.key}`,
     () => void load(),
 )
 
@@ -148,7 +152,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                     <NextEventCard
                         :event="currentOrNextEvent.event"
                         :is-current="currentOrNextEvent.isCurrent"
-                        :now="wallNow"
+                        :now="now"
                     />
                 </template>
                 <template v-else>

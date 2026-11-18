@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
 import type { Event, Group } from '../lib/types.js'
-import { formatTime, wallClockNow } from '../lib/date.js'
+import { formatTime } from '../lib/date.js'
 import { groupLabel } from '../lib/group-label.js'
 
 const eventsStore = useEventsStore()
@@ -13,13 +13,13 @@ const events = ref<Event[]>([])
 const loading = ref(true)
 const search = ref('')
 // Wall-clock, so it can be compared with the event times.
-const now = ref(wallClockNow())
+const now = ref(new Date())
 let tick: ReturnType<typeof setInterval> | null = null
 
 // The store caches a day for five minutes, so calling this every tick picks up
 // scraper changes without hammering the api, and rolls over at midnight.
 async function load() {
-    now.value = wallClockNow()
+    now.value = new Date()
     events.value = await eventsStore.fetchDayEvents(now.value, [])
 }
 

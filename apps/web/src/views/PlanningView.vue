@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, provide, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDisplay } from 'vuetify'
 import { backend } from '../lib/api.js'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
+import { useNotificationsStore } from '../stores/notifications.js'
+import { CAN_HIDE_COURSES, useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { useGroupOverride } from '../lib/group-override.js'
 import { groupLabel } from '../lib/group-label.js'
 import type { Event, Teacher } from '../lib/types.js'
 import WeekCalendar from '../components/WeekCalendar.vue'
-import { mondayOfWeek, skipSunday, wallClockNow } from '../lib/date.js'
+import GroupPickerDialog from '../components/GroupPickerDialog.vue'
+import { mondayOfWeek, skipSunday } from '../lib/date.js'
 
 const { mobile } = useDisplay()
 // Carried onto the changes page so `?group=` survives the jump.
@@ -17,6 +20,7 @@ const route = useRoute()
 const router = useRouter()
 const groups = useGroupsStore()
 const override = useGroupOverride()
+const pickerOpen = ref(false)
 
 // `?teacher=<id>` shows that teacher's timetable, and wins over `?group=`: it is
 // where the teacher dialog's "full planning" button lands.
@@ -31,7 +35,8 @@ watch(
     async (id) => {
         teacher.value = null
         teacherNotFound.value = false
-        if (!id) return
+        // The server render has no api to talk to; the client fetches on mount.
+        if (!id || import.meta.env.SSR) return
         const res = await backend.api.teachers[':id'].$get({ param: { id }, query: {} })
         const body = await res.json()
         if (id !== teacherId.value) return
@@ -54,11 +59,14 @@ const pickedGroupIds = computed({
     set: (ids: string[]) => override.set(ids),
 })
 const eventsStore = useEventsStore()
+const hiddenCourses = useHiddenCoursesStore()
+// Hidden courses are the student's own business: a teacher's timetable, or a
+// class looked up with `?group=`, is shown whole.
+const ownPlanning = computed(() => !teacherId.value && !override.isActive.value)
+const hiddenTitles = computed(() => (ownPlanning.value ? hiddenCourses.titles : []))
+provide(CAN_HIDE_COURSES, ownPlanning)
 const events = ref<Event[]>([])
-// Wall-clock, not `new Date()`: `mondayOfWeek` reads the UTC getters, so a real
-// instant between midnight and 02h Paris still falls on the previous day and the
-// view opened on last week.
-const date = ref(skipSunday(wallClockNow()))
+const date = ref(skipSunday(new Date()))
 const loading = ref(false)
 
 // Switching between a teacher and a group, or paging faster than the api
@@ -66,8 +74,12 @@ const loading = ref(false)
 let requestId = 0
 
 watch(
-    [teacherId, () => override.groupIds.value, date],
-    async ([newTeacherId, newGroupIds, newDate], [oldTeacherId, oldGroupIds, oldDate]) => {
+    [teacherId, () => override.groupIds.value, date, () => hiddenTitles.value.join('\n')],
+    async (
+        [newTeacherId, newGroupIds, newDate, newHidden],
+        [oldTeacherId, oldGroupIds, oldDate, oldHidden],
+    ) => {
+        if (import.meta.env.SSR) return
         // Paging within a week shows the same events; a teacher or group change never does.
         const sameWeek =
             oldDate !== undefined &&
@@ -77,7 +89,8 @@ watch(
             oldGroupIds !== undefined &&
             oldGroupIds.length === newGroupIds.length &&
             newGroupIds.every((id) => oldGroupIds.includes(id))
-        if (sameWeek && sameTeacher && (newTeacherId !== null || sameGroups)) return
+        const sameHidden = newHidden === oldHidden
+        if (sameWeek && sameTeacher && sameHidden && (newTeacherId !== null || sameGroups)) return
 
         const token = ++requestId
         if (newTeacherId === null && newGroupIds.length === 0) {
@@ -92,6 +105,7 @@ watch(
                 : await eventsStore.fetchWeekEvents(
                       mondayOfWeek(newDate as Date),
                       newGroupIds as string[],
+                      hiddenTitles.value,
                   )
             if (token !== requestId) return
             events.value = fetched ?? []
@@ -101,10 +115,40 @@ watch(
     },
     { immediate: true, deep: true },
 )
+
+const notifications = useNotificationsStore()
+
+/**
+ * The link to what is on screen, for someone else to open: the teacher, or the
+ * groups by the names `?group=` reads. A group link unfurls as the group's day
+ * (see lib/seo.ts), which is the point of sharing it rather than the address
+ * bar, which for a student's own planning carries no group at all.
+ */
+const sharePath = computed(() => {
+    if (teacherId.value) return `/planning?teacher=${encodeURIComponent(teacherId.value)}`
+    const shown = override.isActive.value ? override.matched.value : groups.selectedGroups
+    if (shown.length === 0) return null
+    return `/planning?group=${encodeURIComponent(shown.map(override.urlName).join(','))}`
+})
+
+// Always the clipboard, never navigator.share: desktop browsers have the
+// system share sheet too now, and a link to paste is what people want there.
+async function copyLink() {
+    if (!sharePath.value) return
+    // Read on click: the page also renders on a server, which has no window.
+    const url = window.location.origin + sharePath.value
+    try {
+        await navigator.clipboard.writeText(url)
+        notifications.success('Lien copié')
+    } catch {
+        notifications.error('Impossible de copier le lien')
+    }
+}
 </script>
 
 <template>
     <v-container fluid class="pa-4">
+        <GroupPickerDialog v-model="pickerOpen" />
         <v-alert
             v-if="teacher"
             type="info"
@@ -165,6 +209,22 @@ watch(
         >
             Groupe introuvable : {{ override.unknownNames.value.join(', ') }}.
         </v-alert>
+        <v-alert
+            v-else-if="!teacherId && groups.activeGroupIds.length === 0"
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="mb-4"
+            icon="mdi-account-group"
+        >
+            <div class="d-flex align-center ga-2 flex-wrap">
+                <span>Choisis tes groupes pour voir ton emploi du temps.</span>
+                <v-spacer />
+                <v-btn size="small" variant="text" @click="pickerOpen = true">
+                    Choisir mes groupes
+                </v-btn>
+            </div>
+        </v-alert>
         <WeekCalendar v-model="date" :events="events" :loading="loading">
             <template #prepend>
                 <v-autocomplete
@@ -185,6 +245,17 @@ watch(
                 />
             </template>
             <template #append>
+                <v-chip
+                    v-if="ownPlanning && hiddenCourses.titles.length > 0"
+                    to="/profile"
+                    prepend-icon="mdi-eye-off"
+                    variant="tonal"
+                    :size="mobile ? 'small' : undefined"
+                >
+                    {{ hiddenCourses.titles.length }} masqué{{
+                        hiddenCourses.titles.length > 1 ? 's' : ''
+                    }}
+                </v-chip>
                 <v-tooltip v-if="!teacherId" text="Changements récents" location="start">
                     <template #activator="{ props }">
                         <v-btn
@@ -193,6 +264,18 @@ watch(
                             :to="{ path: '/planning/changes', query: route.query }"
                             icon="mdi-history"
                             :size="mobile ? 'small' : undefined"
+                        />
+                    </template>
+                </v-tooltip>
+                <v-tooltip text="Copier le lien" location="start">
+                    <template #activator="{ props }">
+                        <v-btn
+                            v-bind="props"
+                            variant="tonal"
+                            icon="mdi-link-variant"
+                            :size="mobile ? 'small' : undefined"
+                            :disabled="!sharePath"
+                            @click="copyLink"
                         />
                     </template>
                 </v-tooltip>

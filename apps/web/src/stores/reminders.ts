@@ -1,3 +1,8 @@
+import {
+    DEFAULT_REMINDER_LEAD,
+    isReminderLead,
+    REMINDER_LEAD_CHOICES,
+} from '@studysuite/shared/reminders'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
@@ -12,18 +17,19 @@ import {
     syncPush,
 } from '../lib/push.js'
 import { useGroupsStore } from './groups.js'
+import { useHiddenCoursesStore } from './hidden-courses.js'
 import { useProvidersStore } from './providers.js'
 
-export const LEAD_CHOICES = [5, 10, 15, 30, 60] as const
+export const LEAD_CHOICES = REMINDER_LEAD_CHOICES
 
 const LS_LEAD = 'study_suite_reminder_lead'
-const DEFAULT_LEAD = 15
+const DEFAULT_LEAD: number = DEFAULT_REMINDER_LEAD
 
 /** Remembered locally only so the picker shows the right value before the api
  *  answers; the row in `push_subscriptions` is the truth. */
 function storedLead(): number {
     const raw = Number(localStorage.getItem(LS_LEAD))
-    return LEAD_CHOICES.includes(raw as (typeof LEAD_CHOICES)[number]) ? raw : DEFAULT_LEAD
+    return isReminderLead(raw) ? raw : DEFAULT_LEAD
 }
 
 /**
@@ -81,6 +87,10 @@ export const useRemindersStore = defineStore('reminders', () => {
         return useGroupsStore().effectiveGroupIds
     }
 
+    function hiddenTitles(): string[] {
+        return useHiddenCoursesStore().titles
+    }
+
     async function init(): Promise<void> {
         supported.value = pushSupported()
         needsInstall.value = installRequired()
@@ -100,7 +110,7 @@ export const useRemindersStore = defineStore('reminders', () => {
         } else {
             // Subscribed here but unknown to the api. The row was pruned after
             // a run of failures, or the database was restored. Re-register.
-            await syncPush(groupIds(), leadMinutes.value)
+            await syncPush(groupIds(), leadMinutes.value, hiddenTitles())
         }
     }
 
@@ -109,7 +119,12 @@ export const useRemindersStore = defineStore('reminders', () => {
         busy.value = true
         error.value = null
         try {
-            await enablePush(providers.push.publicKey, groupIds(), leadMinutes.value)
+            await enablePush(
+                providers.push.publicKey,
+                groupIds(),
+                leadMinutes.value,
+                hiddenTitles(),
+            )
             subscribed.value = true
             return true
         } catch (err) {
@@ -140,13 +155,13 @@ export const useRemindersStore = defineStore('reminders', () => {
     async function setLead(minutes: number): Promise<void> {
         leadMinutes.value = minutes
         localStorage.setItem(LS_LEAD, String(minutes))
-        if (subscribed.value) await syncPush(groupIds(), minutes)
+        if (subscribed.value) await syncPush(groupIds(), minutes, hiddenTitles())
     }
 
-    /** Called when the student's class or local group selection changes. */
+    /** Called when the student's class, local group selection or hidden courses change. */
     async function syncGroups(): Promise<void> {
         if (!supported.value || !subscribed.value) return
-        await syncPush(groupIds(), leadMinutes.value)
+        await syncPush(groupIds(), leadMinutes.value, hiddenTitles())
     }
 
     async function test(): Promise<'sent' | 'gone' | 'failed' | 'not-subscribed'> {

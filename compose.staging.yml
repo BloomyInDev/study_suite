@@ -5,8 +5,11 @@
 # Nothing here reads or writes production's data: separate project, separate
 # networks, no published database port.
 #
-# Deploy from its own directory, under its own project name:
+# Deployed by CI on every push to `staging` (the `deploy-staging` job runs
+# deploy/staging.sh on the host). By hand, from the stack's own directory and
+# under its own project name:
 #   docker compose -p study_staging pull && docker compose -p study_staging up -d
+# This file is not synced by the deploy: copy it over when it changes.
 #
 # The mem limits keep a misbehaving preview from starving production, which
 # shares this 2 GB LXC.
@@ -71,13 +74,20 @@ services:
             PORT: 3000
             CORS_ORIGIN: '*'
             CONFIG_PATH: /config.yaml
+            # Pages are rendered here at request time (apps/api/src/lib/ssr.ts).
+            # Must match web's SITE_URL: both come from the same variable.
+            SITE_URL: ${SITE_URL:-https://study-staging.bastienluben.dev}
+            # Where the template and the ssr manifest are fetched from.
+            SSR_WEB_ORIGIN: http://web
         volumes:
             # Its own file, not production's: a different jwt.secret and the
             # preview's own OAuth redirect URIs.
             - ./api.config.yaml:/config.yaml:ro
         expose:
             - '3000'
-        mem_limit: 256m
+        # The page renderer's bundle adds about 110 MB of RSS (see AGENTS.md,
+        # Request-time rendering).
+        mem_limit: 384m
         depends_on:
             postgres:
                 condition: service_healthy

@@ -3,14 +3,15 @@ import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import type { Event } from '../lib/types.js'
 import CalendarEvent from './CalendarEvent.vue'
+import CurrentTimeLine from './CurrentTimeLine.vue'
 import {
     nextDay,
     previousDay,
     skipSunday,
     toCalendarLocalDate,
-    wallClockNow,
     weekdayFormat,
 } from '../lib/date.js'
+import { useNow } from '../lib/use-now.js'
 
 const props = withDefaults(
     defineProps<{
@@ -24,11 +25,10 @@ const props = withDefaults(
     { loading: false, keyboardNav: true, height: undefined, minHeight: 400 },
 )
 
-// The paged date is a Paris wall-clock label, like the event timestamps it is
-// compared to. Never `new Date()`.
 const date = defineModel<Date>({ required: true })
 
 const { mobile } = useDisplay()
+const now = useNow()
 
 // A Sunday renders as Mon–Sat of the ended week plus the next Monday, and pages
 // a week away from what the parent fetches (see `skipSunday`). Snap whatever
@@ -42,10 +42,7 @@ watch(
     { immediate: true },
 )
 
-// The calendar reads `model-value` with the *local* getters, while `date` is a
-// wall-clock label, so handing it over raw applies the Paris offset a second
-// time and the grid runs ahead of the events, which go through
-// `toCalendarLocalDate`.
+// See `toCalendarLocalDate`: the grid must get the same reading as the events.
 const calendarDate = computed(() => toCalendarLocalDate(date.value))
 
 const calendarEvents = computed(() =>
@@ -91,7 +88,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             <v-btn
                 variant="outlined"
                 :class="mobile ? '' : 'mx-4'"
-                @click="date = skipSunday(wallClockNow())"
+                @click="date = skipSunday(new Date())"
             >
                 Aujourd'hui
             </v-btn>
@@ -123,6 +120,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
         >
             <template #event="{ event }">
                 <CalendarEvent :event="event" />
+            </template>
+            <template #day-body="day">
+                <CurrentTimeLine :day="day" :now="now" />
             </template>
         </v-calendar>
     </v-sheet>

@@ -105,7 +105,7 @@ const confirm = () => {
 </script>
 
 <template>
-    <v-dialog v-model="show" max-width="480" persistent>
+    <v-dialog v-model="show" max-width="480">
         <v-card>
             <v-card-title class="text-h5 pt-4 px-4">Choisir mes groupes</v-card-title>
             <v-card-text class="pa-4">
@@ -156,13 +156,7 @@ const confirm = () => {
             </v-card-text>
             <v-card-actions>
                 <v-spacer />
-                <v-btn
-                    v-if="groups.selectedGroupIds.length > 0"
-                    variant="text"
-                    @click="show = false"
-                >
-                    Annuler
-                </v-btn>
+                <v-btn variant="text" @click="show = false">Annuler</v-btn>
                 <v-btn
                     color="primary"
                     variant="flat"

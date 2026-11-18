@@ -1,15 +1,18 @@
 import type { Ref } from 'vue'
-import { wallClockNow } from '@studysuite/shared/time'
+import {
+    PLANNING_TZ,
+    addParisDays,
+    parisDayKey,
+    parisParts,
+    parisWeekStart,
+} from '@studysuite/shared/time'
 
-// Event timestamps are Paris wall-clock labelled UTC, which is why everything
-// below reads them through `timeZone: 'UTC'` and the UTC getters. A real
-// instant has to be converted before it can be compared with one.
 export {
-    fromWallClock,
-    toWallClock,
-    wallClockNow,
-    wallClockDayStart,
-    wallClockDayEnd,
+    addParisDays,
+    parisDayEnd,
+    parisDayStart,
+    parisParts,
+    parisWeekStart,
 } from '@studysuite/shared/time'
 
 export const formatTime = (date: Date): string =>
@@ -17,16 +20,16 @@ export const formatTime = (date: Date): string =>
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
-        timeZone: 'UTC',
+        timeZone: PLANNING_TZ,
     })
 
-/** `lun. 15 sept.`: a wall-clock day, without its hour. */
+/** `lun. 15 sept.` */
 export const formatShortDay = (date: Date): string =>
     date.toLocaleDateString('fr-FR', {
         weekday: 'short',
         day: '2-digit',
         month: 'short',
-        timeZone: 'UTC',
+        timeZone: PLANNING_TZ,
     })
 
 export const formatFullDate = (date: Date): string =>
@@ -38,34 +41,25 @@ export const formatFullDate = (date: Date): string =>
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
-        timeZone: 'UTC',
+        timeZone: PLANNING_TZ,
     })
 
 export const formatTimeUntil = (
     target: Date,
     textBefore = 'dans',
-    from: Date = wallClockNow(),
+    from: Date = new Date(),
 ): string => {
     const diffMins = Math.round((target.getTime() - from.getTime()) / 60000)
     if (diffMins < 0) return 'déjà commencé'
 
-    const isSameDay =
-        target.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ===
-        from.toLocaleDateString('fr-FR', { timeZone: 'UTC' })
-
-    if (isSameDay) {
+    if (parisDayKey(target) === parisDayKey(from)) {
         if (diffMins < 60) return `${textBefore} ${diffMins} minute${diffMins > 1 ? 's' : ''}`
         const h = Math.floor(diffMins / 60)
         const m = diffMins % 60
         return `${textBefore} ${h}h${m > 0 ? m.toString().padStart(2, '0') : ''}`
     }
 
-    const tomorrow = new Date(from)
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1)
-    if (
-        target.toLocaleDateString('fr-FR', { timeZone: 'UTC' }) ===
-        tomorrow.toLocaleDateString('fr-FR', { timeZone: 'UTC' })
-    )
+    if (parisDayKey(target) === parisDayKey(addParisDays(from, 1)))
         return `demain à ${formatTime(target)}`
 
     return target
@@ -73,7 +67,7 @@ export const formatTimeUntil = (
             weekday: 'long',
             hour: '2-digit',
             minute: '2-digit',
-            timeZone: 'UTC',
+            timeZone: PLANNING_TZ,
         })
         .replace(',', ' à')
 }
@@ -99,50 +93,38 @@ export const formatDueRelative = (iso: string, from: Date = new Date()): string 
     return `dans ${days} jours`
 }
 
+/**
+ * `v-calendar` places everything with the browser's *local* getters and offers
+ * no way to name a zone. This hands it a date whose local reading is the Paris
+ * one, so the grid shows Paris hours wherever the browser is. In Paris itself
+ * it changes nothing. The result is for the calendar only: it is not the
+ * instant any more, and must not be compared with one.
+ */
 export const toCalendarLocalDate = (date: Date): Date => {
-    const d = new Date(date)
-    d.setMinutes(d.getMinutes() + d.getTimezoneOffset())
-    return d
+    const { year, month, day, hour, minute, second } = parisParts(date)
+    // eslint-disable-next-line no-restricted-syntax -- the one place a local reading is wanted
+    return new Date(year, month - 1, day, hour, minute, second)
 }
 
-export const dateAtMidnight = (date: Date): Date => {
-    const d = new Date(date.getTime())
-    d.setUTCHours(0, 0, 0, 0)
-    return d
-}
+export const mondayOfWeek = (date: Date): Date => parisWeekStart(date)
 
-export const mondayOfWeek = (date: Date): Date => {
-    const d = new Date(date.getTime())
-    const day = d.getUTCDay() || 7
-    if (day !== 1) d.setUTCHours(-24 * (day - 1))
-    return dateAtMidnight(d)
-}
+export const toIsoDateString = (date: Date): string => parisDayKey(date)
 
-export const toIsoDateString = (date: Date): string => {
-    const y = date.getUTCFullYear()
-    const m = String(date.getUTCMonth() + 1).padStart(2, '0')
-    const d = String(date.getUTCDate()).padStart(2, '0')
-    return `${y}-${m}-${d}`
-}
-
+// `timestamp.date` is the calendar's own `YYYY-MM-DD`, a day with no zone, so
+// it is parsed and read back in UTC to stay that day everywhere.
 export const weekdayFormat = (timestamp: { date: string }): string =>
     new Date(timestamp.date).toLocaleDateString('fr-FR', { weekday: 'long', timeZone: 'UTC' })
 
-// The paged date is wall-clock, like everything else here, so the arithmetic and
-// the Sunday skip read the UTC getters. The local ones would land on the next
-// day (and skip the wrong Sunday) for any wall-clock hour past 22h.
+const isParisSunday = (date: Date): boolean => parisParts(date).weekday === 0
+
 export const nextDay = (date: Ref<Date>, increment: number): void => {
-    const d = new Date(date.value)
-    d.setUTCDate(d.getUTCDate() + increment)
-    if (d.getUTCDay() === 0) d.setUTCDate(d.getUTCDate() + 1)
-    date.value = d
+    const d = addParisDays(date.value, increment)
+    date.value = isParisSunday(d) ? addParisDays(d, 1) : d
 }
 
 export const previousDay = (date: Ref<Date>, decrement: number): void => {
-    const d = new Date(date.value)
-    d.setUTCDate(d.getUTCDate() - decrement)
-    if (d.getUTCDay() === 0) d.setUTCDate(d.getUTCDate() - 1)
-    date.value = d
+    const d = addParisDays(date.value, -decrement)
+    date.value = isParisSunday(d) ? addParisDays(d, -1) : d
 }
 
 /**
@@ -158,9 +140,4 @@ export const previousDay = (date: Ref<Date>, decrement: number): void => {
  * one about to start. `nextDay` / `previousDay` already skip Sunday, so this is
  * only needed where a date enters from outside: "Aujourd'hui" and mount.
  */
-export const skipSunday = (date: Date): Date => {
-    if (date.getUTCDay() !== 0) return date
-    const d = new Date(date.getTime())
-    d.setUTCDate(d.getUTCDate() + 1)
-    return d
-}
+export const skipSunday = (date: Date): Date => (isParisSunday(date) ? addParisDays(date, 1) : date)

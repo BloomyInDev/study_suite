@@ -63,59 +63,32 @@ npm scope is `@studysuite`. When an app declares `"@studysuite/shared": "workspa
 
 ---
 
-## Time: Paris wall-clock labelled UTC
+## Time: the calendar is Paris's
 
-Every event timestamp is a label, not an instant. That covers `events.start_date`,
-`events.end_date`, and the `startDate` and `endDate` an api response carries. The
-scraper builds them with `Date.UTC` from the hour the Prose Consult page displays, so
-a course at 10h00 Paris is stored as `10:00:00Z`. Reading it back with the UTC getters
-gives the hour a student actually sees.
+Event timestamps are ordinary instants. Their day, week and displayed hour are
+Europe/Paris ones whatever machine asks, and the `Date` getters cannot answer
+that: the local ones read the process timezone (Europe/Paris on a laptop, UTC in
+the api container), the UTC ones put a 00h30 course on the previous day. Use
+`@studysuite/shared/time` (`parisDate`, `parisParts`, `parisDayStart`,
+`parisWeekStart`, `addParisDays`, ...) and `timeZone: 'Europe/Paris'` when
+formatting. Its tests, and the api's, must pass under any `TZ`.
 
-So `new Date()` cannot be compared with one of them. Doing so is off by the Paris UTC
-offset, one hour in winter and two in summer. Every availability feature was wrong by
-that amount for exactly this reason: "Disponibles maintenant", free rooms, teacher
-busy/free, current-or-next event.
-
-`@studysuite/shared/time` is the only correct way across that boundary:
-
-| Helper                                                      | Use                                                         |
-| ----------------------------------------------------------- | ----------------------------------------------------------- |
-| `wallClockNow()`                                            | "now", comparable with an event timestamp                   |
-| `toWallClock(instant)`                                      | convert a real instant you already hold                     |
-| `wallClockDayStart(instant?)` / `wallClockDayEnd(instant?)` | the Paris day's bounds; `...End` is exclusive               |
-| `fromWallClock(label)`                                      | the real instant a label denotes (inverse of `toWallClock`) |
-| `wallClockToOffsetIso(label)`                               | that instant as `+02:00`, for the wire                      |
-
-It resolves the offset through an explicit `Europe/Paris` `Intl.DateTimeFormat`, never
-the local getters. Its predecessor `dateToUTC` read the process timezone instead, which
-is Europe/Paris on a laptop and UTC in the api container. Availability was right in dev
-and two hours out in production.
-
-Rules of thumb:
-
-- Query params `from` / `to` on the event routes are wall-clock too, matching the
-  responses. Sending `new Date().toISOString()` shifts the window.
-- Timestamps that are genuinely instants stay real dates and compare with `new Date()`:
-  `users.updated_at`, `discord_token_expires_at`, `assignments.due_date`, iCal's
-  `DTSTAMP`. `HomeView` holds both kinds and keeps them apart as `now` and `wallNow`.
-- Displaying an event time means UTC getters or `timeZone: 'UTC'`, which is what
-  `apps/web/src/lib/date.ts` does throughout.
-- **The api's JSON says `Z` while meaning Paris.** Every event route takes a
-  `dateFormat` param. The default `iso`, plus `unix` and `unix-ms`, all hand out
-  the raw wall-clock label, so `iso` carries a `Z` it does not mean and the two
-  numeric formats are off by the Paris offset. An external consumer doing date
-  arithmetic on them lands one or two hours early. A transit lookup for an 08:00
-  class targeted a 06:00Z arrival. The numeric pair are the worse half, because
-  an epoch has no label reading at all, so a consumer cannot compensate the way
-  it can once it knows about the `Z`. `iso-offset`, `unix-instant` and
-  `unix-ms-instant` emit the true instant, and any client outside this repo
-  should ask for those. The wrong three stay on purpose: `apps/web` and existing
-  consumers already read them that way, and correcting them in place would break
-  those silently. `packages/shared/src/time/index.test.ts` pins the offsets
-  either side of both DST transitions, and `apps/api/src/lib/serialize.test.ts`
-  asserts the legacy three stay wrong by exactly the offset. That is a
-  regression guard, not an aspiration. Both must pass under any `TZ`, which is
-  the bug they exist for.
+- `v-calendar` only knows the browser's local getters. `toCalendarLocalDate`
+  (`apps/web/src/lib/date.ts`) hands it a date whose local reading is the Paris
+  one. That value is for the calendar alone and is no longer the instant.
+- A `from` / `to` query value that names no offset (`2026-09-07`,
+  `2026-09-07T08:00`) is read in Paris, not in UTC or the process timezone.
+  Bare digits are an epoch, in seconds below 1e11 and milliseconds above, so
+  both `unix` and `unix-ms` output can be sent back.
+- `dateFormat=unix-instant` and `unix-ms-instant` are deprecated aliases of
+  `unix` and `unix-ms`, kept for clients that already send them.
+- eslint bans the `Date` getters, `Date.UTC` and `new Date(y, m, d)` in `.ts`
+  files outside `shared/time`. `.vue` files are not linted, so the views rely
+  on review.
+- **An image built before migration `0017` must never run against a migrated
+  database.** Until then timestamps were Paris wall-clock labelled UTC; such a
+  scraper would reconcile every course as moved by an hour or two and fill
+  `event_changes`. Rolling back the code means restoring the database too.
 
 ## packages/shared
 
@@ -152,6 +125,8 @@ mapping `ENV_VAR_NAME` to `dot.path`. Both `apps/api` and `apps/scraper` use it.
 | `iut_group_mappings`        | IUT directory group → student group mapping       |
 | `push_subscriptions`        | One row per browser that wants course reminders   |
 | `push_reminder_sends`       | Which reminder has already gone out               |
+| `discord_reminders`         | One row per account with Discord DM reminders on  |
+| `discord_reminder_sends`    | Which DM reminder has already gone to the bot     |
 
 `event_changes.change_type` enum: `added`, `removed`, `updated`, `moved`.
 For `moved`, `diff` JSON contains `{ newStart: ISO, newEnd: ISO }`.
@@ -257,55 +232,100 @@ the table is empty, so a fresh database still bootstraps.
 
 Hono server on Bun, port 3000.
 
-**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional. Leave it out and the api boots with the IUT routes answering 503. The `push` block (`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`) is optional the same way, and so is the `bot` block (`BOT_API_KEYS`, comma-separated). See [Discord bot access](#discord-bot-access).
+**Config** env vars: `PORT`, `DATABASE_URL`, `CORS_ORIGIN`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_REDIRECT_URI`, `JWT_SECRET` (≥32 chars). The `iut` block (`IUT_DISPLAY_NAME`, `IUT_ISSUER_URL`, `IUT_CLIENT_ID`, `IUT_CLIENT_SECRET`, `IUT_REDIRECT_URI`) is optional. Leave it out and the api boots with the IUT routes answering 503. The `push` block (`PUSH_VAPID_PUBLIC_KEY`, `PUSH_VAPID_PRIVATE_KEY`, `PUSH_VAPID_SUBJECT`) is optional the same way, and so is the `bot` block (`BOT_API_KEYS`, comma-separated). See [Discord bot access](#discord-bot-access). So is the `ssr` block (`SITE_URL`, `SSR_WEB_ORIGIN`, `SSR_BUNDLE_PATH`); see [Request-time rendering](#request-time-rendering).
 
 ### Route table
 
-| Method | Path                                        | Auth  | Description                                                          |
-| ------ | ------------------------------------------- | ----- | -------------------------------------------------------------------- |
-| GET    | `/api/health`                               | none  | Health check                                                         |
-| GET    | `/api/config`                               | none  | Login providers, their labels, and the push public key               |
-| GET    | `/api/auth/discord`                         | none  | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`)   |
-| GET    | `/api/auth/discord/callback`                | none  | Exchange code, upsert user, issue JWT                                |
-| GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                      |
-| GET    | `/api/auth/iut`                             | none  | Redirect to the IUT bridge (PKCE); `?token=` links instead           |
-| GET    | `/api/auth/iut/callback`                    | none  | Verify the ID token, upsert or link the identity, issue JWT          |
-| GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                      |
-| GET    | `/api/events/week`                          | none  | Events for a week (`?date=`)                                         |
-| GET    | `/api/events/day`                           | none  | Events for a day (`?date=`)                                          |
-| GET    | `/api/events/upcoming`                      | none  | Next N events (`?limit=`)                                            |
-| GET    | `/api/events`                               | none  | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)           |
-| GET    | `/api/events/:id`                           | none  | Single event                                                         |
-| GET    | `/api/calendar.ics`                         | none  | iCal feed (`?groupId=&teacherId=&roomId=&from=&to=`)                 |
-| PUT    | `/api/push/subscriptions`                   | opt.  | Register this browser for course reminders                           |
-| GET    | `/api/push/subscriptions`                   | opt.  | Read back what a browser is registered for (`?endpoint=`)            |
-| DELETE | `/api/push/subscriptions`                   | opt.  | Unregister a browser (`?endpoint=`)                                  |
-| POST   | `/api/push/test`                            | opt.  | Push a notification to a browser now (`?endpoint=`)                  |
-| GET    | `/api/bot/guilds/:discordGuildId/mappings`  | bot   | A server's Discord role → student group mappings                     |
-| GET    | `/api/bot/assignments`                      | bot   | Homework of some groups and their ancestors (`?groupIds=&from=&to=`) |
-| GET    | `/api/teachers`                             | none  | All teachers                                                         |
-| GET    | `/api/rooms`                                | none  | All rooms                                                            |
-| GET    | `/api/groups`                               | none  | All groups with parent/child hierarchy                               |
-| GET    | `/api/groups/:id`                           | none  | Single group with hierarchy                                          |
-| GET    | `/api/groups/:id/events`                    | none  | Events for a group                                                   |
-| POST   | `/api/groups/:id/parents`                   | none  | Add parent relation                                                  |
-| DELETE | `/api/groups/:id/parents/:parentId`         | none  | Remove parent relation                                               |
-| GET    | `/api/admin/users`                          | admin | List all users                                                       |
-| PATCH  | `/api/admin/users/:id`                      | admin | Update user (status, role, group, isAdmin)                           |
-| GET    | `/api/admin/guilds`                         | admin | List guilds with nested role mappings                                |
-| POST   | `/api/admin/guilds`                         | admin | Create guild                                                         |
-| DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                         |
-| POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                               |
-| DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                       |
-| GET    | `/api/admin/iut-mappings`                   | admin | List IUT directory group mappings                                    |
-| POST   | `/api/admin/iut-mappings`                   | admin | Map an IUT group to a role and a class                               |
-| DELETE | `/api/admin/iut-mappings/:id`               | admin | Remove an IUT group mapping                                          |
+| Method | Path                                        | Auth  | Description                                                                |
+| ------ | ------------------------------------------- | ----- | -------------------------------------------------------------------------- |
+| GET    | `/api/health`                               | none  | Health check                                                               |
+| GET    | `/api/config`                               | none  | Login providers, their labels, and the push public key                     |
+| GET    | `/api/auth/discord`                         | none  | Redirect to Discord OAuth2 (`identify guilds guilds.members.read`)         |
+| GET    | `/api/auth/discord/callback`                | none  | Exchange code, upsert user, issue JWT                                      |
+| GET    | `/api/auth/discord/my-guilds`               | user  | User's guilds + roles from stored Discord token                            |
+| GET    | `/api/auth/iut`                             | none  | Redirect to the IUT bridge (PKCE); `?token=` links instead                 |
+| GET    | `/api/auth/iut/callback`                    | none  | Verify the ID token, upsert or link the identity, issue JWT                |
+| GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                            |
+| GET    | `/api/events/week`                          | none  | Events for a week (`?date=`)                                               |
+| GET    | `/api/events/day`                           | none  | Events for a day (`?date=`)                                                |
+| GET    | `/api/events/upcoming`                      | none  | Next N events (`?limit=`)                                                  |
+| GET    | `/api/events`                               | none  | Filtered events (`?from=&to=&teacherId=&roomId=&groupId=`)                 |
+| GET    | `/api/events/:id`                           | none  | Single event                                                               |
+| GET    | `/api/calendar.ics`                         | none  | iCal feed (`?groupId=&teacherId=&roomId=&from=&to=`)                       |
+| PUT    | `/api/push/subscriptions`                   | opt.  | Register this browser for course reminders                                 |
+| GET    | `/api/push/subscriptions`                   | opt.  | Read back what a browser is registered for (`?endpoint=`)                  |
+| DELETE | `/api/push/subscriptions`                   | opt.  | Unregister a browser (`?endpoint=`)                                        |
+| POST   | `/api/push/test`                            | opt.  | Push a notification to a browser now (`?endpoint=`)                        |
+| GET    | `/api/reminders/discord`                    | user  | My Discord DM reminder settings, all a settings panel shows                |
+| PUT    | `/api/reminders/discord`                    | user  | Turn them on, or change the lead (`{ leadMinutes }`)                       |
+| DELETE | `/api/reminders/discord`                    | user  | Turn them off                                                              |
+| POST   | `/api/reminders/discord/test`               | user  | Have the bot DM me a test now                                              |
+| GET    | `/api/bot/guilds/:discordGuildId/mappings`  | bot   | A server's Discord role → student group mappings                           |
+| GET    | `/api/bot/assignments`                      | bot   | Homework of some groups and their ancestors (`?groupIds=&from=&to=`)       |
+| GET    | `/api/bot/reminders/stream`                 | bot   | The due DM reminders, as Server-Sent Events                                |
+| POST   | `/api/bot/reminders/deliveries`             | bot   | Report whether a DM reached its member                                     |
+| GET    | `/api/teachers`                             | none  | All teachers                                                               |
+| GET    | `/api/rooms`                                | none  | All rooms                                                                  |
+| GET    | `/api/groups`                               | none  | All groups with parent/child hierarchy                                     |
+| GET    | `/api/groups/:id`                           | none  | Single group with hierarchy                                                |
+| GET    | `/api/groups/:id/events`                    | none  | Events for a group                                                         |
+| POST   | `/api/groups/:id/parents`                   | none  | Add parent relation                                                        |
+| DELETE | `/api/groups/:id/parents/:parentId`         | none  | Remove parent relation                                                     |
+| GET    | `/api/admin/users`                          | admin | List all users                                                             |
+| PATCH  | `/api/admin/users/:id`                      | admin | Update user (status, role, group, isAdmin)                                 |
+| GET    | `/api/admin/guilds`                         | admin | List guilds with nested role mappings                                      |
+| POST   | `/api/admin/guilds`                         | admin | Create guild                                                               |
+| DELETE | `/api/admin/guilds/:id`                     | admin | Delete guild                                                               |
+| POST   | `/api/admin/guilds/:id/mappings`            | admin | Add role→group mapping                                                     |
+| DELETE | `/api/admin/guilds/:id/mappings/:mappingId` | admin | Remove mapping                                                             |
+| GET    | `/api/admin/iut-mappings`                   | admin | List IUT directory group mappings                                          |
+| POST   | `/api/admin/iut-mappings`                   | admin | Map an IUT group to a role and a class                                     |
+| DELETE | `/api/admin/iut-mappings/:id`               | admin | Remove an IUT group mapping                                                |
+| GET    | `/api/og/planning.png`                      | none  | Embed image of a shared planning link (`?group=`)                          |
+| GET    | any path outside `/api`                     | none  | The page, rendered (see [Request-time rendering](#request-time-rendering)) |
 
 ### iCal feed
 
 `GET /api/calendar.ics` returns an RFC 5545 document for calendar clients to subscribe to. Same filters as `GET /api/events` (`groupId`, `teacherId`, `roomId`, `from`, `to`); without `from` it reaches 60 days back, so the payload does not grow forever. No auth, like the rest of the event routes.
 
-Event timestamps are Paris wall-clock stored as UTC (the scraper builds them with `Date.UTC` from what the page displays), so `lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` with the UTC components and ships a `VTIMEZONE`. Emitting them as `Z` instants would shift every course by one or two hours.
+`lib/ical.ts` emits `DTSTART;TZID=Europe/Paris` and ships a `VTIMEZONE`, rather than `Z` instants, so a calendar client keeps a course at its Paris hour.
+
+### Group filters include ancestors
+
+A course is tagged with the widest group it is for: a promo-wide lecture carries
+the promo, a semester meeting the semester, never each TD group underneath. A
+filter on one TD group alone therefore misses them, and `Q3`'s feed had no
+"Réunion d'information" addressed to `A2-Semestre-3`.
+
+So every route that filters by group also matches the group's ancestors, at any
+depth, unless told `includeAncestorGroups=false`: `/api/events` (`groupId`),
+`/api/events/upcoming` and `/api/events/changes` (`groupIds`),
+`/api/calendar.ics` (`groupId`), `/api/groups/:id/events` and
+`/api/bot/assignments`. `expandGroupIds()` (`lib/group-ancestors.ts`) does it;
+the walk itself lives in `lib/ancestor-walk.ts`, free of the database so it can
+be tested. The param is an enum of `true`/`false`/`1`/`0` rather than
+`z.coerce.boolean()`, which reads the string `"false"` as true.
+
+On is the default because the exact group is almost never what a caller wants,
+and one iCal subscription should be a student's whole timetable. The web app
+still sends the ancestors itself (`groups.withAncestors`), which is now
+redundant and harmless. `GET /api/assignments` is not concerned: its groups are
+an access check, not a filter. Nor is `PUT /api/push/subscriptions`, whose
+`groupIds` are stored as sent.
+
+### Hidden courses
+
+A student can hide a course they do not attend. The list is per browser
+(`stores/hidden-courses.ts`, localStorage), by exact title, and the api does
+the filtering: `/api/events`, `/week`, `/day`, `/upcoming` and
+`/api/calendar.ics` take a repeated `excludeTitle` param. Repeated rather than
+comma-separated because a title may hold a comma. On `/upcoming` it applies
+before the limit, which is why it is not done client-side.
+
+The web app only sends it for the student's own planning. A teacher's
+timetable, a room, or a class looked up with `?group=` is shown whole. Push
+reminders are sent server-side, so the subscription carries its own copy
+(`push_subscriptions.excluded_titles`), re-synced whenever the list changes.
 
 ### Course reminders: Web Push
 
@@ -343,14 +363,9 @@ Three things about it are not obvious:
   Never early, and still true if a tick was missed, so a restart or a slow query
   delays a reminder instead of losing it. The claim table is what makes that safe
   to repeat.
-- **`now` is `wallClockNow()`.** Event timestamps are Paris wall-clock labels
-  (see [Time](#time-paris-wall-clock-labelled-utc)), so the comparison, the
-  minute count and the hour in the notification body all stay in label space,
-  where the offset cancels. `formatHour` reads the label with `timeZone: 'UTC'`;
-  formatting it in `Europe/Paris` would apply the offset twice and announce a
-  10h00 course at 12h00. `lib/reminder-match.ts` holds that logic free of the
-  database and the config so it can be tested, and `reminder-match.test.ts` pins
-  both DST seasons.
+
+`lib/reminder-match.ts` holds the matching free of the database and the config
+so it can be tested.
 
 **Configuration.** Optional, like `iut`: with no keypair the routes answer 503,
 the ticker never starts, and `GET /api/config` reports `push.enabled: false` so
@@ -413,6 +428,35 @@ Things that are not obvious:
   carries milliseconds, so a raw `>` returns the cursor's own row forever.
   One scraper run shares a single `detected_at`, so a run larger than `limit`
   is cut short. Pollers should keep `groupIds` narrow.
+
+### Discord DM reminders
+
+The same course reminders as Web Push, sent by the bot as DMs, for members
+whose browser push is unreliable. The api decides everything and the bot only
+delivers: the bot stores nothing and computes nothing.
+
+- **Settings live on the account.** The bot's panel calls
+  `/api/reminders/discord` as the member (`X-Acting-Discord-User`), and the
+  answer carries all it shows, the lead choices included
+  (`@studysuite/shared/reminders`, shared with the push settings). The class is
+  the account's own, ancestors included. Hidden courses live in each browser
+  and do not apply.
+- **The tick** (`lib/discord-reminder-tick.ts`) is the push tick's twin: same
+  `duePairs()`, same claim-before-send on `discord_reminder_sends`, at most
+  once. It claims nothing while no bot is connected, so a bot that reconnects
+  before the course starts still gets the reminder.
+- **The stream** (`GET /api/bot/reminders/stream`) is SSE: one `reminder`
+  event per DM, text ready to send. One bot at a time (`lib/discord-reminder-hub.ts`):
+  a new connection closes the previous one, or two bots would DM everyone twice.
+- **Three idle timeouts.** Bun closes a connection after 10 s without traffic,
+  so the route calls `server.timeout(req, 0)` on Bun's own request object
+  (`c.req.raw`; a rebuilt `Request` is silently ignored). A `: ping` every
+  25 s stays under nginx's 60 s and Cloudflare's ~100 s, and
+  `X-Accel-Buffering: no` stops nginx from holding the events back.
+- **Two security schemes on one route break the typing.** Listing
+  `[{ Bearer: [] }, { Bot: [] }]` collapses `c.req.valid('json')` to `never`
+  under `@hono/zod-openapi`, so user routes list `Bearer` alone even though the
+  bot reaches them too.
 
 ---
 
@@ -568,7 +612,7 @@ so the head follows the route. The views themselves carry no head code.
 `pnpm build` runs vite-ssg, which renders each route to its own HTML file
 (`dist/planning/index.html` and so on) with those tags already in it. A crawler
 does not run JavaScript and would otherwise see the same tags on every URL.
-nginx's `try_files $uri $uri/ /index.html` serves them before the SPA fallback.
+nginx serves them when request-time rendering (below) is unavailable.
 
 Consequences to keep in mind:
 
@@ -612,6 +656,114 @@ TLS-terminating proxy it would point back at `http://`.
 
 `public/og-image.png` (1200×630) is generated from `public/og-image.svg` with
 `rsvg-convert -w 1200 -h 630 public/og-image.svg -o public/og-image.png`.
+
+### Request-time rendering
+
+The static pages cannot vary with the query string, so `/planning?group=S1`
+gets the same head as `/planning`. Pages are therefore also rendered per
+request, by the api, and the static ones stay as the fallback.
+
+- **nginx** serves any file that exists and sends every other GET to the api
+  (`@ssr`). A 5xx, a timeout or the api being down serves the vite-ssg page
+  instead (`@static`), so the worst case is the site as it was before.
+  `location = /` reaches `@ssr` through an `error_page`, since try_files counts
+  the root directory as found, and needs `recursive_error_pages` for the
+  fallback to follow.
+- **The renderer** is `apps/web/src/entry-server.ts`, built by
+  `pnpm -F @studysuite/web build:ssr` into one self-contained file
+  (`dist-server/entry-server.js`, every dependency bundled), which the api image
+  builds in a stage of its own. It assembles the page the way vite-ssg does:
+  the same template, preload links and head. Plugin setup is shared with
+  `main.ts` through `src/setup.ts`.
+- **The api** (`lib/ssr.ts`) catches every GET outside `/api` and renders it. It
+  fetches the template (`/ssr-template.html`, written by vite-ssg's
+  `onBeforePageRender`) and `/.vite/ssr-manifest.json` **from the web
+  container**, revalidating by ETag on each request. Baking them into the api
+  image would name hashed assets from the api's build, which nginx may not be
+  serving.
+- **The browser does not hydrate.** vite-ssg's client calls `createApp` and
+  renders over the server markup from scratch, as it always did over the static
+  pages. Turning hydration on means fixing real mismatches first: the server
+  cannot see the theme, the picked groups or the token in `localStorage`.
+- **The server has no `localStorage`.** `entry-server.ts` installs an empty one
+  that drops writes, as a process global, so the render is a first-time
+  visitor's. Immediate watchers that fetch return early under
+  `import.meta.env.SSR`, and setup code must not read `window`.
+- **Config:** the api's `ssr` block, set by compose from `SITE_URL` (the same
+  variable web uses) and `SSR_WEB_ORIGIN=http://web`. Without it the api
+  answers 503 and nginx serves the static pages.
+- **Memory:** the bundle costs the api about 110 MB of RSS, steady after a few
+  thousand renders. The og card renderer below adds 50 to 80 MB once it has
+  drawn a few cards: wasm memory grows and is never handed back.
+
+### Shared planning links
+
+`/planning?group=S1` unfurls as the group's planning: title, description and
+`og:image` name it. Only groups that resolve count, under their canonical
+names, so nothing typed into the url reaches the head or the card.
+
+- **The head** is `usePageSeo` (`lib/seo.ts`), through `useGroupOverride`, the
+  same resolution the page itself uses. For the server render to resolve it,
+  the api passes the group list to `render()` when the url carries `?group=`,
+  and `entry-server.ts` seeds the groups store with it.
+- **The image** is `GET /api/og/planning.png?group=&date=` (`controllers/og.ts`):
+  that Paris day of the groups' planning, ancestors included, drawn like the
+  planning's day view on a phone in the dark theme (`lib/day-card.ts`, pure
+  SVG layout, tested without a database). Always dark: an unfurler fetches the
+  image once for every reader and cannot know their theme. Portrait 9:16, laid out on 450×800 and rendered at
+  900×1600. `date` is in the url so a link shared tomorrow unfurls tomorrow's
+  day, since unfurlers cache an image by its url; the head puts today's date
+  there. A name it does not know redirects to `/og-image.png`.
+- **Rendering** is `lib/og-card.ts`, with `@resvg/resvg-wasm`, not the native
+  `@resvg/resvg-js`: the api's `node_modules` are installed on Alpine and run on
+  Debian, where a native addon built for the other libc does not load. resvg
+  has no system fonts, so DejaVu Sans ships in `apps/api/assets/fonts`. SVG has
+  no text overflow, so `day-card.ts` estimates widths per character class and
+  clips with an ellipsis.
+- **Caching:** cards are kept in memory by a hash of what they show, so a moved
+  course draws a new card and an unchanged day costs one query. Today's card is
+  served with 5 minutes of `Cache-Control`, a past day's with a day.
+- **Colours** come from `@studysuite/shared/color`, shared with the planning,
+  so a block and its text pick the same colours on both.
+- **The copy-link button** on `/planning` builds the link to what is on screen
+  (the teacher, or the groups by the names `?group=` reads) and copies it.
+  Always the clipboard, never `navigator.share`: desktop browsers have the
+  share sheet too, and there a link to paste is what people want.
+
+---
+
+## Deploying
+
+`.github/workflows/build.yaml` builds the five images on every push to `main`
+(`:latest`) and `staging` (`:staging`), each labelled with its commit
+(`org.opencontainers.image.revision`), which is how to tell what a host runs.
+
+**Staging deploys itself.** After a push to `staging` builds, the
+`deploy-staging` job opens an SSH connection to the host and the preview stack
+pulls and restarts. **Production does not**: someone runs
+`docker compose pull && docker compose stop api scraper scraper-ade && docker compose up -d`
+in its directory.
+
+The `stop` is not optional, and `deploy/staging.sh` does the same. `up -d` alone
+leaves the old api and scrapers running until `migrate` has finished, and an old
+scraper reconciling against data newer than itself rewrites every event, which
+also nulls every homework's link to its course.
+
+The job's key is a dedicated one whose line in root's `authorized_keys` carries
+a forced command, `deploy/staging.sh` (installed on the host as
+`stacks/study_staging/deploy.sh`). The host runs that script whatever the
+client asks for, and the script reads nothing from the connection. That is the
+whole security model: the key is root's, on the host production shares, and it
+can do exactly one thing. Do not make the script take a tag, a branch or a
+compose file from the caller. The consequence is that `compose.staging.yml` and
+the script itself are not synced by a deploy and are copied over by hand.
+
+Secrets, on the repository: `STAGING_DEPLOY_SSH_KEY`, `_HOST`, `_PORT`, `_USER`
+and `_KNOWN_HOSTS` (the host's pinned public key, one `known_hosts` line).
+Without the key the job warns and passes, so a fork still builds.
+
+A token pushing over HTTPS needs the `workflow` scope to change that file.
+Pushing over SSH does not.
 
 ---
 
@@ -657,6 +809,5 @@ Common types: `feat`, `fix`, `chore`, `refactor`, `docs`, `build`, `ci`, `test`.
 - The push service worker must stay cache-free. See
   [The push service worker](#the-push-service-worker). Adding Workbox precaching
   would serve the pre-substitution `__SITE_URL__` build.
-- Never compare `new Date()` with an event timestamp. See
-  [Time](#time-paris-wall-clock-labelled-utc), and use `wallClockNow()` from
-  `@studysuite/shared/time`.
+- Never read an event timestamp's day or hour with the `Date` getters. See
+  [Time](#time-the-calendar-is-pariss).

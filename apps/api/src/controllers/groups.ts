@@ -9,9 +9,11 @@ import {
 } from '@studysuite/db'
 import { and, asc, eq, gt, inArray, lt } from 'drizzle-orm'
 import { db } from '../db.js'
+import { expandGroupIds } from '../lib/group-ancestors.js'
+import { groupToDto, listGroups, withHierarchy } from '../lib/groups.js'
 import { requireAdmin, requireAuth } from '../middleware/auth.js'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
-import { OptionalDateRangeSchema } from '../schemas/query.js'
+import { GroupEventsQuerySchema } from '../schemas/query.js'
 import {
     EventDtoSchema,
     GroupSchema,
@@ -50,34 +52,14 @@ const UpdateGroupBodySchema = z.object({
 })
 
 const IdParentIdParamSchema = z.object({
-    id: z.string().uuid().openapi({ param: { name: 'id', in: 'path' } }),
-    parentId: z.string().uuid().openapi({ param: { name: 'parentId', in: 'path' } }),
-})
-
-const withHierarchy = {
-    parentMemberships: { with: { child: true as const } },
-    childMemberships: { with: { parent: true as const } },
-}
-
-type GroupRef = { id: string; internalName: string; displayName: string | null }
-type GroupWithHierarchy = {
-    id: string
-    internalName: string
-    displayName: string | null
-    hidden: boolean
-    parentMemberships: { child: GroupRef }[]
-    childMemberships: { parent: GroupRef }[]
-}
-
-const toRef = (g: GroupRef) => ({ id: g.id, internalName: g.internalName, displayName: g.displayName })
-
-const groupToDto = (row: GroupWithHierarchy) => ({
-    id: row.id,
-    internalName: row.internalName,
-    displayName: row.displayName,
-    hidden: row.hidden,
-    children: row.parentMemberships.map((m) => toRef(m.child)),
-    parents: row.childMemberships.map((m) => toRef(m.parent)),
+    id: z
+        .string()
+        .uuid()
+        .openapi({ param: { name: 'id', in: 'path' } }),
+    parentId: z
+        .string()
+        .uuid()
+        .openapi({ param: { name: 'parentId', in: 'path' } }),
 })
 
 export default new OpenAPIHono()
@@ -95,12 +77,7 @@ export default new OpenAPIHono()
         }),
         async (c) => {
             const { includeHidden } = c.req.valid('query')
-            const rows = await db.query.studentGroups.findMany({
-                where: includeHidden ? undefined : eq(studentGroups.hidden, false),
-                with: withHierarchy,
-                orderBy: asc(studentGroups.internalName),
-            })
-            return c.json({ data: rows.map(groupToDto) }, 200)
+            return c.json({ data: await listGroups(includeHidden) }, 200)
         },
     )
     .openapi(
@@ -134,7 +111,7 @@ export default new OpenAPIHono()
             operationId: 'listGroupEvents',
             summary: "List a group's events",
             tags: ['Groups'],
-            request: { params: IdParamSchema, query: OptionalDateRangeSchema },
+            request: { params: IdParamSchema, query: GroupEventsQuerySchema },
             responses: {
                 200: dataResponse(z.array(EventDtoSchema), 'Events for the group'),
                 404: errorResponse('Not found'),
@@ -142,12 +119,16 @@ export default new OpenAPIHono()
         }),
         async (c) => {
             const { id } = c.req.valid('param')
-            const { from, to, dateFormat } = c.req.valid('query')
-            const fromDate = from ? new Date(from) : undefined
-            const toDate = to ? new Date(to) : undefined
+            const {
+                from: fromDate,
+                to: toDate,
+                includeAncestorGroups,
+                dateFormat,
+            } = c.req.valid('query')
             const [group] = await db.select().from(studentGroups).where(eq(studentGroups.id, id))
             if (!group)
                 return c.json({ error: { code: 'NOT_FOUND', message: 'Group not found' } }, 404)
+            const scope = await expandGroupIds([id], includeAncestorGroups)
             const rows = await db.query.events.findMany({
                 where: and(
                     inArray(
@@ -155,7 +136,7 @@ export default new OpenAPIHono()
                         db
                             .select({ id: eventStudentGroups.eventId })
                             .from(eventStudentGroups)
-                            .where(eq(eventStudentGroups.studentGroupId, id)),
+                            .where(inArray(eventStudentGroups.studentGroupId, scope)),
                     ),
                     fromDate ? gt(events.startDate, fromDate) : undefined,
                     toDate ? lt(events.startDate, toDate) : undefined,
@@ -203,10 +184,7 @@ export default new OpenAPIHono()
                 with: withHierarchy,
             })
             if (!row) {
-                return c.json(
-                    { error: { code: 'NOT_FOUND', message: 'Group not found' } },
-                    404,
-                )
+                return c.json({ error: { code: 'NOT_FOUND', message: 'Group not found' } }, 404)
             }
             return c.json({ data: groupToDto(row) }, 200)
         },
@@ -305,7 +283,10 @@ export default new OpenAPIHono()
             // and members lose their group. Event links just unlink and are rescraped.
             if (!force) {
                 const [assignmentRows, mappingRows] = await Promise.all([
-                    db.select({ id: assignments.id }).from(assignments).where(eq(assignments.studentGroupId, id)),
+                    db
+                        .select({ id: assignments.id })
+                        .from(assignments)
+                        .where(eq(assignments.studentGroupId, id)),
                     db
                         .select({ id: discordRoleMappings.id })
                         .from(discordRoleMappings)
@@ -342,7 +323,10 @@ export default new OpenAPIHono()
             tags: ['Groups'],
             request: {
                 params: IdParamSchema,
-                body: { content: { 'application/json': { schema: ParentBodySchema } }, required: true },
+                body: {
+                    content: { 'application/json': { schema: ParentBodySchema } },
+                    required: true,
+                },
             },
             responses: {
                 201: dataResponse(
@@ -361,13 +345,25 @@ export default new OpenAPIHono()
                     { error: { code: 'BAD_REQUEST', message: 'A group cannot be its own parent' } },
                     400,
                 )
-            const [child] = await db.select().from(studentGroups).where(eq(studentGroups.id, childId))
+            const [child] = await db
+                .select()
+                .from(studentGroups)
+                .where(eq(studentGroups.id, childId))
             if (!child)
                 return c.json({ error: { code: 'NOT_FOUND', message: 'Group not found' } }, 404)
-            const [parent] = await db.select().from(studentGroups).where(eq(studentGroups.id, parentId))
+            const [parent] = await db
+                .select()
+                .from(studentGroups)
+                .where(eq(studentGroups.id, parentId))
             if (!parent)
-                return c.json({ error: { code: 'NOT_FOUND', message: 'Parent group not found' } }, 404)
-            await db.insert(studentGroupMemberships).values({ parentId, childId }).onConflictDoNothing()
+                return c.json(
+                    { error: { code: 'NOT_FOUND', message: 'Parent group not found' } },
+                    404,
+                )
+            await db
+                .insert(studentGroupMemberships)
+                .values({ parentId, childId })
+                .onConflictDoNothing()
             return c.json({ data: { parentId, childId } }, 201)
         },
     )

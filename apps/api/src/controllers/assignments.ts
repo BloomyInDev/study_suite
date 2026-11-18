@@ -4,12 +4,12 @@ import {
     assignments,
     eventStudentGroups,
     eventTeachers,
-    studentGroupMemberships,
     userStudents,
     userTeachers,
 } from '@studysuite/db'
-import { and, asc, count, eq, inArray } from 'drizzle-orm'
+import { and, asc, count, eq } from 'drizzle-orm'
 import { db } from '../db.js'
+import { getAncestorGroupIds } from '../lib/group-ancestors.js'
 import { pickDisplay, type IdentitySummary } from '../lib/identities.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
 import {
@@ -26,12 +26,14 @@ const createSchema = z
         subject: z.string().max(100).optional().openapi({ example: 'R5.05' }),
         description: z.string().optional().openapi({ example: 'Archive .tar.gz sur Moodle' }),
         dueDate: z.coerce.date().openapi({ example: '2026-09-15T23:59:00.000Z' }),
-        studentGroupId: z.string().uuid().openapi({ example: '4d8b6a2c-7e1f-4a3b-9c5d-8e0f2a4b6c8d' }),
-        eventId: z
+        studentGroupId: z
             .string()
             .uuid()
-            .optional()
-            .openapi({ description: 'Course this was set in', example: '2a7c9e1b-5d3f-4a8b-9c2e-6f0a1b3c5d7e' }),
+            .openapi({ example: '4d8b6a2c-7e1f-4a3b-9c5d-8e0f2a4b6c8d' }),
+        eventId: z.string().uuid().optional().openapi({
+            description: 'Course this was set in',
+            example: '2a7c9e1b-5d3f-4a8b-9c2e-6f0a1b3c5d7e',
+        }),
     })
     .openapi('CreateAssignment')
 
@@ -103,23 +105,6 @@ export function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: strin
     }
 }
 
-export async function getAncestorGroupIds(groupId: string): Promise<Set<string>> {
-    const result = new Set<string>()
-    let current = [groupId]
-    while (current.length > 0) {
-        const rows = await db
-            .select({ parentId: studentGroupMemberships.parentId })
-            .from(studentGroupMemberships)
-            .where(inArray(studentGroupMemberships.childId, current))
-        // Only follow parents not seen yet. Filtering after adding them to the
-        // result would end the walk at the first level.
-        const next = [...new Set(rows.map((r) => r.parentId))].filter((p) => !result.has(p))
-        next.forEach((p) => result.add(p))
-        current = next
-    }
-    return result
-}
-
 async function getUserAccessibleGroupIds(userId: string): Promise<Set<string>> {
     const result = new Set<string>()
 
@@ -162,7 +147,10 @@ app.openapi(
         security: [{ Bearer: [] }],
         request: { query: listSchema },
         responses: {
-            200: dataResponse(z.array(AssignmentDtoSchema), 'Assignments accessible to the current user'),
+            200: dataResponse(
+                z.array(AssignmentDtoSchema),
+                'Assignments accessible to the current user',
+            ),
             401: errorResponse('Unauthorized'),
         },
     }),
@@ -318,7 +306,10 @@ app.openapi(
             body.studentGroupId !== existing.studentGroupId &&
             !(await canWrite(payload.sub, payload.isAdmin, targetGroupId))
         ) {
-            return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied on target group' } }, 403)
+            return c.json(
+                { error: { code: 'FORBIDDEN', message: 'Access denied on target group' } },
+                403,
+            )
         }
 
         await db

@@ -26,10 +26,7 @@ export default app
             operationId: 'getAvailableRooms',
             summary: 'List rooms free over a time range',
             description:
-                'A room counts as busy when any event overlaps the range, not merely starts inside it. ' +
-                '`from` and `to` are Paris wall-clock labelled UTC, the same encoding the event ' +
-                'timestamps come back in. Passing a real instant (`new Date().toISOString()`) ' +
-                'shifts the window by the Paris offset.',
+                'A room counts as busy when any event overlaps the range, not merely starts inside it.',
             tags: ['Rooms'],
             request: { query: DateRangeSchema },
             responses: {
@@ -37,9 +34,7 @@ export default app
             },
         }),
         async (c) => {
-            const { from, to } = c.req.valid('query')
-            const fromDate = new Date(from)
-            const toDate = new Date(to)
+            const { from: fromDate, to: toDate } = c.req.valid('query')
             const busyRows = await db
                 .selectDistinct({ id: eventLocations.locationId })
                 .from(eventLocations)
@@ -106,9 +101,7 @@ export default app
         }),
         async (c) => {
             const { id } = c.req.valid('param')
-            const { from, to, dateFormat } = c.req.valid('query')
-            const fromDate = from ? new Date(from) : undefined
-            const toDate = to ? new Date(to) : undefined
+            const { from: fromDate, to: toDate, dateFormat } = c.req.valid('query')
             const [room] = await db.select().from(locations).where(eq(locations.id, id))
             if (!room)
                 return c.json({ error: { code: 'NOT_FOUND', message: 'Room not found' } }, 404)

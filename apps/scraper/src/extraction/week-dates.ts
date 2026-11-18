@@ -1,4 +1,5 @@
 import type { Page } from 'playwright'
+import { parisDate, parisParts } from '@studysuite/shared/time'
 
 /** `dd/mm/yyyy`, the shape every day header ends with. */
 const DAY_DATE = /^\d{2}\/\d{2}\/\d{4}$/
@@ -37,5 +38,5 @@ export function isWeekHeaderReady(dates: string[]): boolean {
 
 function isMonday(date: string): boolean {
     const [day, month, year] = date.split('/').map((n) => parseInt(n, 10))
-    return new Date(Date.UTC(year!, month! - 1, day!)).getUTCDay() === 1
+    return parisParts(parisDate(year!, month!, day!)).weekday === 1
 }

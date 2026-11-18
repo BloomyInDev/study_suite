@@ -1,38 +1,30 @@
 <script setup lang="ts">
 import { groupLabel } from '../lib/group-label.js'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
+import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { Duration, type Event } from '../lib/types.js'
 import CalendarEvent from '../components/CalendarEvent.vue'
-import {
-    nextDay,
-    previousDay,
-    toCalendarLocalDate,
-    wallClockNow,
-    weekdayFormat,
-} from '../lib/date.js'
+import CurrentTimeLine from '../components/CurrentTimeLine.vue'
+import { nextDay, previousDay, toCalendarLocalDate, weekdayFormat } from '../lib/date.js'
+import { useNow } from '../lib/use-now.js'
 
 const groupsStore = useGroupsStore()
 const eventsStore = useEventsStore()
+// Only "Mon Planning" leaves hidden courses out; the groups it is compared
+// with are shown whole.
+const hiddenCourses = useHiddenCoursesStore()
 
-// See PlanningView: a real instant lands on the previous day before 02h Paris.
-const date = ref(wallClockNow())
+const date = ref(new Date())
 const comparisonGroupIds = ref<string[]>([])
 const myEvents = ref<Event[]>([])
 const otherEventsMap = ref<Record<string, Event[]>>({})
 
-// The calendar reads `model-value` with the *local* getters, while `date` is a
-// wall-clock label, so handing it over raw applies the Paris offset a second
-// time and the grid runs 2h ahead of the events, which go through
-// `toCalendarLocalDate`. Past 22h wall-clock that rolled the view onto the next
-// day, and on a Sunday night onto next week, while the fetch stayed on the
-// current one.
+// See `toCalendarLocalDate`: the grid must get the same reading as the events.
 const calendarDate = computed(() => toCalendarLocalDate(date.value))
 const loadingMy = ref(false)
 const loadingOther = ref(false)
-
-const INTERVAL_HEIGHT = 48
 
 const COMPARISON_COLORS = ['secondary', 'error', 'success', 'warning', 'info']
 
@@ -76,43 +68,13 @@ const allCalendarEvents = computed(() => {
 
 const loading = computed(() => loadingMy.value || loadingOther.value)
 
-// The grid is drawn from wall-clock labels, so the current-time line has to be
-// placed from one too: `new Date()` with the local getters put it at the
-// browser's own hour, which is only the planning's hour inside Europe/Paris.
-// It ticks as well: read once, the line froze at the hour the page was opened.
-const now = ref(wallClockNow())
-let nowTick: ReturnType<typeof setInterval> | null = null
-
-onMounted(() => {
-    nowTick = setInterval(() => {
-        now.value = wallClockNow()
-    }, 60_000)
-})
-
-onUnmounted(() => {
-    if (nowTick) clearInterval(nowTick)
-})
-
-const nowY = computed(() => {
-    const hour = now.value.getUTCHours()
-    const minutesFromStart = (hour - 6) * 60 + now.value.getUTCMinutes()
-    if (minutesFromStart < 0 || hour >= 20) return '-10px'
-    return `${(minutesFromStart / 60) * INTERVAL_HEIGHT}px`
-})
-
-// The calendar was handed `toCalendarLocalDate(date)`, so the day it reports
-// is the wall-clock day. Compare it against the label's UTC parts, not the
-// browser's local ones. Kept numeric rather than string-compared so it does not
-// depend on whether the calendar zero-pads.
-const isToday = (dateStr: string) => {
-    const [y, m, d] = dateStr.split('-').map(Number)
-    const today = now.value
-    return y === today.getUTCFullYear() && m === today.getUTCMonth() + 1 && d === today.getUTCDate()
-}
+const now = useNow()
 
 watch(
-    [date, () => groupsStore.effectiveGroupIds],
+    [date, () => groupsStore.effectiveGroupIds, () => hiddenCourses.key],
     async ([newDate, newGroupIds], _, onCleanup) => {
+        // The server render has no api to talk to; the client fetches on mount.
+        if (import.meta.env.SSR) return
         let cancelled = false
         onCleanup(() => {
             cancelled = true
@@ -123,7 +85,11 @@ watch(
         }
         loadingMy.value = true
         try {
-            const evts = await eventsStore.fetchDayEvents(newDate as Date, newGroupIds as string[])
+            const evts = await eventsStore.fetchDayEvents(
+                newDate as Date,
+                newGroupIds as string[],
+                hiddenCourses.titles,
+            )
             if (!cancelled) myEvents.value = evts
         } finally {
             if (!cancelled) loadingMy.value = false
@@ -137,6 +103,7 @@ watch(
     // fetch, and until it does withAncestors can only return the id itself.
     [date, comparisonGroupIds, () => groupsStore.allGroups],
     async ([newDate, newGroupIds], _, onCleanup) => {
+        if (import.meta.env.SSR) return
         let cancelled = false
         onCleanup(() => {
             cancelled = true
@@ -181,7 +148,7 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                 <v-btn icon variant="text" @click="previous"
                     ><v-icon>mdi-chevron-left</v-icon></v-btn
                 >
-                <v-btn variant="outlined" class="mx-2" @click="date = wallClockNow()"
+                <v-btn variant="outlined" class="mx-2" @click="date = new Date()"
                     >Aujourd'hui</v-btn
                 >
                 <v-btn icon variant="text" @click="next"><v-icon>mdi-chevron-right</v-icon></v-btn>
@@ -235,10 +202,8 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
                         <template #event="{ event }">
                             <CalendarEvent :event="event" />
                         </template>
-                        <template #day-body="{ date: slotDate }">
-                            <template v-if="isToday(slotDate)">
-                                <div class="v-current-time" :style="{ top: nowY }" />
-                            </template>
+                        <template #day-body="day">
+                            <CurrentTimeLine :day="day" :now="now" />
                         </template>
                     </v-calendar>
                 </v-sheet>
@@ -250,13 +215,5 @@ const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
 <style scoped>
 .position-relative {
     position: relative;
-}
-.v-current-time {
-    height: 2px;
-    background-color: #ea4335;
-    position: absolute;
-    left: -1px;
-    right: 0;
-    pointer-events: none;
 }
 </style>

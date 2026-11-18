@@ -71,6 +71,21 @@ export const PAGES: PageSeo[] = [
         noindex: true,
     },
     {
+        path: '/legal',
+        title: 'Mentions légales',
+        description: 'Qui édite et qui héberge Study Suite.',
+    },
+    {
+        path: '/privacy',
+        title: 'Politique de confidentialité',
+        description: 'Ce que Study Suite garde sur toi, pourquoi, combien de temps, et tes droits.',
+    },
+    {
+        path: '/terms',
+        title: "Conditions générales d'utilisation",
+        description: "Les règles d'utilisation de Study Suite.",
+    },
+    {
         path: '/login',
         title: 'Connexion',
         description: 'Connecte-toi avec Discord pour accéder à Study Suite.',

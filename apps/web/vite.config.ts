@@ -57,21 +57,36 @@ function writeCrawlerFiles(outDir: string) {
     )
 }
 
-export default defineConfig({
+// `pnpm build:ssr` builds src/entry-server.ts in this mode, for the api to
+// render pages at request time. The api image carries no web dependencies, so
+// the bundle must hold all of them, not just Vuetify.
+const SSR_BUNDLE_MODE = 'ssr-bundle'
+
+export default defineConfig(({ mode }) => ({
     plugins: [vue(), vuetify({ autoImport: true })],
     // Vuetify ships its component CSS as .css imports, which Node cannot load
     // when it is left external to the SSG render, so bundle it instead.
-    ssr: { noExternal: ['vuetify'] },
+    ssr: { noExternal: mode === SSR_BUNDLE_MODE ? true : ['vuetify'] },
+    build: mode === SSR_BUNDLE_MODE ? { outDir: 'dist-server', copyPublicDir: false } : {},
     ssgOptions: {
         // /planning → dist/planning/index.html, so nginx serves it for the URL
         // the SPA already uses; jsdom stands in for the browser globals the
         // stores read (localStorage, mostly) while rendering.
         dirStyle: 'nested',
         mock: true,
+        // The client's index.html before any page is rendered into it: the
+        // template the api renders into at request time. It is fetched from
+        // nginx rather than baked into the api image, so it always names the
+        // assets nginx is actually serving. Returning nothing leaves the page
+        // render untouched.
+        onBeforePageRender: (_route: string, indexHTML: string) => {
+            writeFileSync('dist/ssr-template.html', indexHTML)
+            return undefined
+        },
         onFinished: () => writeCrawlerFiles('dist'),
     },
     define: {
         'import.meta.env.VITE_GIT_COMMIT_HASH': JSON.stringify(commitHash),
         'import.meta.env.VITE_SITE_URL': JSON.stringify(siteUrl),
     },
-})
+}))

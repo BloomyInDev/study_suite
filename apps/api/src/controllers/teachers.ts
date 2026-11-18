@@ -3,7 +3,6 @@ import { eventTeachers, events, teachers } from '@studysuite/db'
 import { and, asc, eq, gte, ilike, inArray, lt, lte, or } from 'drizzle-orm'
 import { db } from '../db.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
-import { wallClockNow } from '@studysuite/shared/time'
 import { eventToDto, withEventRelations } from '../lib/serialize.js'
 import { DateFormatSchema, OptionalDateRangeSchema, SearchSchema } from '../schemas/query.js'
 import {
@@ -15,7 +14,6 @@ import {
     errorResponse,
 } from '../schemas/responses.js'
 
-/** `at` is Paris wall-clock labelled UTC, like the columns it is compared to. */
 async function busyTeacherIds(at: Date): Promise<Set<string>> {
     const rows = await db
         .selectDistinct({ teacherId: eventTeachers.teacherId })
@@ -52,7 +50,7 @@ export default app
                         or(ilike(teachers.firstName, `%${q}%`), ilike(teachers.lastName, `%${q}%`)),
                     )
                     .orderBy(asc(teachers.lastName), asc(teachers.firstName)),
-                busyTeacherIds(wallClockNow()),
+                busyTeacherIds(new Date()),
             ])
             return c.json({ data: rows.map((t) => ({ ...t, available: !busy.has(t.id) })) }, 200)
         },
@@ -69,7 +67,7 @@ export default app
             },
         }),
         async (c) => {
-            const now = wallClockNow()
+            const now = new Date()
             const [rows, busy] = await Promise.all([
                 db.select().from(teachers).orderBy(asc(teachers.lastName), asc(teachers.firstName)),
                 busyTeacherIds(now),
@@ -99,7 +97,7 @@ export default app
             const [row] = await db.select().from(teachers).where(eq(teachers.id, id))
             if (!row)
                 return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
-            const now = wallClockNow()
+            const now = new Date()
             const currentEvents = await db.query.events.findMany({
                 where: and(
                     inArray(
@@ -133,9 +131,7 @@ export default app
         }),
         async (c) => {
             const { id } = c.req.valid('param')
-            const { from, to, dateFormat } = c.req.valid('query')
-            const fromDate = from ? new Date(from) : undefined
-            const toDate = to ? new Date(to) : undefined
+            const { from: fromDate, to: toDate, dateFormat } = c.req.valid('query')
             const [teacher] = await db.select().from(teachers).where(eq(teachers.id, id))
             if (!teacher)
                 return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)

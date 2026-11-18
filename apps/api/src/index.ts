@@ -4,14 +4,19 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
 import { startReminderTick } from './lib/reminder-tick.js'
+import { startDiscordReminderTick } from './lib/discord-reminder-tick.js'
+import { createSsrHandler, ssrDisabled } from './lib/ssr.js'
+import { listGroups } from './lib/groups.js'
 import authController from './controllers/auth.js'
 import configController from './controllers/config.js'
 import calendarController from './controllers/calendar.js'
+import ogController from './controllers/og.js'
 import assignmentsController from './controllers/assignments.js'
 import botController from './controllers/bot.js'
 import eventsController from './controllers/events.js'
 import groupsController from './controllers/groups.js'
 import pushController from './controllers/push.js'
+import remindersController from './controllers/reminders.js'
 import roomsController from './controllers/rooms.js'
 import teachersController from './controllers/teachers.js'
 import adminUsersController from './controllers/admin/users.js'
@@ -67,9 +72,12 @@ const app = _app
             .route('/groups', groupsController)
             .route('/assignments', assignmentsController)
             .route('/push', pushController)
+            .route('/reminders', remindersController)
             .route('/bot', botController)
             // Calendar clients key off the .ics suffix, so it is part of the path.
-            .route('/calendar.ics', calendarController),
+            .route('/calendar.ics', calendarController)
+            // The embed image of a shared planning link.
+            .route('/og', ogController),
     )
     // Transitional: Discord may still call back on the pre-/api path until the
     // developer portal entry is updated. Remove once that is done. The plain
@@ -85,11 +93,29 @@ const app = _app
             .route('/iut-mappings', adminIutMappingsController),
     )
 
+// Every other GET is a page: nginx sends here whatever is not a file. Registered
+// on `_app` after the typed chain, so it stays out of AppType and only catches
+// what no route above matched.
+_app.get(
+    '*',
+    config.ssr
+        ? createSsrHandler({
+              siteUrl: config.ssr.siteUrl,
+              webOrigin: config.ssr.webOrigin,
+              bundlePath: config.ssr.bundlePath,
+              loadGroups: () => listGroups(true),
+          })
+        : ssrDisabled,
+)
+
 // The course-reminder ticker. Lives in the api rather than a service of its
 // own because it needs exactly what the api already has: the database and a
 // route off the host (the `frontend` network is not internal, which is what
 // lets the Discord and IUT token exchanges work). A no-op without VAPID keys.
 startReminderTick()
+// Its Discord twin: hands due DMs to the bot over its SSE stream. A no-op
+// without bot keys.
+startDiscordReminderTick()
 
 export type AppType = typeof app
 

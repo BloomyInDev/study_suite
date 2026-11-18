@@ -1,3 +1,4 @@
+import { parisDayStart } from '@studysuite/shared/time'
 import { GwtReader, parseResponse, postRpc, RpcWriter } from './gwt.js'
 import type { AdeSession } from './login.js'
 
@@ -60,7 +61,7 @@ export async function getDisplayConfigurationId(s: AdeSession): Promise<number> 
 export interface AdeWeek {
     /** What `getTimetable` calls it: 0 for the first week of the project. */
     index: number
-    /** That week's Monday, as a UTC-midnight label. */
+    /** That week's Monday, at midnight in Paris. */
     monday: Date
 }
 
@@ -102,13 +103,10 @@ export function projectWeeks(blob: string): AdeWeek[] {
 
     const weeks = new Map<number, Date>()
     for (const m of blob.slice(records.lastIndex).matchAll(WEEK_RECORD)) {
-        // Half a day forward first: an epoch at local midnight is the previous
-        // evening in UTC, and would land on the Sunday.
+        // Half a day forward first, so the day read back does not hinge on
+        // which timezone ADE took its midnight in.
         const at = new Date(Number(m[2]) + 12 * 3_600_000)
-        weeks.set(
-            Number(m[1]) - 1,
-            new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), at.getUTCDate())),
-        )
+        weeks.set(Number(m[1]) - 1, parisDayStart(at))
     }
     const out = [...weeks]
         .map(([index, monday]) => ({ index, monday }))

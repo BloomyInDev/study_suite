@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { groupLabel } from '../lib/group-label.js'
 import { API_URL } from '../lib/api-url'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useEventsStore } from '../stores/events.js'
 import type { Assignment, Event } from '../lib/types.js'
-import { formatShortDay, formatTime, fromWallClock, wallClockDayStart } from '../lib/date.js'
+import { addParisDays, formatShortDay, formatTime, parisDayStart } from '../lib/date.js'
+import { fetchCourseTitles } from '../lib/course-titles.js'
 
 const props = defineProps<{
     modelValue: boolean
@@ -43,14 +44,6 @@ const loadingCourses = ref(false)
 // Only the newest load may write `courses`: switching group twice in a row
 // otherwise lets the slower first answer land last.
 let courseLoadToken = 0
-
-onMounted(async () => {
-    const res = await fetch(`${API_URL}/api/events/titles`)
-    if (res.ok) {
-        const body = (await res.json()) as { data: string[] }
-        subjectOptions.value = body.data
-    }
-})
 
 const form = ref({
     title: '',
@@ -108,6 +101,20 @@ watch(
     { immediate: true },
 )
 
+// The group's subjects only, reloaded when the group changes. Same
+// newest-load-wins guard as the course picker.
+let subjectLoadToken = 0
+watch(
+    [() => props.modelValue, () => form.value.studentGroupId],
+    async ([open, groupId]) => {
+        if (!open) return
+        const token = ++subjectLoadToken
+        const titles = await fetchCourseTitles(groupId ? [groupId] : [])
+        if (token === subjectLoadToken) subjectOptions.value = titles
+    },
+    { immediate: true },
+)
+
 async function loadCourses() {
     const groupId = form.value.studentGroupId
     const token = ++courseLoadToken
@@ -117,9 +124,8 @@ async function loadCourses() {
     }
     loadingCourses.value = true
     try {
-        const from = wallClockDayStart()
-        const to = new Date(from)
-        to.setUTCDate(to.getUTCDate() + COURSE_WINDOW_DAYS)
+        const from = parisDayStart()
+        const to = addParisDays(from, COURSE_WINDOW_DAYS)
         // A promo-wide lecture is tagged on the parent group, not on the class.
         const list = await eventsStore.fetchRange(groups.withAncestors([groupId]), from, to)
 
@@ -154,10 +160,7 @@ function onCourseSelected(id: string | null) {
     form.value.eventId = id
     const course = courses.value.find((e) => e.id === id)
     if (!course) return
-    // A course's timestamps are Paris wall-clock labels while a due date is a
-    // real instant, and the field reads the browser's timezone, so the label
-    // has to be resolved before it is filled in.
-    form.value.dueDate = toDatetimeLocal(fromWallClock(course.start))
+    form.value.dueDate = toDatetimeLocal(course.start)
     if (!form.value.subject.trim()) form.value.subject = course.title
 }
 

@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { backend } from '../lib/api.js'
 import type { Room, RoomWithDetails, Event } from '../lib/types.js'
 import { enhanceEvent } from '../lib/types.js'
-import { wallClockDayEnd, wallClockDayStart, wallClockNow } from '../lib/date.js'
+import { parisDayEnd, parisDayStart } from '../lib/date.js'
 import RoomCard from '../components/RoomCard.vue'
 import RoomDetailsDialog from '../components/RoomDetailsDialog.vue'
 
@@ -42,9 +42,7 @@ watch(filterAvailable, async (val) => {
     if (!val) return
     loadingAvailable.value = true
     try {
-        // The api compares these against wall-clock timestamps, so `now` has to
-        // be in that encoding rather than a real instant.
-        const now = wallClockNow()
+        const now = new Date()
         const to = new Date(now.getTime() + 3_600_000)
         const res = await backend.api.rooms.available.$get({
             query: { from: now.toISOString(), to: to.toISOString() },
@@ -62,10 +60,10 @@ async function openRoom(room: Room) {
     loadingDetails.value = true
     selectedRoom.value = null
     try {
-        const now = wallClockNow()
+        const now = new Date()
         const res = await backend.api.rooms[':id'].events.$get({
             param: { id: room.id },
-            query: { from: wallClockDayStart(), to: wallClockDayEnd() },
+            query: { from: parisDayStart().toISOString(), to: parisDayEnd().toISOString() },
         })
         const roomBody = await res.json()
         if (!('data' in roomBody)) throw new Error('Room not found')

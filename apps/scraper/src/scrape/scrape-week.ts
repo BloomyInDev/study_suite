@@ -2,6 +2,7 @@ import type { Page } from 'playwright'
 import { applyWeekEvents, createDb, insertAllChanges } from '@studysuite/db'
 import type { WeekDiff } from '@studysuite/db'
 import type { ParsedEvent } from '@studysuite/shared'
+import { parisDate } from '@studysuite/shared/time'
 import { captureFailure } from '../browser/debug.js'
 import { launchBrowser } from '../browser/launch.js'
 import { getAllWeekIds, gotoPlanning, gotoWeek } from '../browser/navigation.js'
@@ -19,7 +20,7 @@ function parseWeekMonday(weekDates: string[]): Date {
     const first = weekDates[0]
     if (!first) throw new Error('Week has no day headers')
     const [day, month, year] = first.split('/')
-    return new Date(Date.UTC(parseInt(year!, 10), parseInt(month!, 10) - 1, parseInt(day!, 10)))
+    return parisDate(parseInt(year!, 10), parseInt(month!, 10), parseInt(day!, 10))
 }
 
 async function scrapeWeek(

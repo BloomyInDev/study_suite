@@ -1,6 +1,6 @@
 import { and, asc, eq, gt, inArray, lt, lte, sql } from 'drizzle-orm'
 import { events, pushReminderSends, pushSubscriptions } from '@studysuite/db'
-import { wallClockNow } from '@studysuite/shared/time'
+import { parisParts } from '@studysuite/shared/time'
 import { db } from '../db.js'
 import { withEventRelations } from './serialize.js'
 import { pushConfigured, sendReminder } from './push.js'
@@ -9,6 +9,22 @@ import { buildPayload, duePairs } from './reminder-match.js'
 const TICK_MS = 60_000
 /** How long a send record is kept before it is pruned. */
 const SEND_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * The courses starting within `maxLeadMinutes`: only ever the widest lead
+ * anyone asked for, `duePairs` narrows per subscriber from there. Shared with
+ * the Discord tick.
+ */
+export function upcomingEvents(now: Date, maxLeadMinutes: number) {
+    return db.query.events.findMany({
+        where: and(
+            gt(events.startDate, now),
+            lte(events.startDate, new Date(now.getTime() + maxLeadMinutes * 60_000)),
+        ),
+        with: withEventRelations,
+        orderBy: asc(events.startDate),
+    })
+}
 
 /**
  * One pass: find the courses due a reminder, claim them, push them.
@@ -23,23 +39,13 @@ const SEND_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
  * the events of the next hour, so the matching runs in JS rather than as a join
  * against a `uuid[]` column.
  */
-export async function runReminderTick(now: Date = wallClockNow()): Promise<number> {
+export async function runReminderTick(now: Date = new Date()): Promise<number> {
     if (!pushConfigured) return 0
 
     const subs = await db.select().from(pushSubscriptions)
     if (subs.length === 0) return 0
 
-    // Only ever the widest lead anyone asked for; `duePairs` narrows per
-    // subscriber from there.
-    const maxLead = Math.max(...subs.map((s) => s.leadMinutes))
-    const upcoming = await db.query.events.findMany({
-        where: and(
-            gt(events.startDate, now),
-            lte(events.startDate, new Date(now.getTime() + maxLead * 60_000)),
-        ),
-        with: withEventRelations,
-        orderBy: asc(events.startDate),
-    })
+    const upcoming = await upcomingEvents(now, Math.max(...subs.map((s) => s.leadMinutes)))
     if (upcoming.length === 0) return 0
 
     const pairs = duePairs(subs, upcoming, now)
@@ -111,11 +117,11 @@ export function startReminderTick(): void {
     console.log('[push] course reminders on, ticking every 60s')
 
     setInterval(() => {
-        const now = wallClockNow()
+        const now = new Date()
         void runReminderTick(now).catch((err) => console.error('[push] tick failed', err))
         // Hourly, not every tick: the retention window is a week, so there is
         // nothing to gain from chasing it 1440 times a day.
-        if (now.getUTCMinutes() === 0) {
+        if (parisParts(now).minute === 0) {
             void pruneSends().catch((err) => console.error('[push] prune failed', err))
         }
     }, TICK_MS)
