@@ -264,8 +264,8 @@ Hono server on Bun, port 3000.
 | GET    | `/api/bot/assignments`                      | bot   | Homework of some groups and their ancestors (`?groupIds=&from=&to=`)       |
 | GET    | `/api/bot/reminders/stream`                 | bot   | The due DM reminders, as Server-Sent Events                                |
 | POST   | `/api/bot/reminders/deliveries`             | bot   | Report whether a DM reached its member                                     |
-| GET    | `/api/teachers`                             | none  | All teachers                                                               |
-| GET    | `/api/rooms`                                | none  | All rooms                                                                  |
+| GET    | `/api/teachers`                             | user  | All teachers                                                               |
+| GET    | `/api/rooms`                                | user  | All rooms                                                                  |
 | GET    | `/api/groups`                               | none  | All groups with parent/child hierarchy                                     |
 | GET    | `/api/groups/:id`                           | none  | Single group with hierarchy                                                |
 | GET    | `/api/groups/:id/events`                    | none  | Events for a group                                                         |
@@ -507,6 +507,26 @@ the TD group, so a mapping's class is an anchor: the student narrows it down
 through `PATCH /api/auth/me/student-group`, the same path a Discord role already
 takes. The access token is discarded: 900 s, no refresh, and userinfo returns
 nothing the ID token does not.
+
+**A sign-in that matches no mapping logs its groups** (`[iut] no group mapping
+for groups: [...]`), and nothing else about the person. No teacher had ever
+signed in when this was added, so the groups the directory gives teachers
+were unknown: read them there after a teacher's first sign-in, then add the
+`teacher` mapping in `/admin/iut-mappings`.
+
+### Who may add homework
+
+`getGroupScope()` (`controllers/assignments.ts`) answers for every homework
+read and write, and `GET /api/assignments/groups` hands the same answer to the
+form:
+
+- an admin, or a teacher account **not linked** to a row in `teachers`: every
+  group. The teacher role only comes from an admin's approval or a `teacher`
+  IUT mapping, so the account is vouched for even when nobody said which
+  teacher it is;
+- a linked teacher: the groups of their own courses. The link is made by hand
+  on the admin users page;
+- a student: their class and its ancestors.
 
 **Naming it.** `iut` is an internal identifier, used for the provider enum, the
 table and the routes, and it stays that way. What a user sees comes from

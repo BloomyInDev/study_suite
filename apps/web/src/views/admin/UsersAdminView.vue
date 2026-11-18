@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { groupLabel } from '../../lib/group-label.js'
 import { API_URL } from '../../lib/api-url'
+import { backend } from '../../lib/api.js'
 import { ref, onMounted, computed, reactive } from 'vue'
 import type { AuthUser } from '../../stores/auth.js'
 import { useAuthStore } from '../../stores/auth.js'
@@ -28,8 +29,26 @@ const editForm = reactive({
     status: 'approved' as 'pending' | 'approved' | 'rejected',
     role: null as 'student' | 'teacher' | null,
     studentGroupId: null as string | null,
+    teacherId: null as string | null,
     isAdmin: false,
 })
+
+/**
+ * Which teacher of the planning an account is. Optional: an unlinked teacher
+ * may still add homework to every class, a linked one to the classes of their
+ * own courses.
+ */
+const teachers = ref<{ title: string; value: string }[]>([])
+async function fetchTeachers() {
+    // Through the typed client, which adds the token: the teacher routes need
+    // a signed-in user.
+    const res = await backend.api.teachers.$get()
+    if (!res.ok) return
+    const body = await res.json()
+    teachers.value = body.data
+        .map((t) => ({ title: `${t.lastName} ${t.firstName}`.trim(), value: t.id }))
+        .sort((a, b) => a.title.localeCompare(b.title, 'fr'))
+}
 
 async function fetchUsers() {
     loading.value = true
@@ -91,6 +110,7 @@ function openEdit(user: AuthUser) {
     editForm.status = user.status
     editForm.role = user.role
     editForm.studentGroupId = user.studentGroupId
+    editForm.teacherId = user.teacherId
     editForm.isAdmin = user.isAdmin
     editDialog.value = true
 }
@@ -105,7 +125,7 @@ async function saveEdit() {
         role: editForm.role,
     }
     if (editForm.role === 'student') patch.studentGroupId = editForm.studentGroupId
-    if (editForm.role === 'teacher') patch.teacherId = null
+    if (editForm.role === 'teacher') patch.teacherId = editForm.teacherId
 
     await updateUser(user.id, patch as Partial<AuthUser>)
     editDialog.value = false
@@ -129,7 +149,10 @@ function groupName(id: string | null) {
     return g ? groupLabel(g) : id
 }
 
-onMounted(fetchUsers)
+onMounted(() => {
+    void fetchUsers()
+    void fetchTeachers()
+})
 </script>
 
 <template>
@@ -278,6 +301,18 @@ onMounted(fetchUsers)
                         :items="
                             groups.visibleGroups.map((g) => ({ title: groupLabel(g), value: g.id }))
                         "
+                    />
+                    <v-autocomplete
+                        v-if="editForm.role === 'teacher'"
+                        v-model="editForm.teacherId"
+                        label="Enseignant du planning"
+                        hint="Vide : peut ajouter des devoirs à toutes les classes"
+                        persistent-hint
+                        density="compact"
+                        variant="outlined"
+                        clearable
+                        class="mb-4"
+                        :items="teachers"
                     />
                     <v-checkbox
                         v-model="editForm.isAdmin"

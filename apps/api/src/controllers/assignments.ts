@@ -105,7 +105,30 @@ export function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: strin
     }
 }
 
-async function getUserAccessibleGroupIds(userId: string): Promise<Set<string>> {
+/**
+ * The groups whose homework someone may read and write: every group, or a set.
+ *
+ * Every group for an admin, and for a teacher account not linked to a row in
+ * `teachers`. The teacher role only comes from an admin's approval or a
+ * `teacher` IUT mapping, so the account is vouched for even when nobody said
+ * which teacher it is. A linked teacher gets the groups of their own courses,
+ * a student their class and its ancestors.
+ */
+type GroupScope = { all: true } | { all: false; ids: Set<string> }
+
+const inScope = (scope: GroupScope, groupId: string) => scope.all || scope.ids.has(groupId)
+
+async function getGroupScope(userId: string, isAdmin: boolean): Promise<GroupScope> {
+    if (isAdmin) return { all: true }
+    const [teacher] = await db.select().from(userTeachers).where(eq(userTeachers.userId, userId))
+    if (teacher && !teacher.teacherId) return { all: true }
+    return { all: false, ids: await getUserAccessibleGroupIds(userId, teacher?.teacherId ?? null) }
+}
+
+async function getUserAccessibleGroupIds(
+    userId: string,
+    teacherId: string | null,
+): Promise<Set<string>> {
     const result = new Set<string>()
 
     const [student] = await db.select().from(userStudents).where(eq(userStudents.userId, userId))
@@ -115,13 +138,12 @@ async function getUserAccessibleGroupIds(userId: string): Promise<Set<string>> {
         ancestors.forEach((id) => result.add(id))
     }
 
-    const [teacher] = await db.select().from(userTeachers).where(eq(userTeachers.userId, userId))
-    if (teacher?.teacherId) {
+    if (teacherId) {
         const rows = await db
             .selectDistinct({ groupId: eventStudentGroups.studentGroupId })
             .from(eventTeachers)
             .innerJoin(eventStudentGroups, eq(eventStudentGroups.eventId, eventTeachers.eventId))
-            .where(eq(eventTeachers.teacherId, teacher.teacherId))
+            .where(eq(eventTeachers.teacherId, teacherId))
         rows.forEach((r) => result.add(r.groupId))
     }
 
@@ -129,9 +151,7 @@ async function getUserAccessibleGroupIds(userId: string): Promise<Set<string>> {
 }
 
 async function canWrite(userId: string, isAdmin: boolean, groupId: string): Promise<boolean> {
-    if (isAdmin) return true
-    const accessible = await getUserAccessibleGroupIds(userId)
-    return accessible.has(groupId)
+    return inScope(await getGroupScope(userId, isAdmin), groupId)
 }
 
 const app = new OpenAPIHono<AuthEnv>()
@@ -158,15 +178,12 @@ app.openapi(
         const payload = c.get('user')
         const { groupIds, from, to } = c.req.valid('query')
 
-        let allowedGroupIds: string[]
-        if (payload.isAdmin) {
-            allowedGroupIds = groupIds ?? []
-        } else {
-            const accessible = await getUserAccessibleGroupIds(payload.sub)
-            allowedGroupIds = groupIds
-                ? groupIds.filter((id) => accessible.has(id))
-                : [...accessible]
-        }
+        const scope = await getGroupScope(payload.sub, payload.isAdmin)
+        const allowedGroupIds = scope.all
+            ? (groupIds ?? [])
+            : groupIds
+              ? groupIds.filter((id) => scope.ids.has(id))
+              : [...scope.ids]
 
         if (allowedGroupIds.length === 0) return c.json({ data: [] }, 200)
 
@@ -182,6 +199,31 @@ app.openapi(
         })
 
         return c.json({ data: rows.map((r) => assignmentToDto(r, payload.sub)) }, 200)
+    },
+)
+
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/groups',
+        operationId: 'listWritableAssignmentGroups',
+        summary: 'The groups I may add homework to',
+        description:
+            "`all: true` for an admin and for a teacher account not linked to a teacher, who may write for every group; `groupIds` is then empty. Otherwise the groups of a linked teacher's courses, or a student's class and its ancestors. Registered before `/{id}`, which would otherwise read `groups` as an id.",
+        tags: ['Assignments'],
+        security: [{ Bearer: [] }],
+        responses: {
+            200: dataResponse(
+                z.object({ all: z.boolean(), groupIds: z.array(z.string().uuid()) }),
+                'Writable groups',
+            ),
+            401: errorResponse('Unauthorized'),
+        },
+    }),
+    async (c) => {
+        const payload = c.get('user')
+        const scope = await getGroupScope(payload.sub, payload.isAdmin)
+        return c.json({ data: { all: scope.all, groupIds: scope.all ? [] : [...scope.ids] } }, 200)
     },
 )
 
@@ -208,11 +250,8 @@ app.openapi(
         if (!row)
             return c.json({ error: { code: 'NOT_FOUND', message: 'Assignment not found' } }, 404)
 
-        if (!payload.isAdmin) {
-            const accessible = await getUserAccessibleGroupIds(payload.sub)
-            if (!accessible.has(row.studentGroupId)) {
-                return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
-            }
+        if (!inScope(await getGroupScope(payload.sub, payload.isAdmin), row.studentGroupId)) {
+            return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
         }
 
         return c.json({ data: assignmentToDto(row, payload.sub) }, 200)
