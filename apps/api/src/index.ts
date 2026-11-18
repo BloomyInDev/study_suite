@@ -16,6 +16,7 @@ import botController from './controllers/bot.js'
 import eventsController from './controllers/events.js'
 import groupsController from './controllers/groups.js'
 import pushController from './controllers/push.js'
+import remindersController from './controllers/reminders.js'
 import roomsController from './controllers/rooms.js'
 import teachersController from './controllers/teachers.js'
 import adminUsersController from './controllers/admin/users.js'
@@ -71,6 +72,7 @@ const app = _app
             .route('/groups', groupsController)
             .route('/assignments', assignmentsController)
             .route('/push', pushController)
+            .route('/reminders', remindersController)
             .route('/bot', botController)
             // Calendar clients key off the .ics suffix, so it is part of the path.
             .route('/calendar.ics', calendarController)
