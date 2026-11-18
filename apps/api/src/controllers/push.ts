@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import { MAX_HIDDEN_COURSES } from '@studysuite/shared/hidden-courses'
 import { pushSubscriptions } from '@studysuite/db'
 import { eq } from 'drizzle-orm'
 import { db } from '../db.js'
@@ -23,7 +24,7 @@ const SubscriptionInput = z
                 'Ancestors included. Widen them with the same rule `GET /api/events` callers use, or a promo-wide lecture never matches.',
         }),
         leadMinutes: z.number().int().min(1).max(180).default(15),
-        excludedTitles: z.array(z.string().max(200)).max(100).default([]).openapi({
+        excludedTitles: z.array(z.string().max(200)).max(MAX_HIDDEN_COURSES).default([]).openapi({
             description:
                 'Course titles the user hid, matched exactly. No reminder is sent for them.',
         }),

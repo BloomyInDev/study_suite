@@ -8,7 +8,8 @@
         "./config": "./src/config/index.ts",
         "./time": "./src/time/index.ts",
         "./legal": "./src/legal.ts",
-        "./color": "./src/color/index.ts"
+        "./color": "./src/color/index.ts",
+        "./hidden-courses": "./src/hidden-courses.ts"
     },
     "scripts": {
         "typecheck": "tsc --noEmit",

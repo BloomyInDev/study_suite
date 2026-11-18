@@ -5,6 +5,7 @@ import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import ReminderSettingsCard from '../components/ReminderSettingsCard.vue'
 import { API_URL } from '../lib/api-url'
 import { fetchCourseTitles } from '../lib/course-titles.js'
+import { MAX_HIDDEN_COURSES } from '@studysuite/shared/hidden-courses'
 import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useGroupsStore } from '../stores/groups.js'
@@ -215,6 +216,10 @@ async function saveClass() {
                             class="mb-3"
                             @update:model-value="hiddenCourses.set"
                         />
+                        <div v-if="hiddenCourses.full" class="text-caption text-warning mb-2">
+                            {{ MAX_HIDDEN_COURSES }}&nbsp;cours masqués au maximum : réaffichez-en
+                            un pour en masquer un autre.
+                        </div>
                         <div class="text-caption text-medium-emphasis">
                             Un cours masqué disparaît de votre planning, de l'accueil et des
                             rappels. «&nbsp;Anglais&nbsp;» et «&nbsp;Anglais - Test&nbsp;» sont deux

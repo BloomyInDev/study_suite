@@ -3,6 +3,7 @@ import { inject, ref } from 'vue'
 import { groupLabel } from '../lib/group-label.js'
 import type { Event } from '../lib/types.js'
 import { formatFullDate } from '../lib/date.js'
+import { MAX_HIDDEN_COURSES } from '@studysuite/shared/hidden-courses'
 import { CAN_HIDE_COURSES, useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 
@@ -13,7 +14,13 @@ const hiddenCourses = useHiddenCoursesStore()
 const notifs = useNotificationsStore()
 
 function hideCourse(close: () => void) {
-    hiddenCourses.hide(props.event.title)
+    if (!hiddenCourses.hide(props.event.title)) {
+        notifs.warning(
+            `Vous masquez déjà ${MAX_HIDDEN_COURSES} cours, le maximum. Réaffichez-en un depuis votre profil.`,
+            5000,
+        )
+        return
+    }
     notifs.info(
         `«\u00a0${props.event.title}\u00a0» est masqué. Vous pouvez le réafficher depuis votre profil.`,
         5000,

@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi'
+import { MAX_HIDDEN_COURSES } from '@studysuite/shared/hidden-courses'
 import { parseInstant } from '@studysuite/shared/time'
 
 /**
@@ -51,7 +52,7 @@ export const toParam = () => instantParam('to', 'Only events starting before thi
  * several as an array, and both come out as an array.
  */
 export const ExcludeTitleSchema = z
-    .union([z.string().max(200), z.array(z.string().max(200)).max(100)])
+    .union([z.string().max(200), z.array(z.string().max(200)).max(MAX_HIDDEN_COURSES)])
     .optional()
     .transform((v) => (v === undefined ? undefined : [v].flat().filter(Boolean)))
     .openapi({
