@@ -1,3 +1,8 @@
+import {
+    DEFAULT_REMINDER_LEAD,
+    isReminderLead,
+    REMINDER_LEAD_CHOICES,
+} from '@studysuite/shared/reminders'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import {
@@ -15,16 +20,16 @@ import { useGroupsStore } from './groups.js'
 import { useHiddenCoursesStore } from './hidden-courses.js'
 import { useProvidersStore } from './providers.js'
 
-export const LEAD_CHOICES = [5, 10, 15, 30, 60] as const
+export const LEAD_CHOICES = REMINDER_LEAD_CHOICES
 
 const LS_LEAD = 'study_suite_reminder_lead'
-const DEFAULT_LEAD = 15
+const DEFAULT_LEAD: number = DEFAULT_REMINDER_LEAD
 
 /** Remembered locally only so the picker shows the right value before the api
  *  answers; the row in `push_subscriptions` is the truth. */
 function storedLead(): number {
     const raw = Number(localStorage.getItem(LS_LEAD))
-    return LEAD_CHOICES.includes(raw as (typeof LEAD_CHOICES)[number]) ? raw : DEFAULT_LEAD
+    return isReminderLead(raw) ? raw : DEFAULT_LEAD
 }
 
 /**

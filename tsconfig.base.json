@@ -16,6 +16,7 @@
             "@studysuite/shared/legal": ["./packages/shared/src/legal.ts"],
             "@studysuite/shared/color": ["./packages/shared/src/color/index.ts"],
             "@studysuite/shared/hidden-courses": ["./packages/shared/src/hidden-courses.ts"],
+            "@studysuite/shared/reminders": ["./packages/shared/src/reminders.ts"],
             "@studysuite/db": ["./packages/db/src/index.ts"]
         }
     }

@@ -9,7 +9,8 @@
         "./time": "./src/time/index.ts",
         "./legal": "./src/legal.ts",
         "./color": "./src/color/index.ts",
-        "./hidden-courses": "./src/hidden-courses.ts"
+        "./hidden-courses": "./src/hidden-courses.ts",
+        "./reminders": "./src/reminders.ts"
     },
     "scripts": {
         "typecheck": "tsc --noEmit",
