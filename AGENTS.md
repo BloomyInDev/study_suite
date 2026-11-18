@@ -125,6 +125,8 @@ mapping `ENV_VAR_NAME` to `dot.path`. Both `apps/api` and `apps/scraper` use it.
 | `iut_group_mappings`        | IUT directory group → student group mapping       |
 | `push_subscriptions`        | One row per browser that wants course reminders   |
 | `push_reminder_sends`       | Which reminder has already gone out               |
+| `discord_reminders`         | One row per account with Discord DM reminders on  |
+| `discord_reminder_sends`    | Which DM reminder has already gone to the bot     |
 
 `event_changes.change_type` enum: `added`, `removed`, `updated`, `moved`.
 For `moved`, `diff` JSON contains `{ newStart: ISO, newEnd: ISO }`.
@@ -254,8 +256,14 @@ Hono server on Bun, port 3000.
 | GET    | `/api/push/subscriptions`                   | opt.  | Read back what a browser is registered for (`?endpoint=`)                  |
 | DELETE | `/api/push/subscriptions`                   | opt.  | Unregister a browser (`?endpoint=`)                                        |
 | POST   | `/api/push/test`                            | opt.  | Push a notification to a browser now (`?endpoint=`)                        |
+| GET    | `/api/reminders/discord`                    | user  | My Discord DM reminder settings, all a settings panel shows                |
+| PUT    | `/api/reminders/discord`                    | user  | Turn them on, or change the lead (`{ leadMinutes }`)                       |
+| DELETE | `/api/reminders/discord`                    | user  | Turn them off                                                              |
+| POST   | `/api/reminders/discord/test`               | user  | Have the bot DM me a test now                                              |
 | GET    | `/api/bot/guilds/:discordGuildId/mappings`  | bot   | A server's Discord role → student group mappings                           |
 | GET    | `/api/bot/assignments`                      | bot   | Homework of some groups and their ancestors (`?groupIds=&from=&to=`)       |
+| GET    | `/api/bot/reminders/stream`                 | bot   | The due DM reminders, as Server-Sent Events                                |
+| POST   | `/api/bot/reminders/deliveries`             | bot   | Report whether a DM reached its member                                     |
 | GET    | `/api/teachers`                             | none  | All teachers                                                               |
 | GET    | `/api/rooms`                                | none  | All rooms                                                                  |
 | GET    | `/api/groups`                               | none  | All groups with parent/child hierarchy                                     |
@@ -420,6 +428,35 @@ Things that are not obvious:
   carries milliseconds, so a raw `>` returns the cursor's own row forever.
   One scraper run shares a single `detected_at`, so a run larger than `limit`
   is cut short. Pollers should keep `groupIds` narrow.
+
+### Discord DM reminders
+
+The same course reminders as Web Push, sent by the bot as DMs, for members
+whose browser push is unreliable. The api decides everything and the bot only
+delivers: the bot stores nothing and computes nothing.
+
+- **Settings live on the account.** The bot's panel calls
+  `/api/reminders/discord` as the member (`X-Acting-Discord-User`), and the
+  answer carries all it shows, the lead choices included
+  (`@studysuite/shared/reminders`, shared with the push settings). The class is
+  the account's own, ancestors included. Hidden courses live in each browser
+  and do not apply.
+- **The tick** (`lib/discord-reminder-tick.ts`) is the push tick's twin: same
+  `duePairs()`, same claim-before-send on `discord_reminder_sends`, at most
+  once. It claims nothing while no bot is connected, so a bot that reconnects
+  before the course starts still gets the reminder.
+- **The stream** (`GET /api/bot/reminders/stream`) is SSE: one `reminder`
+  event per DM, text ready to send. One bot at a time (`lib/discord-reminder-hub.ts`):
+  a new connection closes the previous one, or two bots would DM everyone twice.
+- **Three idle timeouts.** Bun closes a connection after 10 s without traffic,
+  so the route calls `server.timeout(req, 0)` on Bun's own request object
+  (`c.req.raw`; a rebuilt `Request` is silently ignored). A `: ping` every
+  25 s stays under nginx's 60 s and Cloudflare's ~100 s, and
+  `X-Accel-Buffering: no` stops nginx from holding the events back.
+- **Two security schemes on one route break the typing.** Listing
+  `[{ Bearer: [] }, { Bot: [] }]` collapses `c.req.valid('json')` to `never`
+  under `@hono/zod-openapi`, so user routes list `Bearer` alone even though the
+  bot reaches them too.
 
 ---
 
