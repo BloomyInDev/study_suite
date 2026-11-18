@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { groupLabel } from '../../lib/group-label.js'
 import { API_URL } from '../../lib/api-url'
+import { backend } from '../../lib/api.js'
 import { ref, onMounted, computed, reactive } from 'vue'
 import type { AuthUser } from '../../stores/auth.js'
 import { useAuthStore } from '../../stores/auth.js'
@@ -39,11 +40,11 @@ const editForm = reactive({
  */
 const teachers = ref<{ title: string; value: string }[]>([])
 async function fetchTeachers() {
-    const res = await fetch(`${API_URL}/api/teachers`)
+    // Through the typed client, which adds the token: the teacher routes need
+    // a signed-in user.
+    const res = await backend.api.teachers.$get()
     if (!res.ok) return
-    const body = (await res.json()) as {
-        data: { id: string; firstName: string; lastName: string }[]
-    }
+    const body = await res.json()
     teachers.value = body.data
         .map((t) => ({ title: `${t.lastName} ${t.firstName}`.trim(), value: t.id }))
         .sort((a, b) => a.title.localeCompare(b.title, 'fr'))
