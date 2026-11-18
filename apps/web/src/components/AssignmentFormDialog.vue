@@ -4,7 +4,6 @@ import { API_URL } from '../lib/api-url'
 import { computed, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
-import { useAuthStore } from '../stores/auth.js'
 import { useEventsStore } from '../stores/events.js'
 import type { Assignment, Event } from '../lib/types.js'
 import { addParisDays, formatShortDay, formatTime, parisDayStart } from '../lib/date.js'
@@ -22,7 +21,6 @@ const emit = defineEmits<{
 
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
-const auth = useAuthStore()
 const eventsStore = useEventsStore()
 
 const show = computed({
@@ -89,6 +87,43 @@ watch(
             }
         }
     },
+)
+
+/**
+ * The groups this account may add homework to, from the api: every group for
+ * an admin or an unlinked teacher, the classes of a linked teacher's courses,
+ * a student's class and the groups above it. Null until loaded.
+ */
+const writable = ref<{ all: boolean; groupIds: string[] } | null>(null)
+
+const groupItems = computed(() => {
+    const scope = writable.value
+    const allowed = scope?.all
+        ? groups.visibleGroups
+        : groups.visibleGroups.filter((g) => scope?.groupIds.includes(g.id))
+    // An assignment being edited keeps its group listed, even outside the scope.
+    const current = groups.allGroups.find((g) => g.id === form.value.studentGroupId)
+    const list = current && !allowed.includes(current) ? [current, ...allowed] : allowed
+    return list.map((g) => ({ title: groupLabel(g), value: g.id }))
+})
+
+async function loadWritableGroups() {
+    const res = await fetch(`${API_URL}/api/assignments/groups`, { headers: authHeader() })
+    if (!res.ok) return
+    writable.value = ((await res.json()) as { data: { all: boolean; groupIds: string[] } }).data
+    // A new assignment opens on a group the account may actually write to.
+    const ids = groupItems.value.map((i) => i.value)
+    if (!props.editing && !ids.includes(form.value.studentGroupId) && ids.length > 0) {
+        form.value.studentGroupId = ids[0]!
+    }
+}
+
+watch(
+    () => props.modelValue,
+    (open) => {
+        if (open) void loadWritableGroups()
+    },
+    { immediate: true },
 )
 
 // The picker is only worth loading once it is asked for, but an assignment
@@ -283,13 +318,8 @@ async function deleteAssignment() {
                             variant="outlined"
                             density="compact"
                             hide-details
-                            :disabled="!auth.isAdmin"
-                            :items="
-                                groups.visibleGroups.map((g) => ({
-                                    title: groupLabel(g),
-                                    value: g.id,
-                                }))
-                            "
+                            :disabled="groupItems.length <= 1"
+                            :items="groupItems"
                         />
                     </v-col>
 
