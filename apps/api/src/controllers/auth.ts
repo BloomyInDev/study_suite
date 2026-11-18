@@ -735,6 +735,11 @@ app.openapi(
         }
 
         const mapping = await resolveIutMapping(claims.groups ?? [])
+        if (!mapping) {
+            // The groups alone, no username: what an admin needs to add the
+            // missing mapping (a teacher's first sign-in, typically).
+            console.log('[iut] no group mapping for groups:', JSON.stringify(claims.groups ?? []))
+        }
         const existingId = await findUserIdByIdentity('iut', subject)
         const existing = existingId
             ? await db.select().from(users).where(eq(users.id, existingId)).limit(1)
