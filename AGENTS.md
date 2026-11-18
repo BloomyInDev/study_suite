@@ -508,6 +508,26 @@ through `PATCH /api/auth/me/student-group`, the same path a Discord role already
 takes. The access token is discarded: 900 s, no refresh, and userinfo returns
 nothing the ID token does not.
 
+**A sign-in that matches no mapping logs its groups** (`[iut] no group mapping
+for groups: [...]`), and nothing else about the person. No teacher had ever
+signed in when this was added, so the groups the directory gives teachers
+were unknown: read them there after a teacher's first sign-in, then add the
+`teacher` mapping in `/admin/iut-mappings`.
+
+### Who may add homework
+
+`getGroupScope()` (`controllers/assignments.ts`) answers for every homework
+read and write, and `GET /api/assignments/groups` hands the same answer to the
+form:
+
+- an admin, or a teacher account **not linked** to a row in `teachers`: every
+  group. The teacher role only comes from an admin's approval or a `teacher`
+  IUT mapping, so the account is vouched for even when nobody said which
+  teacher it is;
+- a linked teacher: the groups of their own courses. The link is made by hand
+  on the admin users page;
+- a student: their class and its ancestors.
+
 **Naming it.** `iut` is an internal identifier, used for the provider enum, the
 table and the routes, and it stays that way. What a user sees comes from
 `iut.displayName` (default `IUT`) via `GET /api/config`, which lists the
