@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { config } from './config.js'
 import { startReminderTick } from './lib/reminder-tick.js'
+import { startDiscordReminderTick } from './lib/discord-reminder-tick.js'
 import { createSsrHandler, ssrDisabled } from './lib/ssr.js'
 import { listGroups } from './lib/groups.js'
 import authController from './controllers/auth.js'
@@ -110,6 +111,9 @@ _app.get(
 // route off the host (the `frontend` network is not internal, which is what
 // lets the Discord and IUT token exchanges work). A no-op without VAPID keys.
 startReminderTick()
+// Its Discord twin: hands due DMs to the bot over its SSE stream. A no-op
+// without bot keys.
+startDiscordReminderTick()
 
 export type AppType = typeof app
 

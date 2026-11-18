@@ -11,6 +11,22 @@ const TICK_MS = 60_000
 const SEND_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
 
 /**
+ * The courses starting within `maxLeadMinutes`: only ever the widest lead
+ * anyone asked for, `duePairs` narrows per subscriber from there. Shared with
+ * the Discord tick.
+ */
+export function upcomingEvents(now: Date, maxLeadMinutes: number) {
+    return db.query.events.findMany({
+        where: and(
+            gt(events.startDate, now),
+            lte(events.startDate, new Date(now.getTime() + maxLeadMinutes * 60_000)),
+        ),
+        with: withEventRelations,
+        orderBy: asc(events.startDate),
+    })
+}
+
+/**
  * One pass: find the courses due a reminder, claim them, push them.
  *
  * Claiming happens before sending. The insert into `push_reminder_sends` is
@@ -29,17 +45,7 @@ export async function runReminderTick(now: Date = new Date()): Promise<number> {
     const subs = await db.select().from(pushSubscriptions)
     if (subs.length === 0) return 0
 
-    // Only ever the widest lead anyone asked for; `duePairs` narrows per
-    // subscriber from there.
-    const maxLead = Math.max(...subs.map((s) => s.leadMinutes))
-    const upcoming = await db.query.events.findMany({
-        where: and(
-            gt(events.startDate, now),
-            lte(events.startDate, new Date(now.getTime() + maxLead * 60_000)),
-        ),
-        with: withEventRelations,
-        orderBy: asc(events.startDate),
-    })
+    const upcoming = await upcomingEvents(now, Math.max(...subs.map((s) => s.leadMinutes)))
     if (upcoming.length === 0) return 0
 
     const pairs = duePairs(subs, upcoming, now)

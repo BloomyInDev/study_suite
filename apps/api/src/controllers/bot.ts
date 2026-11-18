@@ -1,7 +1,16 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
-import { assignments, discordGuilds, discordRoleMappings, studentGroups } from '@studysuite/db'
-import { asc, eq } from 'drizzle-orm'
+import {
+    assignments,
+    discordGuilds,
+    discordReminders,
+    discordRoleMappings,
+    studentGroups,
+    userIdentities,
+} from '@studysuite/db'
+import { and, asc, eq, inArray } from 'drizzle-orm'
+import { streamSSE } from 'hono/streaming'
 import { db } from '../db.js'
+import { attachBot } from '../lib/discord-reminder-hub.js'
 import { expandGroupIds } from '../lib/group-ancestors.js'
 import { requireBot } from '../middleware/auth.js'
 import { IncludeAncestorGroupsSchema } from '../schemas/query.js'
@@ -137,6 +146,131 @@ app.openapi(
         })
 
         return c.json({ data: rows.map((r) => assignmentToDto(r, null)) }, 200)
+    },
+)
+
+/**
+ * Under Cloudflare's ~100 s and nginx's 60 s idle cuts. Bun's own 10 s one is
+ * lifted for this route alone, below.
+ */
+const HEARTBEAT_MS = 25_000
+
+app.openapi(
+    createRoute({
+        method: 'get',
+        path: '/reminders/stream',
+        operationId: 'botStreamReminders',
+        summary: 'The DM reminders to send, as Server-Sent Events',
+        description:
+            'Kept open by the bot. Each `reminder` event is one DM, ready to send: `{ discordUserId, eventId, title, body, startsAt }`, where `eventId` and `startsAt` are null for a test. A `ready` event opens the stream and a `: ping` comment arrives every 25 s. One bot delivers at a time: a new connection closes the previous one. Reminders due while no bot is connected are kept until their course starts, then dropped. Report each DM with `POST /api/bot/reminders/deliveries`.',
+        tags: ['Bot'],
+        security: [{ Bot: [] }],
+        responses: {
+            200: {
+                content: { 'text/event-stream': { schema: z.string() } },
+                description: 'The event stream',
+            },
+            401: errorResponse('Unauthorized'),
+            503: errorResponse('Bot access is not configured'),
+        },
+    }),
+    (c) => {
+        // Bun closes a connection after 10 s without traffic, and this one is
+        // quiet between reminders by design. Hono hands Bun's server over as
+        // `c.env`; it is absent under the tests.
+        ;(c.env as { timeout?: (req: Request, seconds: number) => void } | undefined)?.timeout?.(
+            c.req.raw,
+            0,
+        )
+        // nginx would otherwise buffer the events until the response ends.
+        c.header('X-Accel-Buffering', 'no')
+
+        return streamSSE(c, async (stream) => {
+            let open = true
+            const detach = attachBot({
+                send: (message) =>
+                    stream.writeSSE({ event: 'reminder', data: JSON.stringify(message) }),
+                close: () => {
+                    open = false
+                },
+            })
+            stream.onAbort(() => {
+                open = false
+                detach()
+            })
+
+            await stream.writeSSE({ event: 'ready', data: '{}' })
+            while (open) {
+                await stream.sleep(HEARTBEAT_MS)
+                if (open) await stream.write(': ping\n\n')
+            }
+            detach()
+        })
+    },
+)
+
+const DeliveryReportSchema = z
+    .object({
+        discordUserId: z
+            .string()
+            .regex(/^\d{17,20}$/)
+            .openapi({ example: '812340987654321098' }),
+        eventId: z.string().uuid().nullable(),
+        ok: z.boolean(),
+        error: z
+            .string()
+            .max(300)
+            .optional()
+            .openapi({ description: 'Why the DM failed, shown to the member in their settings' }),
+    })
+    .openapi('DiscordReminderDelivery')
+
+app.openapi(
+    createRoute({
+        method: 'post',
+        path: '/reminders/deliveries',
+        operationId: 'botReportReminderDelivery',
+        summary: 'Report whether a DM reminder reached its member',
+        description:
+            'What the member sees as the last delivery or the last failure in their reminder settings. A failure does not turn reminders off.',
+        tags: ['Bot'],
+        security: [{ Bot: [] }],
+        request: { body: { content: { 'application/json': { schema: DeliveryReportSchema } } } },
+        responses: {
+            200: dataResponse(
+                z.object({ recorded: z.boolean() }),
+                'Recorded, or false when the member has no reminders on',
+            ),
+            401: errorResponse('Unauthorized'),
+            503: errorResponse('Bot access is not configured'),
+        },
+    }),
+    async (c) => {
+        const { discordUserId, ok, error } = c.req.valid('json')
+        const now = new Date()
+        const updated = await db
+            .update(discordReminders)
+            .set(
+                ok
+                    ? { lastDeliveredAt: now, lastFailure: null, lastFailureAt: null }
+                    : { lastFailure: error ?? 'Unknown error', lastFailureAt: now },
+            )
+            .where(
+                inArray(
+                    discordReminders.userId,
+                    db
+                        .select({ id: userIdentities.userId })
+                        .from(userIdentities)
+                        .where(
+                            and(
+                                eq(userIdentities.provider, 'discord'),
+                                eq(userIdentities.subject, discordUserId),
+                            ),
+                        ),
+                ),
+            )
+            .returning({ userId: discordReminders.userId })
+        return c.json({ data: { recorded: updated.length > 0 } }, 200)
     },
 )
 
