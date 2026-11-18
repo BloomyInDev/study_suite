@@ -102,7 +102,11 @@ const groupItems = computed(() => {
         ? groups.visibleGroups
         : groups.visibleGroups.filter((g) => scope?.groupIds.includes(g.id))
     // An assignment being edited keeps its group listed, even outside the scope.
-    const current = groups.allGroups.find((g) => g.id === form.value.studentGroupId)
+    // A new one does not: its default comes from the planning's picked groups,
+    // which may be a class this account cannot write to.
+    const current = props.editing
+        ? groups.allGroups.find((g) => g.id === props.editing!.studentGroup.id)
+        : undefined
     const list = current && !allowed.includes(current) ? [current, ...allowed] : allowed
     return list.map((g) => ({ title: groupLabel(g), value: g.id }))
 })
