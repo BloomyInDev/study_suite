@@ -41,8 +41,20 @@ export async function renderPng(svg: string, width: number): Promise<Uint8Array<
         font: { fontBuffers, defaultFontFamily: 'DejaVu Sans', loadSystemFonts: false },
         fitTo: { mode: 'width', value: width },
     })
-    // Copied into a buffer of its own, which is what a response body takes.
-    return new Uint8Array(resvg.render().asPng())
+    // Freed by hand: each render holds the fonts and a pixmap in wasm memory,
+    // several MB that the GC has no reason to reclaim from such small wrappers
+    // and that wasm never hands back once grown.
+    try {
+        const image = resvg.render()
+        try {
+            // Copied into a buffer of its own, which is what a response body takes.
+            return new Uint8Array(image.asPng())
+        } finally {
+            image.free()
+        }
+    } finally {
+        resvg.free()
+    }
 }
 
 interface NamedGroup {
