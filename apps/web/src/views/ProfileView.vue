@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { groupLabel } from '../lib/group-label.js'
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import ReminderSettingsCard from '../components/ReminderSettingsCard.vue'
 import { API_URL } from '../lib/api-url'
-import { backend } from '../lib/api.js'
+import { fetchCourseTitles } from '../lib/course-titles.js'
 import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { useAuthStore } from '../stores/auth.js'
 import { useGroupsStore } from '../stores/groups.js'
@@ -22,14 +22,21 @@ const pickerOpen = ref(false)
 const savingGroup = ref(false)
 const classDraft = ref<string | null>(auth.user?.studentGroupId ?? null)
 
-// Every title the planning holds, so a course can be hidden before it is next
-// on screen. A hidden title that no longer exists stays listed, to be removed.
+// The student's own courses around today, so one can be hidden before it is
+// next on screen. A hidden title outside them stays listed, to be removed.
 const courseTitles = ref<string[]>([])
 const titleChoices = computed(() => [...new Set([...courseTitles.value, ...hiddenCourses.titles])])
-onMounted(async () => {
-    const res = await backend.api.events.titles.$get()
-    if (res.ok) courseTitles.value = (await res.json()).data
-})
+let titlesLoadToken = 0
+watch(
+    () => groups.effectiveGroupIds.join(','),
+    async () => {
+        if (import.meta.env.SSR) return
+        const token = ++titlesLoadToken
+        const titles = await fetchCourseTitles(groups.effectiveGroupIds)
+        if (token === titlesLoadToken) courseTitles.value = titles
+    },
+    { immediate: true },
+)
 
 function groupLabelById(id: string): string {
     const g = groups.allGroups.find((group) => group.id === id)
