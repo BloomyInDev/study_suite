@@ -264,8 +264,8 @@ Hono server on Bun, port 3000.
 | GET    | `/api/bot/assignments`                      | bot   | Homework of some groups and their ancestors (`?groupIds=&from=&to=`)       |
 | GET    | `/api/bot/reminders/stream`                 | bot   | The due DM reminders, as Server-Sent Events                                |
 | POST   | `/api/bot/reminders/deliveries`             | bot   | Report whether a DM reached its member                                     |
-| GET    | `/api/teachers`                             | none  | All teachers                                                               |
-| GET    | `/api/rooms`                                | none  | All rooms                                                                  |
+| GET    | `/api/teachers`                             | user  | All teachers                                                               |
+| GET    | `/api/rooms`                                | user  | All rooms                                                                  |
 | GET    | `/api/groups`                               | none  | All groups with parent/child hierarchy                                     |
 | GET    | `/api/groups/:id`                           | none  | Single group with hierarchy                                                |
 | GET    | `/api/groups/:id/events`                    | none  | Events for a group                                                         |
