@@ -125,6 +125,26 @@ export const LimitSchema = z.object({
     dateFormat: DateFormatSchema,
 })
 
+/** Comma-separated group ids, each a uuid so a typo answers 400 rather than 500. */
+const GroupIdsParam = z
+    .string()
+    .optional()
+    .transform((v) => (v ? v.split(',').filter(Boolean) : undefined))
+    .pipe(z.array(z.string().uuid()).max(50).optional())
+    .openapi({
+        param: { name: 'groupIds', in: 'query' },
+        description: 'Comma-separated group ids. Only titles of courses for these groups.',
+        example: '3f1c2a9e-8b7d-4c6e-9f10-2a3b4c5d6e7f',
+    })
+
+/** `GET /events/titles`: every filter optional, so a bare call lists them all. */
+export const TitlesQuerySchema = z.object({
+    from: fromParam().optional(),
+    to: toParam().optional(),
+    groupIds: GroupIdsParam,
+    includeAncestorGroups: IncludeAncestorGroupsSchema,
+})
+
 export const OptionalDateRangeSchema = z.object({
     from: fromParam().optional(),
     to: toParam().optional(),

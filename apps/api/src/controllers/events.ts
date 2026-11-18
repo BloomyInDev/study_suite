@@ -13,6 +13,7 @@ import {
     EventChangesSchema,
     FilteredEventsSchema,
     LimitSchema,
+    TitlesQuerySchema,
 } from '../schemas/query.js'
 import {
     EventChangeDtoSchema,
@@ -30,15 +31,30 @@ export default new OpenAPIHono()
             path: '/titles',
             operationId: 'listEventTitles',
             summary: 'List distinct course titles',
+            description:
+                'Every title the planning holds, or only those of the courses in a window and for some groups, ancestors included by default.',
             tags: ['Events'],
+            request: { query: TitlesQuerySchema },
             responses: {
                 200: dataResponse(z.array(z.string()), 'Distinct event titles'),
             },
         }),
         async (c) => {
+            const { from, to, groupIds, includeAncestorGroups } = c.req.valid('query')
             const rows = await db
                 .selectDistinct({ title: events.title })
                 .from(events)
+                .where(
+                    and(
+                        ...eventFilterConditions({
+                            from,
+                            to,
+                            groupIds: groupIds
+                                ? await expandGroupIds(groupIds, includeAncestorGroups)
+                                : undefined,
+                        }),
+                    ),
+                )
                 .orderBy(asc(events.title))
             return c.json({ data: rows.map((r) => r.title) }, 200)
         },
