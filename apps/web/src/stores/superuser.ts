@@ -14,9 +14,11 @@ function readStored(): boolean {
 }
 
 /**
- * An admin's superuser mode: the only way past the lock on a teacher's
- * homework (`lib/assignment-lock.ts` in the api). An admin is often a student
- * too, so being admin alone changes nothing; the mode has to be switched on.
+ * Admin mode. An admin is often a student too, so the account browses as one
+ * until the mode is switched on. Then the app bar turns red and offers the
+ * admin pages (`lib/admin-nav.ts`), the router lets `/admin/*` through, and
+ * homework edits may pass the lock on a teacher's homework
+ * (`lib/assignment-lock.ts` in the api, through `X-Superuser`).
  *
  * Kept in sessionStorage, so it ends with the tab rather than lingering for
  * days on an account its owner mostly uses as a student.

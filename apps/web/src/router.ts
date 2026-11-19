@@ -1,5 +1,6 @@
 import type { RouteRecordRaw, Router } from 'vue-router'
 import { useAuthStore } from './stores/auth.js'
+import { useSuperuserStore } from './stores/superuser.js'
 
 // vite-ssg owns the router instance, since it needs a memory history to render
 // each route at build time. This module only describes the routes and the guard.
@@ -45,7 +46,6 @@ export const routes: RouteRecordRaw[] = [
     { path: '/terms', component: () => import('./views/TermsView.vue') },
     {
         path: '/admin',
-        component: () => import('./layouts/AdminLayout.vue'),
         redirect: '/admin/groups',
         meta: { requiresAuth: true, requiresAdmin: true },
         children: [
@@ -90,7 +90,9 @@ export function registerGuards(router: Router) {
         )
             return '/pending'
 
-        if (to.meta.requiresAdmin && !auth.isAdmin) return '/'
+        // Admin pages need admin mode on, not just the flag: an admin account is
+        // often a student's, and browses as one until the mode is switched on.
+        if (to.meta.requiresAdmin && !useSuperuserStore().active) return '/'
 
         return true
     })

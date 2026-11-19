@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useDisplay, useTheme } from 'vuetify'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useGroupsStore } from './stores/groups.js'
 import { useNotificationsStore } from './stores/notifications.js'
 import { useAuthStore } from './stores/auth.js'
@@ -12,10 +12,12 @@ import { useTermsStore } from './stores/terms.js'
 import { useSuperuserStore } from './stores/superuser.js'
 import TermsBanner from './components/TermsBanner.vue'
 import { usePageSeo } from './lib/seo.js'
+import { adminMenus } from './lib/admin-nav.js'
 
 const { mobile } = useDisplay()
 const theme = useTheme()
 const router = useRouter()
+const route = useRoute()
 const groupsStore = useGroupsStore()
 const providersStore = useProvidersStore()
 const notifs = useNotificationsStore()
@@ -24,6 +26,16 @@ const reminders = useRemindersStore()
 const hiddenCourses = useHiddenCoursesStore()
 const terms = useTermsStore()
 const superuser = useSuperuserStore()
+const adminNav = computed(() => adminMenus(providersStore.iutLabel))
+
+// The admin pages need admin mode (router guard). Leaving the mode while on one
+// would strand the admin on a page the nav no longer offers.
+watch(
+    () => superuser.active,
+    (active) => {
+        if (!active && route.path.startsWith('/admin')) void router.push('/')
+    },
+)
 
 // The one place the head is wired up: every page's title and og: tags come from
 // lib/pages.ts and follow the route, so no view carries head code of its own.
@@ -114,21 +126,27 @@ const navItems = [
                     :to="item.to"
                     @click="drawerOpen = false"
                 />
+                <template v-if="superuser.active">
+                    <template v-for="menu in adminNav" :key="menu.title">
+                        <v-list-subheader>{{ menu.title }}</v-list-subheader>
+                        <v-list-item
+                            v-for="item in menu.items"
+                            :key="item.to"
+                            :prepend-icon="item.icon"
+                            :title="item.title"
+                            :to="item.to"
+                            @click="drawerOpen = false"
+                        />
+                    </template>
+                </template>
             </v-list>
             <template #append>
                 <v-divider />
                 <v-list nav density="compact">
                     <v-list-item
                         v-if="auth.isAdmin"
-                        prepend-icon="mdi-shield-crown"
-                        title="Admin"
-                        to="/admin"
-                        @click="drawerOpen = false"
-                    />
-                    <v-list-item
-                        v-if="auth.isAdmin"
                         :prepend-icon="superuser.active ? 'mdi-shield-alert' : 'mdi-shield-outline'"
-                        :title="superuser.active ? 'Superuser activé' : 'Mode superuser'"
+                        :title="superuser.active ? 'Quitter le mode admin' : 'Mode admin'"
                         :base-color="superuser.active ? 'error' : undefined"
                         @click="superuser.toggle()"
                     />
@@ -152,7 +170,7 @@ const navItems = [
 
         <v-app-bar
             :color="superuser.active ? 'error' : 'primary'"
-            :title="superuser.active ? 'Study Suite · superuser' : 'Study Suite'"
+            :title="superuser.active ? 'Study Suite · admin' : 'Study Suite'"
         >
             <template #prepend v-if="mobile">
                 <v-app-bar-nav-icon @click="drawerOpen = !drawerOpen" />
@@ -163,17 +181,36 @@ const navItems = [
                     <v-icon>{{ item.icon }}</v-icon>
                     <v-tooltip activator="parent" location="bottom">{{ item.title }}</v-tooltip>
                 </v-btn>
+                <template v-if="superuser.active">
+                    <v-divider vertical class="mx-2" />
+                    <v-menu v-for="menu in adminNav" :key="menu.title" location="bottom end">
+                        <template #activator="{ props: menuProps }">
+                            <v-btn icon v-bind="menuProps">
+                                <v-icon>{{ menu.icon }}</v-icon>
+                                <v-tooltip activator="parent" location="bottom">{{
+                                    menu.title
+                                }}</v-tooltip>
+                            </v-btn>
+                        </template>
+                        <v-list density="compact" nav>
+                            <v-list-subheader>{{ menu.title }}</v-list-subheader>
+                            <v-list-item
+                                v-for="item in menu.items"
+                                :key="item.to"
+                                :prepend-icon="item.icon"
+                                :title="item.title"
+                                :to="item.to"
+                            />
+                        </v-list>
+                    </v-menu>
+                </template>
                 <v-divider vertical class="mx-2" />
-                <v-btn v-if="auth.isAdmin" icon to="/admin">
-                    <v-icon>mdi-shield-crown</v-icon>
-                    <v-tooltip activator="parent" location="bottom">Admin</v-tooltip>
-                </v-btn>
                 <v-btn v-if="auth.isAdmin" icon @click="superuser.toggle()">
                     <v-icon>{{
                         superuser.active ? 'mdi-shield-alert' : 'mdi-shield-outline'
                     }}</v-icon>
                     <v-tooltip activator="parent" location="bottom">{{
-                        superuser.active ? 'Quitter le mode superuser' : 'Mode superuser'
+                        superuser.active ? 'Quitter le mode admin' : 'Mode admin'
                     }}</v-tooltip>
                 </v-btn>
                 <v-btn v-if="auth.isAuthenticated" icon @click="logout">

@@ -532,8 +532,8 @@ form:
 author has a `user_teachers` row can only be edited or deleted by a teacher
 account (`lib/assignment-lock.ts`, `403 TEACHER_LOCKED`). Being admin is not
 enough, since an admin is often a student: the request must also carry
-`X-Superuser: 1`, which the web app sends while the admin's superuser mode is
-on (`stores/superuser.ts`, per tab, app bar turns red). The DTO's
+`X-Superuser: 1`, which the web app sends while admin mode is on
+(`stores/superuser.ts`, per tab, app bar turns red). The DTO's
 `createdBy.isTeacher` drives both the hidden edit button and the "Prof" badge.
 
 **Naming it.** `iut` is an internal identifier, used for the provider enum, the
@@ -572,13 +572,15 @@ Vue 3 + Vuetify 3 + Pinia SPA.
 | `/teachers` | none | TeachersView |
 | `/rooms` | none | RoomsView |
 | `/profile` | user | ProfileView |
-| `/admin/*` | admin | AdminLayout → groups / users / discord-mappings / iut-mappings / changes |
+| `/admin/*` | admin mode | groups / users / discord-mappings / iut-mappings / changes |
 
 **Route guard logic**:
 
 - Authenticated + approved → skip `/login`
 - Pending (non-admin) → redirect to `/pending` on any non-exempt route
-- `requiresAdmin` → redirect to `/` if not admin
+- `requiresAdmin` → redirect to `/` unless admin mode is on (an admin account
+  with the shield toggle switched on, `stores/superuser.ts`). The app bar then
+  turns red and shows two menus, Comptes and Planning (`lib/admin-nav.ts`)
 
 **Stores**: `auth` (JWT decode + login/logout), `events`, `groups`, `notifications`
 (the Vuetify snackbars, not push), `providers`, `reminders`.
