@@ -160,6 +160,14 @@ async function canWrite(userId: string, asAdmin: boolean, groupId: string): Prom
     return inScope(await getGroupScope(userId, asAdmin), groupId)
 }
 
+async function isUnlinkedTeacher(userId: string): Promise<boolean> {
+    const [row] = await db
+        .select({ teacherId: userTeachers.teacherId })
+        .from(userTeachers)
+        .where(eq(userTeachers.userId, userId))
+    return !!row && !row.teacherId
+}
+
 async function isTeacherAccount(userId: string): Promise<boolean> {
     const [row] = await db
         .select({ userId: userTeachers.userId })
@@ -200,7 +208,7 @@ app.openapi(
         operationId: 'listAssignments',
         summary: 'List assignments for your group',
         description:
-            "Without `groupIds`, everything the caller may read: a student's class and its ancestors, a linked teacher's classes, or every group for an unlinked teacher and an admin in admin mode.",
+            "Without `groupIds`, everything the caller may read: a student's class and its ancestors, a linked teacher's classes, every group for an admin in admin mode. An unlinked teacher gets what they wrote.",
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { query: listSchema },
@@ -216,7 +224,8 @@ app.openapi(
         const payload = c.get('user')
         const { groupIds, from, to } = c.req.valid('query')
 
-        const scope = await getGroupScope(payload.sub, asAdmin(c))
+        const admin = asAdmin(c)
+        const scope = await getGroupScope(payload.sub, admin)
         // Null: no group filter. Only for a caller who may see every group and
         // named none, which is how the web app asks for a teacher's whole list.
         const allowedGroupIds: string[] | null = scope.all
@@ -227,10 +236,17 @@ app.openapi(
 
         if (allowedGroupIds?.length === 0) return c.json({ data: [] }, 200)
 
+        // An unlinked teacher may write for every class, so their whole scope
+        // is the whole school: listing it would bury their own posts. Until an
+        // admin links them to a teacher, their list is what they wrote. Not an
+        // access rule: naming groups still reads them.
+        const onlyMine = !groupIds && !admin && (await isUnlinkedTeacher(payload.sub))
+
         const rows = await db.query.assignments.findMany({
-            where: (a, { and: _and, inArray: _inArray, gte, lte }) =>
+            where: (a, { and: _and, inArray: _inArray, eq: _eq, gte, lte }) =>
                 _and(
                     allowedGroupIds ? _inArray(a.studentGroupId, allowedGroupIds) : undefined,
+                    onlyMine ? _eq(a.createdById, payload.sub) : undefined,
                     from ? gte(a.dueDate, from) : undefined,
                     to ? lte(a.dueDate, to) : undefined,
                 ),
