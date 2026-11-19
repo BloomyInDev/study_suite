@@ -15,6 +15,8 @@ const auth = useAuthStore()
 const notifs = useNotificationsStore()
 const showCompleted = ref(false)
 const search = ref('')
+/** A linked teacher's list holds their classes' homework, by anyone: narrow it to their own posts. */
+const onlyMine = ref(false)
 
 const assignments = ref<Assignment[]>([])
 const loading = ref(false)
@@ -54,8 +56,12 @@ const todayEnd = todayStart + 86400000
 
 const filtered = computed(() => {
     const q = search.value.trim().toLowerCase()
-    if (!q) return assignments.value
-    return assignments.value.filter(
+    const mine =
+        onlyMine.value && auth.ownTeacherId
+            ? assignments.value.filter((a) => a.createdBy?.id === auth.user?.id)
+            : assignments.value
+    if (!q) return mine
+    return mine.filter(
         (a) =>
             a.title.toLowerCase().includes(q) ||
             (a.subject ?? '').toLowerCase().includes(q) ||
@@ -173,6 +179,16 @@ watch(
                 clearable
                 class="flex-grow-1"
             />
+            <v-chip
+                v-if="auth.ownTeacherId"
+                :variant="onlyMine ? 'flat' : 'outlined'"
+                :color="onlyMine ? 'primary' : undefined"
+                prepend-icon="mdi-account-edit"
+                class="flex-shrink-0"
+                @click="onlyMine = !onlyMine"
+            >
+                Les miens
+            </v-chip>
             <v-switch
                 v-model="showCompleted"
                 label="Complétés"
