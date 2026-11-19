@@ -9,6 +9,11 @@ import {
 } from '@studysuite/db'
 import { and, asc, count, eq } from 'drizzle-orm'
 import { db } from '../db.js'
+import {
+    isSuperuserRequest,
+    mayChangeAssignment,
+    SUPERUSER_HEADER,
+} from '../lib/assignment-lock.js'
 import { getAncestorGroupIds } from '../lib/group-ancestors.js'
 import { pickDisplay, type IdentitySummary } from '../lib/identities.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
@@ -65,7 +70,7 @@ export const withRelations = {
     studentGroup: true as const,
     event: true as const,
     // The display name lives in user_identities now, not on the user row.
-    createdBy: { with: { identities: true as const } },
+    createdBy: { with: { identities: true as const, teacherProfile: true as const } },
     updatedBy: { with: { identities: true as const } },
     completions: true as const,
 }
@@ -96,7 +101,9 @@ export function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: strin
             displayName: row.studentGroup.displayName,
         },
         event: row.event ? { id: row.event.id, title: row.event.title } : null,
-        createdBy: authorRef(row.createdBy),
+        createdBy: row.createdBy
+            ? { ...authorRef(row.createdBy)!, isTeacher: !!row.createdBy.teacherProfile }
+            : null,
         updatedBy: authorRef(row.updatedBy),
         completedByMe: row.completions.some((c) => c.userId === myUserId),
         completionCount: row.completions.length,
@@ -153,6 +160,33 @@ async function getUserAccessibleGroupIds(
 async function canWrite(userId: string, isAdmin: boolean, groupId: string): Promise<boolean> {
     return inScope(await getGroupScope(userId, isAdmin), groupId)
 }
+
+async function isTeacherAccount(userId: string): Promise<boolean> {
+    const [row] = await db
+        .select({ userId: userTeachers.userId })
+        .from(userTeachers)
+        .where(eq(userTeachers.userId, userId))
+    return !!row
+}
+
+/** Whether this request may edit or delete `row`, beyond the group check. */
+async function passesTeacherLock(
+    row: NonNullable<AssignmentRow>,
+    payload: { sub: string; isAdmin: boolean },
+    superuserHeader: string | undefined,
+): Promise<boolean> {
+    const authorIsTeacher = !!row.createdBy?.teacherProfile
+    if (!authorIsTeacher) return true
+    return mayChangeAssignment(authorIsTeacher, {
+        isTeacher: await isTeacherAccount(payload.sub),
+        isAdmin: payload.isAdmin,
+        superuser: isSuperuserRequest(superuserHeader),
+    })
+}
+
+const TEACHER_LOCKED = {
+    error: { code: 'TEACHER_LOCKED', message: "Only a teacher may change a teacher's homework" },
+} as const
 
 const app = new OpenAPIHono<AuthEnv>()
 app.use(requireAuth)
@@ -340,6 +374,9 @@ app.openapi(
         if (!(await canWrite(payload.sub, payload.isAdmin, existing.studentGroupId))) {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
         }
+        if (!(await passesTeacherLock(existing, payload, c.req.header(SUPERUSER_HEADER)))) {
+            return c.json(TEACHER_LOCKED, 403)
+        }
         if (
             body.studentGroupId &&
             body.studentGroupId !== existing.studentGroupId &&
@@ -390,6 +427,9 @@ app.openapi(
         }
         if (!(await canWrite(payload.sub, payload.isAdmin, existing.studentGroupId))) {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
+        }
+        if (!(await passesTeacherLock(existing, payload, c.req.header(SUPERUSER_HEADER)))) {
+            return c.json(TEACHER_LOCKED, 403)
         }
 
         await db.delete(assignments).where(eq(assignments.id, id))

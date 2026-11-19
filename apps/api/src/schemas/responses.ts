@@ -146,6 +146,11 @@ export const AssignmentDtoSchema = z
             .object({
                 id: uuid('7b3d5f1a-9c2e-4b6d-8f0a-1c3e5a7b9d1f'),
                 displayName: z.string().openapi({ example: 'bastien' }),
+                isTeacher: z.boolean().openapi({
+                    description:
+                        'Written by a teacher: only teachers, or an admin in superuser mode, may change it',
+                    example: false,
+                }),
             })
             .nullable(),
         updatedBy: z
