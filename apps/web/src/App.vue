@@ -11,6 +11,7 @@ import { useHiddenCoursesStore } from './stores/hidden-courses.js'
 import { useTermsStore } from './stores/terms.js'
 import { useAdminModeStore } from './stores/admin-mode.js'
 import TermsBanner from './components/TermsBanner.vue'
+import TeacherIdentityDialog from './components/TeacherIdentityDialog.vue'
 import { usePageSeo } from './lib/seo.js'
 import { adminMenus } from './lib/admin-nav.js'
 
@@ -269,6 +270,7 @@ const navItems = [
         </v-footer>
 
         <TermsBanner />
+        <TeacherIdentityDialog />
 
         <template v-for="notif in notifs.notifications" :key="notif.id">
             <v-snackbar
