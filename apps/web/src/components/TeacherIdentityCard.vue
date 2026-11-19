@@ -49,8 +49,10 @@ async function save(teacherId: string | null) {
     saving.value = true
     try {
         const user = await saveMyTeacher(teacherId)
-        auth.setAuth(auth.token, user)
+        // The answer first: an unlinked profile with no answer yet is what
+        // opens the sign-in dialog, even for one tick.
         setNotListed(user.id, teacherId === null)
+        auth.setAuth(auth.token, user)
         notifs.success(teacherId ? 'Enregistré' : "Noté : vous n'êtes pas dans la liste")
     } catch {
         notifs.error("Impossible d'enregistrer votre choix")
