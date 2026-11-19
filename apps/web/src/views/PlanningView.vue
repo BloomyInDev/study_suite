@@ -15,7 +15,11 @@ import WeekCalendar from '../components/WeekCalendar.vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import { mondayOfWeek, skipSunday } from '../lib/date.js'
 
-const { mobile } = useDisplay()
+const { mobile, width } = useDisplay()
+// Below this the toolbar's buttons and the day arrows no longer share a row
+// (measured with the "N masqués" chip showing), so all but compare fold into a
+// menu: compare is the one people kept missing.
+const compactToolbar = computed(() => width.value < 640)
 // Carried onto the changes page so `?group=` survives the jump.
 const route = useRoute()
 const router = useRouter()
@@ -75,6 +79,9 @@ const hiddenCourses = useHiddenCoursesStore()
 // class looked up with `?group=`, is shown whole.
 const ownPlanning = computed(() => !teacherId.value && !override.isActive.value)
 const hiddenTitles = computed(() => (ownPlanning.value ? hiddenCourses.titles : []))
+// The toolbar shows it as a chip, or as a menu entry on a narrow screen.
+const hiddenCount = computed(() => (ownPlanning.value ? hiddenCourses.titles.length : 0))
+const changesLink = computed(() => ({ path: '/planning/changes', query: route.query }))
 provide(CAN_HIDE_COURSES, ownPlanning)
 const events = ref<Event[]>([])
 const date = ref(skipSunday(new Date()))
@@ -256,51 +263,85 @@ async function copyLink() {
                 />
             </template>
             <template #append>
-                <v-chip
-                    v-if="ownPlanning && hiddenCourses.titles.length > 0"
-                    to="/profile"
-                    prepend-icon="mdi-eye-off"
-                    variant="tonal"
-                    :size="mobile ? 'small' : undefined"
-                >
-                    {{ hiddenCourses.titles.length }} masqué{{
-                        hiddenCourses.titles.length > 1 ? 's' : ''
-                    }}
-                </v-chip>
-                <v-tooltip v-if="!teacherId" text="Changements récents" location="start">
-                    <template #activator="{ props }">
-                        <v-btn
-                            v-bind="props"
-                            variant="tonal"
-                            :to="{ path: '/planning/changes', query: route.query }"
-                            icon="mdi-history"
-                            :size="mobile ? 'small' : undefined"
-                        />
-                    </template>
-                </v-tooltip>
-                <v-tooltip text="Copier le lien" location="start">
-                    <template #activator="{ props }">
-                        <v-btn
-                            v-bind="props"
-                            variant="tonal"
-                            icon="mdi-link-variant"
-                            :size="mobile ? 'small' : undefined"
-                            :disabled="!sharePath"
-                            @click="copyLink"
-                        />
-                    </template>
-                </v-tooltip>
-                <v-tooltip text="Comparer" location="start">
+                <template v-if="!compactToolbar">
+                    <v-chip
+                        v-if="hiddenCount > 0"
+                        to="/profile"
+                        prepend-icon="mdi-eye-off"
+                        variant="tonal"
+                        :size="mobile ? 'small' : undefined"
+                    >
+                        {{ hiddenCount }} masqué{{ hiddenCount > 1 ? 's' : '' }}
+                    </v-chip>
+                    <v-tooltip v-if="!teacherId" text="Changements récents" location="start">
+                        <template #activator="{ props }">
+                            <v-btn
+                                v-bind="props"
+                                variant="tonal"
+                                :to="changesLink"
+                                icon="mdi-history"
+                                :size="mobile ? 'small' : undefined"
+                            />
+                        </template>
+                    </v-tooltip>
+                    <v-tooltip text="Copier le lien" location="start">
+                        <template #activator="{ props }">
+                            <v-btn
+                                v-bind="props"
+                                variant="tonal"
+                                icon="mdi-link-variant"
+                                :size="mobile ? 'small' : undefined"
+                                :disabled="!sharePath"
+                                @click="copyLink"
+                            />
+                        </template>
+                    </v-tooltip>
+                </template>
+                <!-- Labelled wherever it fits: an icon alone went unnoticed. -->
+                <v-tooltip text="Comparer" location="start" :disabled="!compactToolbar">
                     <template #activator="{ props }">
                         <v-btn
                             v-bind="props"
                             variant="tonal"
                             to="/planning/compare"
-                            icon="mdi-compare"
+                            :icon="compactToolbar ? 'mdi-calendar-multiple' : undefined"
+                            :prepend-icon="compactToolbar ? undefined : 'mdi-calendar-multiple'"
+                            :text="compactToolbar ? undefined : 'Comparer'"
                             :size="mobile ? 'small' : undefined"
                         />
                     </template>
                 </v-tooltip>
+                <v-menu v-if="compactToolbar" location="bottom end">
+                    <template #activator="{ props }">
+                        <v-btn
+                            v-bind="props"
+                            variant="tonal"
+                            icon="mdi-dots-vertical"
+                            aria-label="Plus d'actions"
+                            :size="mobile ? 'small' : undefined"
+                        />
+                    </template>
+                    <v-list density="compact">
+                        <v-list-item
+                            v-if="!teacherId"
+                            :to="changesLink"
+                            prepend-icon="mdi-history"
+                            title="Changements récents"
+                        />
+                        <v-list-item
+                            prepend-icon="mdi-link-variant"
+                            title="Copier le lien"
+                            :disabled="!sharePath"
+                            @click="copyLink"
+                        />
+                        <v-list-item
+                            v-if="hiddenCount > 0"
+                            to="/profile"
+                            prepend-icon="mdi-eye-off"
+                            :title="`${hiddenCount} cours masqué${hiddenCount > 1 ? 's' : ''}`"
+                        />
+                    </v-list>
+                </v-menu>
             </template>
         </WeekCalendar>
     </v-container>

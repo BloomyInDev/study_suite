@@ -87,6 +87,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             />
             <v-btn
                 variant="outlined"
+                :size="mobile ? 'small' : undefined"
                 :class="mobile ? '' : 'mx-4'"
                 @click="date = skipSunday(new Date())"
             >
@@ -99,7 +100,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
                 icon="mdi-chevron-right"
             />
         </v-col>
-        <v-col cols="auto" md="4" class="d-flex justify-end ga-2">
+        <v-col cols="auto" md="4" class="d-flex justify-end align-center ga-2">
             <slot name="append" />
         </v-col>
     </v-row>
