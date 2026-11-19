@@ -48,6 +48,9 @@ watch(
 const open = computed(
     () =>
         mounted.value &&
+        // The cached profile may predate an admin linking the account: only
+        // the one auth.refresh() fetched says whether it is still unlinked.
+        auth.userFresh &&
         auth.isAuthenticated &&
         auth.isApproved &&
         auth.isTeacher &&

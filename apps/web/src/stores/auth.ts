@@ -82,9 +82,18 @@ export const useAuthStore = defineStore('auth', () => {
     const hasProvider = (provider: AuthProvider) =>
         user.value?.identities.some((i) => i.provider === provider) ?? false
 
+    /**
+     * Whether `user` came from the api in this page load, rather than from
+     * localStorage, which holds whatever was true at the last sign-in. Anything
+     * that must not act on a stale profile (an admin may have linked a teacher
+     * since) waits for it.
+     */
+    const userFresh = ref(false)
+
     function setAuth(newToken: string, newUser: AuthUser) {
         token.value = newToken
         user.value = newUser
+        userFresh.value = true
         localStorage.setItem('auth_token', newToken)
         localStorage.setItem('auth_user', JSON.stringify(newUser))
     }
@@ -109,6 +118,7 @@ export const useAuthStore = defineStore('auth', () => {
     return {
         token,
         user,
+        userFresh,
         isAuthenticated,
         isAdmin,
         isPending,
