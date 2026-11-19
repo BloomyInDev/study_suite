@@ -5,7 +5,13 @@ import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
 import { sign, verify } from 'hono/jwt'
 import { db } from '../db.js'
 import { users, discordGuilds, discordRoleMappings, iutGroupMappings } from '@studysuite/db'
-import { studentGroupMemberships, studentGroups, userStudents, userTeachers } from '@studysuite/db'
+import {
+    studentGroupMemberships,
+    studentGroups,
+    teachers,
+    userStudents,
+    userTeachers,
+} from '@studysuite/db'
 import { TERMS_VERSION } from '@studysuite/shared/legal'
 import { config } from '../config.js'
 import { requireAuth, type AuthEnv, type JwtPayload } from '../middleware/auth.js'
@@ -104,6 +110,12 @@ async function getDescendantGroupIds(rootId: string): Promise<Set<string>> {
 }
 
 const StudentGroupBodySchema = z.object({ studentGroupId: z.string().uuid() })
+
+const MyTeacherBodySchema = z.object({
+    teacherId: z.string().uuid().nullable().openapi({
+        description: 'The teacher of the planning this account is, or null for none of them',
+    }),
+})
 
 // Only the version on screen can be accepted: an older client sending its own
 // is told so, rather than recording terms the user never saw.
@@ -476,6 +488,71 @@ app.openapi(
             .update(userStudents)
             .set({ studentGroupId })
             .where(eq(userStudents.userId, payload.sub))
+
+        const enriched = await fetchEnrichedUser(eq(users.id, payload.sub))
+        return c.json({ data: userToDto(enriched!) }, 200)
+    },
+)
+
+/**
+ * A teacher says which teacher of the planning they are. Trusted to the
+ * account itself: the teacher role already took an admin's approval or a
+ * `teacher` IUT mapping, and linking only narrows things (homework writes go
+ * from every class to the classes of their own courses). Several accounts may
+ * pick the same teacher: some people have two directory accounts.
+ */
+app.openapi(
+    createRoute({
+        method: 'patch',
+        path: '/me/teacher',
+        operationId: 'updateMyTeacher',
+        summary: 'Say which teacher of the planning you are',
+        tags: ['Auth'],
+        security: [{ Bearer: [] }],
+        middleware: [requireAuth] as const,
+        request: {
+            body: {
+                content: { 'application/json': { schema: MyTeacherBodySchema } },
+                required: true,
+            },
+        },
+        responses: {
+            200: dataResponse(UserDtoSchema, 'Updated profile'),
+            403: errorResponse('Not a teacher account'),
+            404: errorResponse('Unknown teacher'),
+        },
+    }),
+    async (c) => {
+        const payload = c.get('user')
+        const { teacherId } = c.req.valid('json')
+
+        const [profile] = await db
+            .select()
+            .from(userTeachers)
+            .where(eq(userTeachers.userId, payload.sub))
+        if (!profile) {
+            return c.json(
+                {
+                    error: {
+                        code: 'NOT_A_TEACHER',
+                        message: 'Only a teacher profile can pick a teacher',
+                    },
+                },
+                403,
+            )
+        }
+
+        if (teacherId) {
+            const [target] = await db
+                .select({ id: teachers.id })
+                .from(teachers)
+                .where(eq(teachers.id, teacherId))
+            if (!target) {
+                return c.json({ error: { code: 'NOT_FOUND', message: 'Teacher not found' } }, 404)
+            }
+        }
+
+        await db.update(userTeachers).set({ teacherId }).where(eq(userTeachers.userId, payload.sub))
 
         const enriched = await fetchEnrichedUser(eq(users.id, payload.sub))
         return c.json({ data: userToDto(enriched!) }, 200)

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { API_URL } from '../lib/api-url'
-import { computed, onMounted, ref } from 'vue'
+import { authHeaders } from '../lib/auth-headers.js'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
+import { useAuthStore } from '../stores/auth.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import type { Assignment } from '../lib/types.js'
 import AssignmentCard from '../components/AssignmentCard.vue'
@@ -9,9 +11,12 @@ import AssignmentFormDialog from '../components/AssignmentFormDialog.vue'
 import AssignmentDetailDialog from '../components/AssignmentDetailDialog.vue'
 
 const groups = useGroupsStore()
+const auth = useAuthStore()
 const notifs = useNotificationsStore()
 const showCompleted = ref(false)
 const search = ref('')
+/** A linked teacher's list holds their classes' homework, by anyone: narrow it to their own posts. */
+const onlyMine = ref(false)
 
 const assignments = ref<Assignment[]>([])
 const loading = ref(false)
@@ -20,19 +25,23 @@ const editingAssignment = ref<Assignment | null>(null)
 const detailOpen = ref(false)
 const viewingAssignment = ref<Assignment | null>(null)
 
-function authHeader() {
-    return { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
-}
+// Bumped on every fetch, so a slower earlier response cannot overwrite a
+// newer one (the ids change once the group graph arrives, see below).
+let fetchSeq = 0
 
 async function fetchAssignments() {
-    const ids = groups.effectiveGroupIds
-    if (ids.length === 0) return
+    // A teacher has no class of their own: naming no group asks the api for
+    // everything they may read, every class for an unlinked teacher.
+    const ids = auth.isTeacher ? [] : groups.effectiveGroupIds
+    if (!auth.isTeacher && ids.length === 0) return
+    const seq = ++fetchSeq
     loading.value = true
     try {
-        const params = new URLSearchParams({ groupIds: ids.join(',') })
-        const res = await fetch(`${API_URL}/api/assignments?${params}`, { headers: authHeader() })
+        const params = new URLSearchParams(ids.length > 0 ? { groupIds: ids.join(',') } : {})
+        const res = await fetch(`${API_URL}/api/assignments?${params}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('fetch failed')
         const body = (await res.json()) as { data: Assignment[] }
+        if (seq !== fetchSeq) return
         assignments.value = body.data
     } catch {
         notifs.error('Erreur lors du chargement des devoirs')
@@ -47,8 +56,12 @@ const todayEnd = todayStart + 86400000
 
 const filtered = computed(() => {
     const q = search.value.trim().toLowerCase()
-    if (!q) return assignments.value
-    return assignments.value.filter(
+    const mine =
+        onlyMine.value && auth.ownTeacherId
+            ? assignments.value.filter((a) => a.createdBy?.id === auth.user?.id)
+            : assignments.value
+    if (!q) return mine
+    return mine.filter(
         (a) =>
             a.title.toLowerCase().includes(q) ||
             (a.subject ?? '').toLowerCase().includes(q) ||
@@ -110,7 +123,7 @@ async function toggleDone(a: Assignment, done: boolean) {
     try {
         const res = await fetch(`${API_URL}/api/assignments/${a.id}/complete`, {
             method,
-            headers: authHeader(),
+            headers: authHeaders(),
         })
         if (!res.ok) throw new Error()
         const body = (await res.json()) as { data: { completedByMe: boolean; completionCount: number } }
@@ -130,6 +143,13 @@ async function toggleDone(a: Assignment, done: boolean) {
 }
 
 onMounted(fetchAssignments)
+// On a fresh load this view mounts before App.vue has fetched the group graph,
+// so `effectiveGroupIds` is the class alone and homework set on its promo or
+// semester is missing. Refetch once the ancestors are known, as HomeView does.
+watch(
+    () => groups.effectiveGroupIds.join(','),
+    () => void fetchAssignments(),
+)
 </script>
 
 <template>
@@ -159,6 +179,16 @@ onMounted(fetchAssignments)
                 clearable
                 class="flex-grow-1"
             />
+            <v-chip
+                v-if="auth.ownTeacherId"
+                :variant="onlyMine ? 'flat' : 'outlined'"
+                :color="onlyMine ? 'primary' : undefined"
+                prepend-icon="mdi-account-edit"
+                class="flex-shrink-0"
+                @click="onlyMine = !onlyMine"
+            >
+                Les miens
+            </v-chip>
             <v-switch
                 v-model="showCompleted"
                 label="Complétés"
@@ -174,7 +204,11 @@ onMounted(fetchAssignments)
 
         <template v-if="!loading">
             <template v-if="assignments.length === 0">
-                <v-alert type="info" variant="tonal">Aucun devoir pour vos groupes.</v-alert>
+                <v-alert type="info" variant="tonal">{{
+                    auth.isTeacher
+                        ? 'Aucun devoir pour le moment.'
+                        : 'Aucun devoir pour vos groupes.'
+                }}</v-alert>
             </template>
 
             <template v-else>

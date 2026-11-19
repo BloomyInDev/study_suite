@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { groupLabel } from '../../lib/group-label.js'
 import { API_URL } from '../../lib/api-url'
+import { authHeaders } from '../../lib/auth-headers.js'
 import { ref, onMounted, computed } from 'vue'
 import { useGroupsStore } from '../../stores/groups.js'
 import { useNotificationsStore } from '../../stores/notifications.js'
@@ -59,10 +60,6 @@ const mappingForm = ref<{
 
 const deletingGuild = ref<string | null>(null)
 const deletingMapping = ref<string | null>(null)
-
-function authHeaders() {
-    return { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
-}
 
 async function fetchGuilds() {
     loading.value = true

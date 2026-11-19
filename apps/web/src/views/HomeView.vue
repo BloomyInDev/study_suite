@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { API_URL } from '../lib/api-url'
+import { authHeaders } from '../lib/auth-headers.js'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
@@ -15,6 +16,7 @@ import AssignmentDetailDialog from '../components/AssignmentDetailDialog.vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import WeekStatsCard from '../components/WeekStatsCard.vue'
 import FreeRoomsCard from '../components/FreeRoomsCard.vue'
+import CourseProgressCard from '../components/CourseProgressCard.vue'
 
 const groupStore = useGroupsStore()
 const eventsStore = useEventsStore()
@@ -30,30 +32,40 @@ const detailOpen = ref(false)
 const viewingAssignment = ref<Assignment | null>(null)
 let intervalId: ReturnType<typeof setInterval> | null = null
 
+/** Whether the homework card has anything to ask for: a class, or being a teacher. */
+const showAssignments = computed(
+    () => auth.isAuthenticated && (auth.isTeacher || groupStore.effectiveGroupIds.length > 0),
+)
+
 async function load() {
     loading.value = true
     try {
+        // A linked teacher follows their own timetable. The card only looks at
+        // this week (endOfWeek), so this week's events are all it needs.
+        const teacherId = auth.ownTeacherId
         const promises: Promise<void>[] = [
-            eventsStore
-                .fetchUpcoming(groupStore.effectiveGroupIds, 10, hiddenCourses.titles)
-                .then((e) => {
-                    events.value = e
-                }),
+            (teacherId
+                ? eventsStore.fetchTeacherWeekEvents(teacherId, new Date())
+                : eventsStore.fetchUpcoming(groupStore.effectiveGroupIds, 10, hiddenCourses.titles)
+            ).then((e) => {
+                events.value = e ?? []
+            }),
         ]
-        if (auth.isAuthenticated && groupStore.effectiveGroupIds.length > 0) {
+        if (showAssignments.value) {
             const from = new Date()
             const cutoff = new Date(from)
             cutoff.setDate(cutoff.getDate() + 14)
             // The api sorts oldest first, so without `from` the whole backlog
             // of past homework came back ahead of what is still due.
+            // A teacher names no group: the api answers with all they may read.
             const params = new URLSearchParams({
-                groupIds: groupStore.effectiveGroupIds.join(','),
+                ...(auth.isTeacher ? {} : { groupIds: groupStore.effectiveGroupIds.join(',') }),
                 from: from.toISOString(),
                 to: cutoff.toISOString(),
             })
             promises.push(
                 fetch(`${API_URL}/api/assignments?${params}`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                    headers: authHeaders(),
                 })
                     .then((r) => (r.ok ? r.json() : { data: [] }))
                     .then((body: { data: Assignment[] }) => {
@@ -109,7 +121,7 @@ const doneCount = computed(() => upcomingAssignments.value.filter((a) => a.compl
 // allGroups loads after mount, so the ancestors, and with them the promo's
 // events, only join effectiveGroupIds a moment later.
 watch(
-    () => `${groupStore.effectiveGroupIds.join(',')}|${hiddenCourses.key}`,
+    () => `${groupStore.effectiveGroupIds.join(',')}|${hiddenCourses.key}|${auth.ownTeacherId}`,
     () => void load(),
 )
 
@@ -145,7 +157,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                         <v-progress-circular indeterminate color="primary" size="48" />
                     </v-card>
                 </template>
-                <template v-else-if="!groupStore.activeGroupIds.length">
+                <template v-else-if="!auth.ownTeacherId && !groupStore.activeGroupIds.length">
                     <NoGroupsCard @open-picker="pickerOpen = true" />
                 </template>
                 <template v-else-if="currentOrNextEvent">
@@ -160,15 +172,10 @@ async function toggleDone(a: Assignment, done: boolean) {
                 </template>
             </v-col>
 
-            <!-- Shown even with nothing due, so the card can say so. Gated on
-                 having a group because that is what decides whether assignments
-                 were fetched at all: without one, empty means unasked. -->
-            <v-col
-                v-if="auth.isAuthenticated && groupStore.effectiveGroupIds.length > 0"
-                cols="12"
-                md="8"
-                lg="6"
-            >
+            <!-- Shown even with nothing due, so the card can say so. Gated like
+                 the fetch (showAssignments): without a group, and not being a
+                 teacher, empty means unasked. -->
+            <v-col v-if="showAssignments" cols="12" md="8" lg="6">
                 <v-card>
                     <v-card-item>
                         <template #prepend>
@@ -211,6 +218,10 @@ async function toggleDone(a: Assignment, done: boolean) {
 
             <v-col v-if="groupStore.selectedGroupIds.length > 0" cols="12" md="8" lg="6">
                 <WeekStatsCard />
+            </v-col>
+
+            <v-col v-if="groupStore.effectiveGroupIds.length > 0" cols="12" md="8" lg="6">
+                <CourseProgressCard />
             </v-col>
 
             <v-col v-if="auth.isAuthenticated" cols="12" md="8" lg="6">

@@ -2,6 +2,7 @@
 import { groupLabel } from '../lib/group-label.js'
 import { computed } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
+import { useAdminModeStore } from '../stores/admin-mode.js'
 import type { Assignment } from '../lib/types.js'
 import { formatDueRelative } from '../lib/date.js'
 import { renderMarkdown } from '../lib/markdown.js'
@@ -17,6 +18,15 @@ const emit = defineEmits<{
 }>()
 
 const auth = useAuthStore()
+const adminMode = useAdminModeStore()
+
+// Mirrors the api's lock: a teacher's homework is for teachers to change, or
+// an admin with admin mode on. The api enforces it; this only hides the button.
+const canEdit = computed(() => {
+    if (!props.assignment || !(auth.isApproved || auth.isAdmin)) return false
+    if (!props.assignment.createdBy?.isTeacher) return true
+    return auth.user?.role === 'teacher' || adminMode.active
+})
 
 const show = computed({
     get: () => props.modelValue,
@@ -84,6 +94,15 @@ function formatAuthor(user: { displayName: string } | null, dateIso: string) {
                     >
                         {{ assignment.event.title }}
                     </v-chip>
+                    <v-chip
+                        v-if="assignment.createdBy?.isTeacher"
+                        color="teal-darken-2"
+                        variant="flat"
+                        size="small"
+                        prepend-icon="mdi-school"
+                    >
+                        Donné par l'enseignant
+                    </v-chip>
                 </div>
 
                 <div
@@ -116,7 +135,7 @@ function formatAuthor(user: { displayName: string } | null, dateIso: string) {
                 />
                 <v-spacer />
                 <v-btn
-                    v-if="auth.isApproved || auth.isAdmin"
+                    v-if="canEdit"
                     variant="tonal"
                     color="primary"
                     prepend-icon="mdi-pencil"

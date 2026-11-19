@@ -6,6 +6,7 @@ import './styles.css'
 import App from './App.vue'
 import { registerGuards, routes } from './router.js'
 import { installPlugins } from './setup.js'
+import { handleStaleChunks } from './lib/stale-chunks.js'
 
 // vite-ssg renders through jsdom (ssgOptions.mock), so Vuetify sees a window and
 // takes its browser path, which reaches for observer APIs jsdom does not
@@ -39,5 +40,9 @@ export const createApp = ViteSSG(App, { routes }, ({ app, router }) => {
 
     // The guard answers for a visitor with no account, which at build time
     // would give every protected route the login page's head.
-    if (!import.meta.env.SSR) registerGuards(router)
+    if (!import.meta.env.SSR) {
+        registerGuards(router)
+        // After a deploy, an open tab asks for chunks that no longer exist.
+        handleStaleChunks(router)
+    }
 })

@@ -5,6 +5,7 @@ import { useDisplay } from 'vuetify'
 import { backend } from '../lib/api.js'
 import { useEventsStore } from '../stores/events.js'
 import { useGroupsStore } from '../stores/groups.js'
+import { useAuthStore } from '../stores/auth.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import { CAN_HIDE_COURSES, useHiddenCoursesStore } from '../stores/hidden-courses.js'
 import { useGroupOverride } from '../lib/group-override.js'
@@ -20,12 +21,22 @@ const route = useRoute()
 const router = useRouter()
 const groups = useGroupsStore()
 const override = useGroupOverride()
+const auth = useAuthStore()
 const pickerOpen = ref(false)
 
 // `?teacher=<id>` shows that teacher's timetable, and wins over `?group=`: it is
-// where the teacher dialog's "full planning" button lands.
-const teacherId = computed(() =>
-    typeof route.query.teacher === 'string' && route.query.teacher ? route.query.teacher : null,
+// where the teacher dialog's "full planning" button lands. With neither, a
+// linked teacher lands on their own. `?group=` is checked as written rather
+// than through the override, which only resolves once the groups have loaded:
+// a class link would otherwise flash the teacher's own week first.
+const teacherId = computed(() => {
+    if (typeof route.query.teacher === 'string' && route.query.teacher) return route.query.teacher
+    if (route.query.group) return null
+    return auth.ownTeacherId
+})
+/** A teacher on their own timetable: no "you are viewing" banner, and the class picker stays. */
+const isOwnTimetable = computed(
+    () => teacherId.value !== null && teacherId.value === auth.ownTeacherId,
 )
 const teacher = ref<Teacher | null>(null)
 const teacherNotFound = ref(false)
@@ -150,7 +161,7 @@ async function copyLink() {
     <v-container fluid class="pa-4">
         <GroupPickerDialog v-model="pickerOpen" />
         <v-alert
-            v-if="teacher"
+            v-if="teacher && !isOwnTimetable"
             type="info"
             variant="tonal"
             density="compact"
@@ -228,7 +239,7 @@ async function copyLink() {
         <WeekCalendar v-model="date" :events="events" :loading="loading">
             <template #prepend>
                 <v-autocomplete
-                    v-if="!teacherId"
+                    v-if="!teacherId || isOwnTimetable"
                     v-model="pickedGroupIds"
                     :items="groups.visibleGroups"
                     :item-title="groupLabel"

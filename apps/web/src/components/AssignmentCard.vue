@@ -71,6 +71,15 @@ function formatAbsolute(iso: string) {
             <v-chip size="x-small" variant="tonal" prepend-icon="mdi-account-group">
                 {{ groupLabel(assignment.studentGroup) }}
             </v-chip>
+            <v-chip
+                v-if="assignment.createdBy?.isTeacher"
+                size="x-small"
+                variant="flat"
+                color="teal-darken-2"
+                prepend-icon="mdi-school"
+            >
+                Prof
+            </v-chip>
         </v-list-item-subtitle>
 
         <template v-if="!compact" #append>

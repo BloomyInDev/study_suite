@@ -246,6 +246,7 @@ Hono server on Bun, port 3000.
 | GET    | `/api/auth/iut`                             | none  | Redirect to the IUT bridge (PKCE); `?token=` links instead                 |
 | GET    | `/api/auth/iut/callback`                    | none  | Verify the ID token, upsert or link the identity, issue JWT                |
 | GET    | `/api/auth/me`                              | user  | Refresh JWT and return user DTO                                            |
+| PATCH  | `/api/auth/me/teacher`                      | user  | A teacher account says which `teachers` row it is (or `null`)              |
 | GET    | `/api/events/week`                          | none  | Events for a week (`?date=`)                                               |
 | GET    | `/api/events/day`                           | none  | Events for a day (`?date=`)                                                |
 | GET    | `/api/events/upcoming`                      | none  | Next N events (`?limit=`)                                                  |
@@ -520,13 +521,35 @@ were unknown: read them there after a teacher's first sign-in, then add the
 read and write, and `GET /api/assignments/groups` hands the same answer to the
 form:
 
-- an admin, or a teacher account **not linked** to a row in `teachers`: every
-  group. The teacher role only comes from an admin's approval or a `teacher`
-  IUT mapping, so the account is vouched for even when nobody said which
-  teacher it is;
-- a linked teacher: the groups of their own courses. The link is made by hand
+- an admin **with admin mode on**, or a teacher account **not linked** to a
+  row in `teachers`: every group. The teacher role only comes from an admin's
+  approval or a `teacher` IUT mapping, so the account is vouched for even when
+  nobody said which teacher it is;
+- a linked teacher: the groups of their own courses. The teacher picks the link
+  themselves (see [Teacher accounts](#teacher-accounts)), or an admin sets it
   on the admin users page;
 - a student: their class and its ancestors.
+
+**Listing without groups.** `GET /api/assignments` with no `groupIds` returns
+the caller's whole read scope, which is how the web app and the bot ask for a
+teacher's list. Two exceptions: a scope of every group with no `groupIds`
+means no group filter at all, and an **unlinked teacher** gets only what they
+wrote, since their scope is the whole school. That last one narrows the list,
+not access: naming groups still reads them.
+
+**Admin mode.** An admin account is often a student's, so here the admin flag
+alone counts for nothing: `actsAsAdmin()` (`lib/admin-mode.ts`) also wants
+`X-Admin-Mode: 1`, which the web app sends on every call while the admin has
+the mode on (`stores/admin-mode.ts`, per tab, app bar turns red;
+`lib/auth-headers.ts` adds it). Without it an admin gets a student's scope.
+This is not a security boundary, the flag is what grants it, and
+`/api/admin/*` checks the flag alone.
+
+**A teacher's homework is locked.** On top of the group scope, homework whose
+author has a `user_teachers` row can only be edited or deleted by a teacher
+account or an admin acting as one (`lib/assignment-lock.ts`,
+`403 TEACHER_LOCKED`). The DTO's `createdBy.isTeacher` drives both the hidden
+edit button and the "Prof" badge.
 
 **Naming it.** `iut` is an internal identifier, used for the provider enum, the
 table and the routes, and it stays that way. What a user sees comes from
@@ -564,16 +587,57 @@ Vue 3 + Vuetify 3 + Pinia SPA.
 | `/teachers` | none | TeachersView |
 | `/rooms` | none | RoomsView |
 | `/profile` | user | ProfileView |
-| `/admin/*` | admin | AdminLayout → groups / users / discord-mappings / iut-mappings / changes |
+| `/admin/*` | admin mode | groups / users / discord-mappings / iut-mappings / changes |
 
 **Route guard logic**:
 
 - Authenticated + approved → skip `/login`
 - Pending (non-admin) → redirect to `/pending` on any non-exempt route
-- `requiresAdmin` → redirect to `/` if not admin
+- `requiresAdmin` → redirect to `/` unless admin mode is on (an admin account
+  with the shield toggle switched on, `stores/admin-mode.ts`). The app bar then
+  turns red and shows two menus, Comptes and Planning (`lib/admin-nav.ts`)
 
-**Stores**: `auth` (JWT decode + login/logout), `events`, `groups`, `notifications`
-(the Vuetify snackbars, not push), `providers`, `reminders`.
+**Stores**: `auth` (JWT decode + login/logout), `admin-mode`, `events`, `groups`,
+`notifications` (the Vuetify snackbars, not push), `providers`, `reminders`.
+
+### Teacher accounts
+
+A teacher has no class, so the views key on the account instead:
+
+- **Timetable.** A teacher linked to a `teachers` row (`auth.ownTeacherId`)
+  lands on their own week on `/planning` and in the home card. `?group=` and
+  `?teacher=` still win, and the class picker stays so they can look one up
+  and come back. An unlinked teacher gets the visitor view.
+- **Homework.** `/homework` and the home card name no group for a teacher (see
+  [Listing without groups](#who-may-add-homework)). A linked teacher's list
+  holds every homework of their classes, other authors' included, and a "Les
+  miens" chip narrows it to their own.
+- **Who they are.** `TeacherIdentityDialog.vue` asks an approved, unlinked
+  teacher which teacher of the planning they are, and
+  `PATCH /api/auth/me/teacher` saves it. The account is trusted to pick:
+  linking only narrows what it can do. The dialog waits for `auth.userFresh`, the profile
+  `auth.refresh()` fetched in this page load, because the cached one may
+  predate a link an admin made since. **"Je ne suis pas dans cette liste" is
+  kept in `localStorage` only** (`study_suite_teacher_not_listed`), so another
+  device asks again. Move it to a nullable column (an additive migration) when
+  that becomes a nuisance.
+
+### Deploys and open tabs
+
+Every route is a lazy chunk named by its hash, and a deploy replaces them all.
+A tab opened before it still names the old ones, nginx answers 404 under
+`/assets/`, and the next navigation to a page not yet loaded used to freeze.
+`lib/stale-chunks.ts` catches the failed import in `router.onError` and does a
+full load of the target, which fetches the current `index.html`. The user was
+leaving the page anyway, so nothing is lost that a normal navigation would
+have kept. It tries once per target per 10 s (`sessionStorage`), so a chunk
+that is really missing cannot loop. Outside a navigation it never reloads by
+itself, since a form may be half filled: `vite:preloadError` only raises a
+snackbar.
+
+One gap: when the reload's own first route fails too (a deploy that shipped a
+broken chunk), vite-ssg never mounts the app, so no snackbar can show and the
+server-rendered page stays inert.
 
 **API client** (`src/lib/api.ts`): typed Hono client via `hono/client` using `AppType` exported from `apps/api`.
 

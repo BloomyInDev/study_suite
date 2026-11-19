@@ -3,6 +3,7 @@ import { groupLabel } from '../lib/group-label.js'
 import { computed, ref, watch } from 'vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import ReminderSettingsCard from '../components/ReminderSettingsCard.vue'
+import TeacherIdentityCard from '../components/TeacherIdentityCard.vue'
 import { API_URL } from '../lib/api-url'
 import { fetchCourseTitles } from '../lib/course-titles.js'
 import { MAX_HIDDEN_COURSES } from '@studysuite/shared/hidden-courses'
@@ -120,6 +121,10 @@ async function saveClass() {
 <template>
     <v-container>
         <v-row>
+            <v-col v-if="auth.isTeacher" cols="12" md="6">
+                <TeacherIdentityCard />
+            </v-col>
+
             <v-col v-if="myClass" cols="12" md="6">
                 <v-card>
                     <v-card-title>Ma classe</v-card-title>
