@@ -39,12 +39,16 @@ const showAssignments = computed(
 async function load() {
     loading.value = true
     try {
+        // A linked teacher follows their own timetable. The card only looks at
+        // this week (endOfWeek), so this week's events are all it needs.
+        const teacherId = auth.ownTeacherId
         const promises: Promise<void>[] = [
-            eventsStore
-                .fetchUpcoming(groupStore.effectiveGroupIds, 10, hiddenCourses.titles)
-                .then((e) => {
-                    events.value = e
-                }),
+            (teacherId
+                ? eventsStore.fetchTeacherWeekEvents(teacherId, new Date())
+                : eventsStore.fetchUpcoming(groupStore.effectiveGroupIds, 10, hiddenCourses.titles)
+            ).then((e) => {
+                events.value = e ?? []
+            }),
         ]
         if (showAssignments.value) {
             const from = new Date()
@@ -116,7 +120,7 @@ const doneCount = computed(() => upcomingAssignments.value.filter((a) => a.compl
 // allGroups loads after mount, so the ancestors, and with them the promo's
 // events, only join effectiveGroupIds a moment later.
 watch(
-    () => `${groupStore.effectiveGroupIds.join(',')}|${hiddenCourses.key}`,
+    () => `${groupStore.effectiveGroupIds.join(',')}|${hiddenCourses.key}|${auth.ownTeacherId}`,
     () => void load(),
 )
 
@@ -152,7 +156,7 @@ async function toggleDone(a: Assignment, done: boolean) {
                         <v-progress-circular indeterminate color="primary" size="48" />
                     </v-card>
                 </template>
-                <template v-else-if="!groupStore.activeGroupIds.length">
+                <template v-else-if="!auth.ownTeacherId && !groupStore.activeGroupIds.length">
                     <NoGroupsCard @open-picker="pickerOpen = true" />
                 </template>
                 <template v-else-if="currentOrNextEvent">

@@ -74,6 +74,11 @@ export const useAuthStore = defineStore('auth', () => {
     const isApproved = computed(() => user.value?.status === 'approved')
     const isRejected = computed(() => user.value?.status === 'rejected')
     const isTeacher = computed(() => user.value?.role === 'teacher')
+    /**
+     * The `teachers` row a teacher account is linked to, which is their own
+     * timetable. Null for an unlinked teacher: an admin makes the link by hand.
+     */
+    const ownTeacherId = computed(() => (isTeacher.value ? (user.value?.teacherId ?? null) : null))
     const hasProvider = (provider: AuthProvider) =>
         user.value?.identities.some((i) => i.provider === provider) ?? false
 
@@ -110,6 +115,7 @@ export const useAuthStore = defineStore('auth', () => {
         isApproved,
         isRejected,
         isTeacher,
+        ownTeacherId,
         hasProvider,
         setAuth,
         refresh,
