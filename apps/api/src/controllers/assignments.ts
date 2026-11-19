@@ -199,6 +199,8 @@ app.openapi(
         path: '/',
         operationId: 'listAssignments',
         summary: 'List assignments for your group',
+        description:
+            "Without `groupIds`, everything the caller may read: a student's class and its ancestors, a linked teacher's classes, or every group for an unlinked teacher and an admin in admin mode.",
         tags: ['Assignments'],
         security: [{ Bearer: [] }],
         request: { query: listSchema },
@@ -215,18 +217,20 @@ app.openapi(
         const { groupIds, from, to } = c.req.valid('query')
 
         const scope = await getGroupScope(payload.sub, asAdmin(c))
-        const allowedGroupIds = scope.all
-            ? (groupIds ?? [])
+        // Null: no group filter. Only for a caller who may see every group and
+        // named none, which is how the web app asks for a teacher's whole list.
+        const allowedGroupIds: string[] | null = scope.all
+            ? (groupIds ?? null)
             : groupIds
               ? groupIds.filter((id) => scope.ids.has(id))
               : [...scope.ids]
 
-        if (allowedGroupIds.length === 0) return c.json({ data: [] }, 200)
+        if (allowedGroupIds?.length === 0) return c.json({ data: [] }, 200)
 
         const rows = await db.query.assignments.findMany({
             where: (a, { and: _and, inArray: _inArray, gte, lte }) =>
                 _and(
-                    _inArray(a.studentGroupId, allowedGroupIds),
+                    allowedGroupIds ? _inArray(a.studentGroupId, allowedGroupIds) : undefined,
                     from ? gte(a.dueDate, from) : undefined,
                     to ? lte(a.dueDate, to) : undefined,
                 ),
