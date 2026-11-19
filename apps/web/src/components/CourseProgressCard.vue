@@ -62,12 +62,21 @@ const courses = computed(() => courseProgress(events.value, new Date(), hiddenCo
                 >
                     <div class="d-flex justify-space-between text-body-2 mb-1 ga-2">
                         <span class="text-truncate">{{ c.title }}</span>
-                        <span class="flex-shrink-0">{{ c.done }} / {{ c.total }}</span>
+                        <span class="flex-shrink-0 d-flex align-center ga-1">
+                            <v-icon v-if="c.done >= c.total" size="16" color="success">
+                                mdi-check
+                            </v-icon>
+                            {{ c.done }} / {{ c.total }}
+                        </span>
                     </div>
+                    <!-- The planning's own colour, a pastel: a thicker bar on a
+                         darker track keeps the filled part visible on white. -->
                     <v-progress-linear
                         :model-value="(c.done / c.total) * 100"
-                        :color="c.done >= c.total ? 'success' : 'primary'"
-                        height="6"
+                        :color="c.color ?? 'primary'"
+                        bg-color="on-surface"
+                        :bg-opacity="0.18"
+                        height="8"
                         rounded
                     />
                 </div>

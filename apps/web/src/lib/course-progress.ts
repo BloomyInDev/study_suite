@@ -1,3 +1,4 @@
+import { scrapedColor } from '@studysuite/shared/color'
 import { parisDate, parisParts } from '@studysuite/shared/time'
 import type { Event } from './types.js'
 
@@ -28,6 +29,8 @@ export interface CourseProgress {
     /** Sessions that have started. */
     done: number
     total: number
+    /** The colour the planning paints the course with, null when it paints none. */
+    color: string | null
 }
 
 /** Courses in progress first, then those not started, then the finished ones. */
@@ -42,12 +45,25 @@ export function courseProgress(
     hiddenTitles: string[] = [],
 ): CourseProgress[] {
     const byTitle = new Map<string, CourseProgress>()
+    // Per title, how often each colour is used: a CM and a TD of one course may
+    // be painted differently, and the bar takes the most common.
+    const colours = new Map<string, Map<string, number>>()
     for (const e of events) {
         if (hiddenTitles.includes(e.title) || NOT_A_COURSE.test(e.title)) continue
-        const p = byTitle.get(e.title) ?? { title: e.title, done: 0, total: 0 }
+        const p = byTitle.get(e.title) ?? { title: e.title, done: 0, total: 0, color: null }
         p.total++
         if (e.start <= now) p.done++
         byTitle.set(e.title, p)
+        const colour = scrapedColor(e.color)
+        if (colour) {
+            const counts = colours.get(e.title) ?? new Map<string, number>()
+            counts.set(colour, (counts.get(colour) ?? 0) + 1)
+            colours.set(e.title, counts)
+        }
+    }
+    for (const [title, counts] of colours) {
+        const [top] = [...counts].sort((a, b) => b[1] - a[1])
+        byTitle.get(title)!.color = top?.[0] ?? null
     }
     return [...byTitle.values()]
         .filter((p) => p.total >= MIN_SESSIONS)
