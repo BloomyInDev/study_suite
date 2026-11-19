@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { API_URL } from '../lib/api-url'
 import { authHeaders } from '../lib/auth-headers.js'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import type { Assignment } from '../lib/types.js'
@@ -21,15 +21,21 @@ const editingAssignment = ref<Assignment | null>(null)
 const detailOpen = ref(false)
 const viewingAssignment = ref<Assignment | null>(null)
 
+// Bumped on every fetch, so a slower earlier response cannot overwrite a
+// newer one (the ids change once the group graph arrives, see below).
+let fetchSeq = 0
+
 async function fetchAssignments() {
     const ids = groups.effectiveGroupIds
     if (ids.length === 0) return
+    const seq = ++fetchSeq
     loading.value = true
     try {
         const params = new URLSearchParams({ groupIds: ids.join(',') })
         const res = await fetch(`${API_URL}/api/assignments?${params}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('fetch failed')
         const body = (await res.json()) as { data: Assignment[] }
+        if (seq !== fetchSeq) return
         assignments.value = body.data
     } catch {
         notifs.error('Erreur lors du chargement des devoirs')
@@ -127,6 +133,13 @@ async function toggleDone(a: Assignment, done: boolean) {
 }
 
 onMounted(fetchAssignments)
+// On a fresh load this view mounts before App.vue has fetched the group graph,
+// so `effectiveGroupIds` is the class alone and homework set on its promo or
+// semester is missing. Refetch once the ancestors are known, as HomeView does.
+watch(
+    () => groups.effectiveGroupIds.join(','),
+    () => void fetchAssignments(),
+)
 </script>
 
 <template>
