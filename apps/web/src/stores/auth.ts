@@ -73,6 +73,7 @@ export const useAuthStore = defineStore('auth', () => {
     const isPending = computed(() => user.value?.status === 'pending')
     const isApproved = computed(() => user.value?.status === 'approved')
     const isRejected = computed(() => user.value?.status === 'rejected')
+    const isTeacher = computed(() => user.value?.role === 'teacher')
     const hasProvider = (provider: AuthProvider) =>
         user.value?.identities.some((i) => i.provider === provider) ?? false
 
@@ -108,6 +109,7 @@ export const useAuthStore = defineStore('auth', () => {
         isPending,
         isApproved,
         isRejected,
+        isTeacher,
         hasProvider,
         setAuth,
         refresh,

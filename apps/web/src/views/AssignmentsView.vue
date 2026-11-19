@@ -3,6 +3,7 @@ import { API_URL } from '../lib/api-url'
 import { authHeaders } from '../lib/auth-headers.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
+import { useAuthStore } from '../stores/auth.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import type { Assignment } from '../lib/types.js'
 import AssignmentCard from '../components/AssignmentCard.vue'
@@ -10,6 +11,7 @@ import AssignmentFormDialog from '../components/AssignmentFormDialog.vue'
 import AssignmentDetailDialog from '../components/AssignmentDetailDialog.vue'
 
 const groups = useGroupsStore()
+const auth = useAuthStore()
 const notifs = useNotificationsStore()
 const showCompleted = ref(false)
 const search = ref('')
@@ -26,12 +28,14 @@ const viewingAssignment = ref<Assignment | null>(null)
 let fetchSeq = 0
 
 async function fetchAssignments() {
-    const ids = groups.effectiveGroupIds
-    if (ids.length === 0) return
+    // A teacher has no class of their own: naming no group asks the api for
+    // everything they may read, every class for an unlinked teacher.
+    const ids = auth.isTeacher ? [] : groups.effectiveGroupIds
+    if (!auth.isTeacher && ids.length === 0) return
     const seq = ++fetchSeq
     loading.value = true
     try {
-        const params = new URLSearchParams({ groupIds: ids.join(',') })
+        const params = new URLSearchParams(ids.length > 0 ? { groupIds: ids.join(',') } : {})
         const res = await fetch(`${API_URL}/api/assignments?${params}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('fetch failed')
         const body = (await res.json()) as { data: Assignment[] }
@@ -184,7 +188,11 @@ watch(
 
         <template v-if="!loading">
             <template v-if="assignments.length === 0">
-                <v-alert type="info" variant="tonal">Aucun devoir pour vos groupes.</v-alert>
+                <v-alert type="info" variant="tonal">{{
+                    auth.isTeacher
+                        ? 'Aucun devoir pour le moment.'
+                        : 'Aucun devoir pour vos groupes.'
+                }}</v-alert>
             </template>
 
             <template v-else>

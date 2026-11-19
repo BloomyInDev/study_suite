@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { API_URL } from '../lib/api-url'
+import { authHeaders } from '../lib/auth-headers.js'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
@@ -30,6 +31,11 @@ const detailOpen = ref(false)
 const viewingAssignment = ref<Assignment | null>(null)
 let intervalId: ReturnType<typeof setInterval> | null = null
 
+/** Whether the homework card has anything to ask for: a class, or being a teacher. */
+const showAssignments = computed(
+    () => auth.isAuthenticated && (auth.isTeacher || groupStore.effectiveGroupIds.length > 0),
+)
+
 async function load() {
     loading.value = true
     try {
@@ -40,20 +46,21 @@ async function load() {
                     events.value = e
                 }),
         ]
-        if (auth.isAuthenticated && groupStore.effectiveGroupIds.length > 0) {
+        if (showAssignments.value) {
             const from = new Date()
             const cutoff = new Date(from)
             cutoff.setDate(cutoff.getDate() + 14)
             // The api sorts oldest first, so without `from` the whole backlog
             // of past homework came back ahead of what is still due.
+            // A teacher names no group: the api answers with all they may read.
             const params = new URLSearchParams({
-                groupIds: groupStore.effectiveGroupIds.join(','),
+                ...(auth.isTeacher ? {} : { groupIds: groupStore.effectiveGroupIds.join(',') }),
                 from: from.toISOString(),
                 to: cutoff.toISOString(),
             })
             promises.push(
                 fetch(`${API_URL}/api/assignments?${params}`, {
-                    headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
+                    headers: authHeaders(),
                 })
                     .then((r) => (r.ok ? r.json() : { data: [] }))
                     .then((body: { data: Assignment[] }) => {
@@ -160,15 +167,10 @@ async function toggleDone(a: Assignment, done: boolean) {
                 </template>
             </v-col>
 
-            <!-- Shown even with nothing due, so the card can say so. Gated on
-                 having a group because that is what decides whether assignments
-                 were fetched at all: without one, empty means unasked. -->
-            <v-col
-                v-if="auth.isAuthenticated && groupStore.effectiveGroupIds.length > 0"
-                cols="12"
-                md="8"
-                lg="6"
-            >
+            <!-- Shown even with nothing due, so the card can say so. Gated like
+                 the fetch (showAssignments): without a group, and not being a
+                 teacher, empty means unasked. -->
+            <v-col v-if="showAssignments" cols="12" md="8" lg="6">
                 <v-card>
                     <v-card-item>
                         <template #prepend>
