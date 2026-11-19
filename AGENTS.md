@@ -520,21 +520,27 @@ were unknown: read them there after a teacher's first sign-in, then add the
 read and write, and `GET /api/assignments/groups` hands the same answer to the
 form:
 
-- an admin, or a teacher account **not linked** to a row in `teachers`: every
-  group. The teacher role only comes from an admin's approval or a `teacher`
+- an admin **with admin mode on**, or a teacher account **not linked** to a
+  row in `teachers`: every group. The teacher role only comes from an admin's approval or a `teacher`
   IUT mapping, so the account is vouched for even when nobody said which
   teacher it is;
 - a linked teacher: the groups of their own courses. The link is made by hand
   on the admin users page;
 - a student: their class and its ancestors.
 
+**Admin mode.** An admin account is often a student's, so here the admin flag
+alone counts for nothing: `actsAsAdmin()` (`lib/admin-mode.ts`) also wants
+`X-Admin-Mode: 1`, which the web app sends on every call while the admin has
+the mode on (`stores/admin-mode.ts`, per tab, app bar turns red;
+`lib/auth-headers.ts` adds it). Without it an admin gets a student's scope.
+This is not a security boundary, the flag is what grants it, and
+`/api/admin/*` checks the flag alone.
+
 **A teacher's homework is locked.** On top of the group scope, homework whose
 author has a `user_teachers` row can only be edited or deleted by a teacher
-account (`lib/assignment-lock.ts`, `403 TEACHER_LOCKED`). Being admin is not
-enough, since an admin is often a student: the request must also carry
-`X-Admin-Mode: 1`, which the web app sends while admin mode is on
-(`stores/admin-mode.ts`, per tab, app bar turns red). The DTO's
-`createdBy.isTeacher` drives both the hidden edit button and the "Prof" badge.
+account or an admin acting as one (`lib/assignment-lock.ts`,
+`403 TEACHER_LOCKED`). The DTO's `createdBy.isTeacher` drives both the hidden
+edit button and the "Prof" badge.
 
 **Naming it.** `iut` is an internal identifier, used for the provider enum, the
 table and the routes, and it stays that way. What a user sees comes from

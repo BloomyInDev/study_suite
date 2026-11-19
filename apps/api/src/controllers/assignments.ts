@@ -1,4 +1,5 @@
 import { createRoute, OpenAPIHono, z } from '@hono/zod-openapi'
+import type { Context } from 'hono'
 import {
     assignmentCompletions,
     assignments,
@@ -9,11 +10,8 @@ import {
 } from '@studysuite/db'
 import { and, asc, count, eq } from 'drizzle-orm'
 import { db } from '../db.js'
-import {
-    isAdminModeRequest,
-    mayChangeAssignment,
-    ADMIN_MODE_HEADER,
-} from '../lib/assignment-lock.js'
+import { actsAsAdmin, ADMIN_MODE_HEADER } from '../lib/admin-mode.js'
+import { mayChangeAssignment } from '../lib/assignment-lock.js'
 import { getAncestorGroupIds } from '../lib/group-ancestors.js'
 import { pickDisplay, type IdentitySummary } from '../lib/identities.js'
 import { requireAuth, type AuthEnv } from '../middleware/auth.js'
@@ -115,7 +113,8 @@ export function assignmentToDto(row: NonNullable<AssignmentRow>, myUserId: strin
 /**
  * The groups whose homework someone may read and write: every group, or a set.
  *
- * Every group for an admin, and for a teacher account not linked to a row in
+ * Every group for an admin acting as one (`actsAsAdmin()`: with admin mode
+ * on, since an admin is often a student browsing as one), and for a teacher account not linked to a row in
  * `teachers`. The teacher role only comes from an admin's approval or a
  * `teacher` IUT mapping, so the account is vouched for even when nobody said
  * which teacher it is. A linked teacher gets the groups of their own courses,
@@ -125,8 +124,8 @@ type GroupScope = { all: true } | { all: false; ids: Set<string> }
 
 const inScope = (scope: GroupScope, groupId: string) => scope.all || scope.ids.has(groupId)
 
-async function getGroupScope(userId: string, isAdmin: boolean): Promise<GroupScope> {
-    if (isAdmin) return { all: true }
+async function getGroupScope(userId: string, asAdmin: boolean): Promise<GroupScope> {
+    if (asAdmin) return { all: true }
     const [teacher] = await db.select().from(userTeachers).where(eq(userTeachers.userId, userId))
     if (teacher && !teacher.teacherId) return { all: true }
     return { all: false, ids: await getUserAccessibleGroupIds(userId, teacher?.teacherId ?? null) }
@@ -157,8 +156,8 @@ async function getUserAccessibleGroupIds(
     return result
 }
 
-async function canWrite(userId: string, isAdmin: boolean, groupId: string): Promise<boolean> {
-    return inScope(await getGroupScope(userId, isAdmin), groupId)
+async function canWrite(userId: string, asAdmin: boolean, groupId: string): Promise<boolean> {
+    return inScope(await getGroupScope(userId, asAdmin), groupId)
 }
 
 async function isTeacherAccount(userId: string): Promise<boolean> {
@@ -172,17 +171,20 @@ async function isTeacherAccount(userId: string): Promise<boolean> {
 /** Whether this request may edit or delete `row`, beyond the group check. */
 async function passesTeacherLock(
     row: NonNullable<AssignmentRow>,
-    payload: { sub: string; isAdmin: boolean },
-    adminModeHeader: string | undefined,
+    userId: string,
+    asAdmin: boolean,
 ): Promise<boolean> {
     const authorIsTeacher = !!row.createdBy?.teacherProfile
     if (!authorIsTeacher) return true
     return mayChangeAssignment(authorIsTeacher, {
-        isTeacher: await isTeacherAccount(payload.sub),
-        isAdmin: payload.isAdmin,
-        adminMode: isAdminModeRequest(adminModeHeader),
+        isTeacher: await isTeacherAccount(userId),
+        actsAsAdmin: asAdmin,
     })
 }
+
+/** The flag and admin mode: an admin browsing as a student is one here. */
+const asAdmin = (c: Context<AuthEnv>) =>
+    actsAsAdmin(c.get('user').isAdmin, c.req.header(ADMIN_MODE_HEADER))
 
 const TEACHER_LOCKED = {
     error: { code: 'TEACHER_LOCKED', message: "Only a teacher may change a teacher's homework" },
@@ -212,7 +214,7 @@ app.openapi(
         const payload = c.get('user')
         const { groupIds, from, to } = c.req.valid('query')
 
-        const scope = await getGroupScope(payload.sub, payload.isAdmin)
+        const scope = await getGroupScope(payload.sub, asAdmin(c))
         const allowedGroupIds = scope.all
             ? (groupIds ?? [])
             : groupIds
@@ -256,7 +258,7 @@ app.openapi(
     }),
     async (c) => {
         const payload = c.get('user')
-        const scope = await getGroupScope(payload.sub, payload.isAdmin)
+        const scope = await getGroupScope(payload.sub, asAdmin(c))
         return c.json({ data: { all: scope.all, groupIds: scope.all ? [] : [...scope.ids] } }, 200)
     },
 )
@@ -284,7 +286,7 @@ app.openapi(
         if (!row)
             return c.json({ error: { code: 'NOT_FOUND', message: 'Assignment not found' } }, 404)
 
-        if (!inScope(await getGroupScope(payload.sub, payload.isAdmin), row.studentGroupId)) {
+        if (!inScope(await getGroupScope(payload.sub, asAdmin(c)), row.studentGroupId)) {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
         }
 
@@ -316,7 +318,7 @@ app.openapi(
         }
         const body = c.req.valid('json')
 
-        if (!(await canWrite(payload.sub, payload.isAdmin, body.studentGroupId))) {
+        if (!(await canWrite(payload.sub, asAdmin(c), body.studentGroupId))) {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
         }
 
@@ -371,16 +373,16 @@ app.openapi(
         }
 
         const targetGroupId = body.studentGroupId ?? existing.studentGroupId
-        if (!(await canWrite(payload.sub, payload.isAdmin, existing.studentGroupId))) {
+        if (!(await canWrite(payload.sub, asAdmin(c), existing.studentGroupId))) {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
         }
-        if (!(await passesTeacherLock(existing, payload, c.req.header(ADMIN_MODE_HEADER)))) {
+        if (!(await passesTeacherLock(existing, payload.sub, asAdmin(c)))) {
             return c.json(TEACHER_LOCKED, 403)
         }
         if (
             body.studentGroupId &&
             body.studentGroupId !== existing.studentGroupId &&
-            !(await canWrite(payload.sub, payload.isAdmin, targetGroupId))
+            !(await canWrite(payload.sub, asAdmin(c), targetGroupId))
         ) {
             return c.json(
                 { error: { code: 'FORBIDDEN', message: 'Access denied on target group' } },
@@ -425,10 +427,10 @@ app.openapi(
         if (!existing) {
             return c.json({ error: { code: 'NOT_FOUND', message: 'Assignment not found' } }, 404)
         }
-        if (!(await canWrite(payload.sub, payload.isAdmin, existing.studentGroupId))) {
+        if (!(await canWrite(payload.sub, asAdmin(c), existing.studentGroupId))) {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
         }
-        if (!(await passesTeacherLock(existing, payload, c.req.header(ADMIN_MODE_HEADER)))) {
+        if (!(await passesTeacherLock(existing, payload.sub, asAdmin(c)))) {
             return c.json(TEACHER_LOCKED, 403)
         }
 
