@@ -132,7 +132,6 @@ function notInList() {
                     variant="outlined"
                     density="comfortable"
                     hide-details
-                    autofocus
                 />
             </v-card-text>
             <v-card-actions class="px-4 pb-4 flex-wrap ga-2">
