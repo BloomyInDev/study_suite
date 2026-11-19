@@ -16,6 +16,7 @@ import AssignmentDetailDialog from '../components/AssignmentDetailDialog.vue'
 import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import WeekStatsCard from '../components/WeekStatsCard.vue'
 import FreeRoomsCard from '../components/FreeRoomsCard.vue'
+import CourseProgressCard from '../components/CourseProgressCard.vue'
 
 const groupStore = useGroupsStore()
 const eventsStore = useEventsStore()
@@ -217,6 +218,10 @@ async function toggleDone(a: Assignment, done: boolean) {
 
             <v-col v-if="groupStore.selectedGroupIds.length > 0" cols="12" md="8" lg="6">
                 <WeekStatsCard />
+            </v-col>
+
+            <v-col v-if="groupStore.effectiveGroupIds.length > 0" cols="12" md="8" lg="6">
+                <CourseProgressCard />
             </v-col>
 
             <v-col v-if="auth.isAuthenticated" cols="12" md="8" lg="6">
