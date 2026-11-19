@@ -74,8 +74,8 @@ function formatAbsolute(iso: string) {
             <v-chip
                 v-if="assignment.createdBy?.isTeacher"
                 size="x-small"
-                variant="tonal"
-                color="secondary"
+                variant="flat"
+                color="teal-darken-2"
                 prepend-icon="mdi-school"
             >
                 Prof

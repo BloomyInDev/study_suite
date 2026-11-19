@@ -96,8 +96,8 @@ function formatAuthor(user: { displayName: string } | null, dateIso: string) {
                     </v-chip>
                     <v-chip
                         v-if="assignment.createdBy?.isTeacher"
-                        color="secondary"
-                        variant="tonal"
+                        color="teal-darken-2"
+                        variant="flat"
                         size="small"
                         prepend-icon="mdi-school"
                     >
