@@ -9,7 +9,7 @@ import { useProvidersStore } from './stores/providers.js'
 import { useRemindersStore } from './stores/reminders.js'
 import { useHiddenCoursesStore } from './stores/hidden-courses.js'
 import { useTermsStore } from './stores/terms.js'
-import { useSuperuserStore } from './stores/superuser.js'
+import { useAdminModeStore } from './stores/admin-mode.js'
 import TermsBanner from './components/TermsBanner.vue'
 import { usePageSeo } from './lib/seo.js'
 import { adminMenus } from './lib/admin-nav.js'
@@ -25,13 +25,13 @@ const auth = useAuthStore()
 const reminders = useRemindersStore()
 const hiddenCourses = useHiddenCoursesStore()
 const terms = useTermsStore()
-const superuser = useSuperuserStore()
+const adminMode = useAdminModeStore()
 const adminNav = computed(() => adminMenus(providersStore.iutLabel))
 
 // The admin pages need admin mode (router guard). Leaving the mode while on one
 // would strand the admin on a page the nav no longer offers.
 watch(
-    () => superuser.active,
+    () => adminMode.active,
     (active) => {
         if (!active && route.path.startsWith('/admin')) void router.push('/')
     },
@@ -126,7 +126,7 @@ const navItems = [
                     :to="item.to"
                     @click="drawerOpen = false"
                 />
-                <template v-if="superuser.active">
+                <template v-if="adminMode.active">
                     <template v-for="menu in adminNav" :key="menu.title">
                         <v-list-subheader>{{ menu.title }}</v-list-subheader>
                         <v-list-item
@@ -145,10 +145,10 @@ const navItems = [
                 <v-list nav density="compact">
                     <v-list-item
                         v-if="auth.isAdmin"
-                        :prepend-icon="superuser.active ? 'mdi-shield-alert' : 'mdi-shield-outline'"
-                        :title="superuser.active ? 'Quitter le mode admin' : 'Mode admin'"
-                        :base-color="superuser.active ? 'error' : undefined"
-                        @click="superuser.toggle()"
+                        :prepend-icon="adminMode.active ? 'mdi-shield-alert' : 'mdi-shield-outline'"
+                        :title="adminMode.active ? 'Quitter le mode admin' : 'Mode admin'"
+                        :base-color="adminMode.active ? 'error' : undefined"
+                        @click="adminMode.toggle()"
                     />
                     <v-list-item
                         v-if="auth.isAuthenticated"
@@ -169,8 +169,8 @@ const navItems = [
         </v-navigation-drawer>
 
         <v-app-bar
-            :color="superuser.active ? 'error' : 'primary'"
-            :title="superuser.active ? 'Study Suite · admin' : 'Study Suite'"
+            :color="adminMode.active ? 'error' : 'primary'"
+            :title="adminMode.active ? 'Study Suite · admin' : 'Study Suite'"
         >
             <template #prepend v-if="mobile">
                 <v-app-bar-nav-icon @click="drawerOpen = !drawerOpen" />
@@ -181,7 +181,7 @@ const navItems = [
                     <v-icon>{{ item.icon }}</v-icon>
                     <v-tooltip activator="parent" location="bottom">{{ item.title }}</v-tooltip>
                 </v-btn>
-                <template v-if="superuser.active">
+                <template v-if="adminMode.active">
                     <v-divider vertical class="mx-2" />
                     <v-menu v-for="menu in adminNav" :key="menu.title" location="bottom end">
                         <template #activator="{ props: menuProps }">
@@ -205,12 +205,12 @@ const navItems = [
                     </v-menu>
                 </template>
                 <v-divider vertical class="mx-2" />
-                <v-btn v-if="auth.isAdmin" icon @click="superuser.toggle()">
+                <v-btn v-if="auth.isAdmin" icon @click="adminMode.toggle()">
                     <v-icon>{{
-                        superuser.active ? 'mdi-shield-alert' : 'mdi-shield-outline'
+                        adminMode.active ? 'mdi-shield-alert' : 'mdi-shield-outline'
                     }}</v-icon>
                     <v-tooltip activator="parent" location="bottom">{{
-                        superuser.active ? 'Quitter le mode admin' : 'Mode admin'
+                        adminMode.active ? 'Quitter le mode admin' : 'Mode admin'
                     }}</v-tooltip>
                 </v-btn>
                 <v-btn v-if="auth.isAuthenticated" icon @click="logout">

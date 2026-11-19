@@ -2,7 +2,7 @@
 import { groupLabel } from '../lib/group-label.js'
 import { computed } from 'vue'
 import { useAuthStore } from '../stores/auth.js'
-import { useSuperuserStore } from '../stores/superuser.js'
+import { useAdminModeStore } from '../stores/admin-mode.js'
 import type { Assignment } from '../lib/types.js'
 import { formatDueRelative } from '../lib/date.js'
 import { renderMarkdown } from '../lib/markdown.js'
@@ -18,14 +18,14 @@ const emit = defineEmits<{
 }>()
 
 const auth = useAuthStore()
-const superuser = useSuperuserStore()
+const adminMode = useAdminModeStore()
 
 // Mirrors the api's lock: a teacher's homework is for teachers to change, or
-// an admin in superuser mode. The api enforces it; this only hides the button.
+// an admin with admin mode on. The api enforces it; this only hides the button.
 const canEdit = computed(() => {
     if (!props.assignment || !(auth.isApproved || auth.isAdmin)) return false
     if (!props.assignment.createdBy?.isTeacher) return true
-    return auth.user?.role === 'teacher' || superuser.active
+    return auth.user?.role === 'teacher' || adminMode.active
 })
 
 const show = computed({

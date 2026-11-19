@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useAuthStore } from './auth.js'
 
-const KEY = 'study_suite_superuser'
+const KEY = 'study_suite_admin_mode'
 
 function readStored(): boolean {
     try {
@@ -18,12 +18,12 @@ function readStored(): boolean {
  * until the mode is switched on. Then the app bar turns red and offers the
  * admin pages (`lib/admin-nav.ts`), the router lets `/admin/*` through, and
  * homework edits may pass the lock on a teacher's homework
- * (`lib/assignment-lock.ts` in the api, through `X-Superuser`).
+ * (`lib/assignment-lock.ts` in the api, through `X-Admin-Mode`).
  *
  * Kept in sessionStorage, so it ends with the tab rather than lingering for
  * days on an account its owner mostly uses as a student.
  */
-export const useSuperuserStore = defineStore('superuser', () => {
+export const useAdminModeStore = defineStore('adminMode', () => {
     const auth = useAuthStore()
     const enabled = ref(readStored())
 
@@ -41,7 +41,7 @@ export const useSuperuserStore = defineStore('superuser', () => {
 
     /** Headers to add to a homework edit or delete. */
     function headers(): Record<string, string> {
-        return active.value ? { 'X-Superuser': '1' } : {}
+        return active.value ? { 'X-Admin-Mode': '1' } : {}
     }
 
     return { enabled, active, toggle, headers }

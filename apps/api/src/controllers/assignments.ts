@@ -10,9 +10,9 @@ import {
 import { and, asc, count, eq } from 'drizzle-orm'
 import { db } from '../db.js'
 import {
-    isSuperuserRequest,
+    isAdminModeRequest,
     mayChangeAssignment,
-    SUPERUSER_HEADER,
+    ADMIN_MODE_HEADER,
 } from '../lib/assignment-lock.js'
 import { getAncestorGroupIds } from '../lib/group-ancestors.js'
 import { pickDisplay, type IdentitySummary } from '../lib/identities.js'
@@ -173,14 +173,14 @@ async function isTeacherAccount(userId: string): Promise<boolean> {
 async function passesTeacherLock(
     row: NonNullable<AssignmentRow>,
     payload: { sub: string; isAdmin: boolean },
-    superuserHeader: string | undefined,
+    adminModeHeader: string | undefined,
 ): Promise<boolean> {
     const authorIsTeacher = !!row.createdBy?.teacherProfile
     if (!authorIsTeacher) return true
     return mayChangeAssignment(authorIsTeacher, {
         isTeacher: await isTeacherAccount(payload.sub),
         isAdmin: payload.isAdmin,
-        superuser: isSuperuserRequest(superuserHeader),
+        adminMode: isAdminModeRequest(adminModeHeader),
     })
 }
 
@@ -374,7 +374,7 @@ app.openapi(
         if (!(await canWrite(payload.sub, payload.isAdmin, existing.studentGroupId))) {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
         }
-        if (!(await passesTeacherLock(existing, payload, c.req.header(SUPERUSER_HEADER)))) {
+        if (!(await passesTeacherLock(existing, payload, c.req.header(ADMIN_MODE_HEADER)))) {
             return c.json(TEACHER_LOCKED, 403)
         }
         if (
@@ -428,7 +428,7 @@ app.openapi(
         if (!(await canWrite(payload.sub, payload.isAdmin, existing.studentGroupId))) {
             return c.json({ error: { code: 'FORBIDDEN', message: 'Access denied' } }, 403)
         }
-        if (!(await passesTeacherLock(existing, payload, c.req.header(SUPERUSER_HEADER)))) {
+        if (!(await passesTeacherLock(existing, payload, c.req.header(ADMIN_MODE_HEADER)))) {
             return c.json(TEACHER_LOCKED, 403)
         }
 

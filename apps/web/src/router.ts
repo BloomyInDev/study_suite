@@ -1,6 +1,6 @@
 import type { RouteRecordRaw, Router } from 'vue-router'
 import { useAuthStore } from './stores/auth.js'
-import { useSuperuserStore } from './stores/superuser.js'
+import { useAdminModeStore } from './stores/admin-mode.js'
 
 // vite-ssg owns the router instance, since it needs a memory history to render
 // each route at build time. This module only describes the routes and the guard.
@@ -92,7 +92,7 @@ export function registerGuards(router: Router) {
 
         // Admin pages need admin mode on, not just the flag: an admin account is
         // often a student's, and browses as one until the mode is switched on.
-        if (to.meta.requiresAdmin && !useSuperuserStore().active) return '/'
+        if (to.meta.requiresAdmin && !useAdminModeStore().active) return '/'
 
         return true
     })

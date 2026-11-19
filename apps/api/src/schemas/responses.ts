@@ -148,7 +148,7 @@ export const AssignmentDtoSchema = z
                 displayName: z.string().openapi({ example: 'bastien' }),
                 isTeacher: z.boolean().openapi({
                     description:
-                        'Written by a teacher: only teachers, or an admin in superuser mode, may change it',
+                        'Written by a teacher: only teachers, or an admin with admin mode on, may change it',
                     example: false,
                 }),
             })
