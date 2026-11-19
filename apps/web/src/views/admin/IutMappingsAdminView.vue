@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { API_URL } from '../../lib/api-url'
+import { authHeaders } from '../../lib/auth-headers.js'
 import { groupLabel } from '../../lib/group-label.js'
 import { useGroupsStore } from '../../stores/groups.js'
 import { useNotificationsStore } from '../../stores/notifications.js'
@@ -38,10 +39,6 @@ const canSubmit = computed(
     () =>
         form.claimValue.trim().length > 0 && (form.userRole === 'teacher' || !!form.studentGroupId),
 )
-
-function authHeaders() {
-    return { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
-}
 
 async function fetchMappings() {
     loading.value = true

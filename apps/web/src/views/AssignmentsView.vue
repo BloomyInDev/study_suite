@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { API_URL } from '../lib/api-url'
+import { authHeaders } from '../lib/auth-headers.js'
 import { computed, onMounted, ref } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
@@ -20,17 +21,13 @@ const editingAssignment = ref<Assignment | null>(null)
 const detailOpen = ref(false)
 const viewingAssignment = ref<Assignment | null>(null)
 
-function authHeader() {
-    return { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
-}
-
 async function fetchAssignments() {
     const ids = groups.effectiveGroupIds
     if (ids.length === 0) return
     loading.value = true
     try {
         const params = new URLSearchParams({ groupIds: ids.join(',') })
-        const res = await fetch(`${API_URL}/api/assignments?${params}`, { headers: authHeader() })
+        const res = await fetch(`${API_URL}/api/assignments?${params}`, { headers: authHeaders() })
         if (!res.ok) throw new Error('fetch failed')
         const body = (await res.json()) as { data: Assignment[] }
         assignments.value = body.data
@@ -110,7 +107,7 @@ async function toggleDone(a: Assignment, done: boolean) {
     try {
         const res = await fetch(`${API_URL}/api/assignments/${a.id}/complete`, {
             method,
-            headers: authHeader(),
+            headers: authHeaders(),
         })
         if (!res.ok) throw new Error()
         const body = (await res.json()) as { data: { completedByMe: boolean; completionCount: number } }
