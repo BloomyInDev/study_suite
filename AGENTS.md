@@ -528,6 +528,14 @@ form:
   on the admin users page;
 - a student: their class and its ancestors.
 
+**A teacher's homework is locked.** On top of the group scope, homework whose
+author has a `user_teachers` row can only be edited or deleted by a teacher
+account (`lib/assignment-lock.ts`, `403 TEACHER_LOCKED`). Being admin is not
+enough, since an admin is often a student: the request must also carry
+`X-Superuser: 1`, which the web app sends while the admin's superuser mode is
+on (`stores/superuser.ts`, per tab, app bar turns red). The DTO's
+`createdBy.isTeacher` drives both the hidden edit button and the "Prof" badge.
+
 **Naming it.** `iut` is an internal identifier, used for the provider enum, the
 table and the routes, and it stays that way. What a user sees comes from
 `iut.displayName` (default `IUT`) via `GET /api/config`, which lists the

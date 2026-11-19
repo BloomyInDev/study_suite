@@ -94,6 +94,15 @@ function formatAuthor(user: { displayName: string } | null, dateIso: string) {
                     >
                         {{ assignment.event.title }}
                     </v-chip>
+                    <v-chip
+                        v-if="assignment.createdBy?.isTeacher"
+                        color="secondary"
+                        variant="tonal"
+                        size="small"
+                        prepend-icon="mdi-school"
+                    >
+                        Donné par l'enseignant
+                    </v-chip>
                 </div>
 
                 <div
