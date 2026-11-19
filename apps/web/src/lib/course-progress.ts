@@ -33,6 +33,22 @@ export interface CourseProgress {
     color: string | null
 }
 
+/**
+ * The planning paints some courses white or light grey, which a bar on a grey
+ * track on a white card cannot show. Those, hueless and light, give way to the
+ * theme colour; the saturated pastels (yellow, pink, light blue) stay.
+ */
+export function visibleBarColor(hex: string | null): string | null {
+    if (!hex) return null
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [
+        number,
+        number,
+        number,
+    ]
+    const hueless = Math.max(r, g, b) - Math.min(r, g, b) < 24
+    return hueless && Math.min(r, g, b) > 180 ? null : hex
+}
+
 /** Courses in progress first, then those not started, then the finished ones. */
 function stage(p: CourseProgress): number {
     if (p.done >= p.total) return 2
@@ -63,7 +79,7 @@ export function courseProgress(
     }
     for (const [title, counts] of colours) {
         const [top] = [...counts].sort((a, b) => b[1] - a[1])
-        byTitle.get(title)!.color = top?.[0] ?? null
+        byTitle.get(title)!.color = visibleBarColor(top?.[0] ?? null)
     }
     return [...byTitle.values()]
         .filter((p) => p.total >= MIN_SESSIONS)
