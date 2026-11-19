@@ -65,7 +65,8 @@ export interface Assignment {
     dueDate: string
     studentGroup: { id: string; internalName: string; displayName?: string | null }
     event: { id: string; title: string } | null
-    createdBy: { id: string; displayName: string } | null
+    /** `isTeacher`: only teachers, or an admin in superuser mode, may change it. */
+    createdBy: { id: string; displayName: string; isTeacher: boolean } | null
     updatedBy: { id: string; displayName: string } | null
     completedByMe: boolean
     completionCount: number

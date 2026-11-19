@@ -9,6 +9,7 @@ import { useProvidersStore } from './stores/providers.js'
 import { useRemindersStore } from './stores/reminders.js'
 import { useHiddenCoursesStore } from './stores/hidden-courses.js'
 import { useTermsStore } from './stores/terms.js'
+import { useSuperuserStore } from './stores/superuser.js'
 import TermsBanner from './components/TermsBanner.vue'
 import { usePageSeo } from './lib/seo.js'
 
@@ -22,6 +23,7 @@ const auth = useAuthStore()
 const reminders = useRemindersStore()
 const hiddenCourses = useHiddenCoursesStore()
 const terms = useTermsStore()
+const superuser = useSuperuserStore()
 
 // The one place the head is wired up: every page's title and og: tags come from
 // lib/pages.ts and follow the route, so no view carries head code of its own.
@@ -124,6 +126,13 @@ const navItems = [
                         @click="drawerOpen = false"
                     />
                     <v-list-item
+                        v-if="auth.isAdmin"
+                        :prepend-icon="superuser.active ? 'mdi-shield-alert' : 'mdi-shield-outline'"
+                        :title="superuser.active ? 'Superuser activé' : 'Mode superuser'"
+                        :base-color="superuser.active ? 'error' : undefined"
+                        @click="superuser.toggle()"
+                    />
+                    <v-list-item
                         v-if="auth.isAuthenticated"
                         prepend-icon="mdi-logout"
                         title="Se déconnecter"
@@ -141,7 +150,10 @@ const navItems = [
             </template>
         </v-navigation-drawer>
 
-        <v-app-bar color="primary" title="Study Suite">
+        <v-app-bar
+            :color="superuser.active ? 'error' : 'primary'"
+            :title="superuser.active ? 'Study Suite · superuser' : 'Study Suite'"
+        >
             <template #prepend v-if="mobile">
                 <v-app-bar-nav-icon @click="drawerOpen = !drawerOpen" />
             </template>
@@ -155,6 +167,14 @@ const navItems = [
                 <v-btn v-if="auth.isAdmin" icon to="/admin">
                     <v-icon>mdi-shield-crown</v-icon>
                     <v-tooltip activator="parent" location="bottom">Admin</v-tooltip>
+                </v-btn>
+                <v-btn v-if="auth.isAdmin" icon @click="superuser.toggle()">
+                    <v-icon>{{
+                        superuser.active ? 'mdi-shield-alert' : 'mdi-shield-outline'
+                    }}</v-icon>
+                    <v-tooltip activator="parent" location="bottom">{{
+                        superuser.active ? 'Quitter le mode superuser' : 'Mode superuser'
+                    }}</v-tooltip>
                 </v-btn>
                 <v-btn v-if="auth.isAuthenticated" icon @click="logout">
                     <v-icon>mdi-logout</v-icon>

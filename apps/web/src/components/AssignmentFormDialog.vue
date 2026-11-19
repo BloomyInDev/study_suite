@@ -5,6 +5,7 @@ import { computed, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import { useEventsStore } from '../stores/events.js'
+import { useSuperuserStore } from '../stores/superuser.js'
 import type { Assignment, Event } from '../lib/types.js'
 import { addParisDays, formatShortDay, formatTime, parisDayStart } from '../lib/date.js'
 import { fetchCourseTitles } from '../lib/course-titles.js'
@@ -22,6 +23,7 @@ const emit = defineEmits<{
 const groups = useGroupsStore()
 const notifs = useNotificationsStore()
 const eventsStore = useEventsStore()
+const superuser = useSuperuserStore()
 
 const show = computed({
     get: () => props.modelValue,
@@ -223,7 +225,11 @@ function formatDueAbsolute(datetimeLocal: string) {
 }
 
 function authHeader() {
-    return { Authorization: `Bearer ${localStorage.getItem('auth_token')}` }
+    // Superuser mode is what lets an admin past the lock on a teacher's homework.
+    return {
+        Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        ...superuser.headers(),
+    }
 }
 
 async function save() {
