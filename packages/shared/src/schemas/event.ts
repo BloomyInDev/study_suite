@@ -11,6 +11,12 @@ export const TeacherSchema = z.object({
 
 export const StudentGroupSchema = z.object({
     internalName: z.string(),
+    /**
+     * What to show when the internal name had to be qualified to stay unique
+     * (`S1 (GEII)` shown as `S1`). Only used when the group is first created:
+     * an admin's later rename wins.
+     */
+    displayName: z.string().optional(),
 })
 
 export const ParsedEventSchema = z.object({

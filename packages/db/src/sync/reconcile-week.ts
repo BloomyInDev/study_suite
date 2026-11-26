@@ -219,8 +219,12 @@ async function getOrCreateTeacher(
 async function getOrCreateStudentGroup(
     tx: Parameters<Parameters<Db['transaction']>[0]>[0],
     internalName: string,
+    displayName?: string,
 ): Promise<string> {
-    await tx.insert(studentGroups).values({ internalName }).onConflictDoNothing()
+    await tx
+        .insert(studentGroups)
+        .values({ internalName, displayName: displayName ?? null })
+        .onConflictDoNothing()
     const [row] = await tx
         .select({ id: studentGroups.id })
         .from(studentGroups)
@@ -253,7 +257,11 @@ async function insertEventWithRelations(
     }
 
     for (const group of ev.groups) {
-        const studentGroupId = await getOrCreateStudentGroup(tx, group.internalName)
+        const studentGroupId = await getOrCreateStudentGroup(
+            tx,
+            group.internalName,
+            group.displayName,
+        )
         await tx.insert(eventStudentGroups).values({ eventId: inserted.id, studentGroupId })
     }
 }
