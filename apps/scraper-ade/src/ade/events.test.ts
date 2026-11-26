@@ -63,6 +63,71 @@ describe('toEvents', () => {
         )
     })
 
+    it('reads a box aligned on two whole columns as the same hours on both days', () => {
+        // GEA BUT3: one ADE event, Tuesday and Wednesday 13h30, drawn as one box.
+        const events = toEvents([square({ left: 999, width: 2000 })], columns)
+        expect(events.map((e) => e.startDate)).toEqual([
+            new Date('2026-09-29T06:00:00Z'),
+            new Date('2026-09-30T06:00:00Z'),
+        ])
+        expect(events.every((e) => e.adeId === 1)).toBe(true)
+    })
+
+    it('splits an event that changes room mid-way at its second hours line', () => {
+        const events = toEvents(
+            [
+                square({
+                    lines: [
+                        'R5.GC2F.09 Fiscalité',
+                        'K212',
+                        PATH,
+                        'AUGE   AXEL',
+                        'BUT3 FA - GC2F',
+                        '08h00 - 10h00',
+                        'K211',
+                        '10h00 - 12h00',
+                    ],
+                }),
+            ],
+            columns,
+        )
+        expect(events.map((e) => [e.startDate, e.endDate, e.rooms])).toEqual([
+            [
+                new Date('2026-09-28T06:00:00Z'),
+                new Date('2026-09-28T08:00:00Z'),
+                [{ name: 'K212' }],
+            ],
+            [
+                new Date('2026-09-28T08:00:00Z'),
+                new Date('2026-09-28T10:00:00Z'),
+                [{ name: 'K211' }],
+            ],
+        ])
+        for (const e of events) {
+            expect(e.teachers).toEqual([{ lastName: 'AUGE', firstName: 'Axel' }])
+            expect(e.groups).toEqual([{ internalName: 'BUT3 FA - GC2F' }])
+        }
+    })
+
+    it('adds rooms printed after the last hours line to the event', () => {
+        // Mesures Physiques: `… Groupe B | 08h00 - 09h30 | B009 TD`.
+        const e = one({
+            lines: [
+                'Env. Sévère TD B',
+                'B014 TD',
+                PATH,
+                'AUGEREAU   FRANCK',
+                'Groupe B',
+                '08h00 - 09h30',
+                'B009 TD',
+                PATH,
+            ],
+        })
+        expect(e.rooms).toEqual([{ name: 'B014 TD' }, { name: 'B009 TD' }])
+        expect(e.groups).toEqual([{ internalName: 'Groupe B' }])
+        expect(e.endDate).toEqual(new Date('2026-09-28T07:30:00Z'))
+    })
+
     it('keeps one event for several drawings of the same ADE event', () => {
         // `Tutorat` is drawn once per group sub-column, under one id.
         const events = toEvents(
