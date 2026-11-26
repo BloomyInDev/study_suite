@@ -19,6 +19,18 @@ const schema = z.object({
          * Unauthenticated, so only for a private network (see watch/trigger.ts).
          */
         triggerPort: zInt.positive().optional(),
+        /**
+         * A `resources.json` from the proseconsult toolkit (`[{ id, path, name }]`).
+         * Set, the scraper fetches every resource in it, not only the ones the
+         * `data=` blob unlocks: the ADE session reads any of them. Unset, it
+         * scrapes the blob's resources alone, as it always did.
+         */
+        resourceMap: z.string().min(1).optional(),
+        /**
+         * Weeks per `getTimetable` call. A whole year of 60 resources makes the
+         * IUT's gateway give up (504), so the range is fetched in slices.
+         */
+        weeksPerCall: zInt.positive().default(8),
     }),
 })
 
@@ -35,6 +47,8 @@ export const config = loadConfig({
         SCRAPE_PAST_DAYS: 'scrape.pastDays',
         SCRAPE_FUTURE_DAYS: 'scrape.futureDays',
         SCRAPE_TRIGGER_PORT: 'scrape.triggerPort',
+        SCRAPE_RESOURCE_MAP: 'scrape.resourceMap',
+        SCRAPE_WEEKS_PER_CALL: 'scrape.weeksPerCall',
     },
 })
 

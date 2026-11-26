@@ -5,12 +5,18 @@ import { startTriggerServer } from './watch/trigger.js'
 
 const db = createDb(config.database.url)
 const runOnce = process.argv.includes('--once')
+// Only for a single run: left on in the loop, the changes feed would go silent.
+const recordChanges = !process.argv.includes('--no-changes')
+if (!recordChanges && !runOnce) {
+    console.error('[scraper] --no-changes only goes with --once')
+    process.exit(1)
+}
 
 if (config.scrape.triggerPort && !runOnce) {
     startTriggerServer(config.scrape.triggerPort, requestScrape)
 }
 
-runWatchLoop(config, db, runOnce)
+runWatchLoop(config, db, runOnce, { recordChanges })
     .then(async () => {
         // A --once run does not exit on its own: the postgres connection holds
         // the event loop open. Everything is committed by now, so close the

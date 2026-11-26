@@ -1,0 +1,1547 @@
+[
+  {
+    "id": "481",
+    "path": "Iutm > Iutm > GEA > BUT 3 - FI > BUT3 FI - GC2F",
+    "name": "BUT3 FI - GC2F"
+  },
+  {
+    "id": "491",
+    "path": "Iutm > Iutm > GEA > BUT 3 - FA > BUT3 FA - GC2F",
+    "name": "BUT3 FA - GC2F"
+  },
+  {
+    "id": "492",
+    "path": "Iutm > Iutm > GEA > BUT 3 - FI > BUT3 FI - GEMA",
+    "name": "BUT3 FI - GEMA"
+  },
+  {
+    "id": "4518",
+    "path": "Iutm > Iutm > options inter-d?partements > LV2 Espagnol B",
+    "name": "LV2 Espagnol B"
+  },
+  {
+    "id": "5765",
+    "path": "Iutm > Iutm > GEII > LP ASI > LP ASI GrA",
+    "name": "LP ASI GrA"
+  },
+  {
+    "id": "6715",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-4 > Q1 > Q1",
+    "name": "Q1"
+  },
+  {
+    "id": "6723",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-4 > Q2 > Q2",
+    "name": "Q2"
+  },
+  {
+    "id": "6730",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-4 > Q3 > Q3",
+    "name": "Q3"
+  },
+  {
+    "id": "6739",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-4 > Q4 > Q4",
+    "name": "Q4"
+  },
+  {
+    "id": "7222",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S1 > S1a",
+    "name": "S1a"
+  },
+  {
+    "id": "7226",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S2 > S2a",
+    "name": "S2a"
+  },
+  {
+    "id": "7326",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S3 > S3a",
+    "name": "S3a"
+  },
+  {
+    "id": "7336",
+    "path": "Iutm > Iutm > Chimie S?te > BUT3 Chimie > BUT3 S5 > IID",
+    "name": "IID"
+  },
+  {
+    "id": "7343",
+    "path": "Iutm > Iutm > Chimie S?te > BUT3 Chimie > BUT3 S6 > IIC",
+    "name": "IIC"
+  },
+  {
+    "id": "7397",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S4 > S4a",
+    "name": "S4a"
+  },
+  {
+    "id": "7405",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S5 > S5a",
+    "name": "S5a"
+  },
+  {
+    "id": "7411",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S?te > S6a",
+    "name": "S6a"
+  },
+  {
+    "id": "8468",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 5-6 > MPF_NuMat_FA",
+    "name": "MPF_NuMat_FA"
+  },
+  {
+    "id": "8477",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S5 FI > S5 FI - A > S5 FI - A1",
+    "name": "S5 FI - A1"
+  },
+  {
+    "id": "8497",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S5 FI > S5 FI - A > S5 FI - A2",
+    "name": "S5 FI - A2"
+  },
+  {
+    "id": "8640",
+    "path": "Iutm > Iutm > TC > BUT 3 TC FI > Groupe A FI3 MDEE",
+    "name": "Groupe A FI3 MDEE"
+  },
+  {
+    "id": "8652",
+    "path": "Iutm > Iutm > TC > BUT 3 TC FI > Groupe B FI3 BI",
+    "name": "Groupe B FI3 BI"
+  },
+  {
+    "id": "8691",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP3 > Groupe B > B1",
+    "name": "B1"
+  },
+  {
+    "id": "8708",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S5 FA > S5 FA - tous > S5 FIFA - Sp? EME Ss-Gr1",
+    "name": "S5 FIFA - Sp? EME Ss-Gr1"
+  },
+  {
+    "id": "8730",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP3 > Groupe B > B2",
+    "name": "B2"
+  },
+  {
+    "id": "8742",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP3 > Groupe A > A2",
+    "name": "A2"
+  },
+  {
+    "id": "8750",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP3 > Groupe A > A1",
+    "name": "A1"
+  },
+  {
+    "id": "8760",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP3 > Groupe D > D2",
+    "name": "D2"
+  },
+  {
+    "id": "8770",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP3 > Groupe D > D1",
+    "name": "D1"
+  },
+  {
+    "id": "9429",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S5 FA > S5 FA - tous > S5 FIFA - Sp? ESE Gr1",
+    "name": "S5 FIFA - Sp? ESE Gr1"
+  },
+  {
+    "id": "10580",
+    "path": "Iutm > Iutm > G?nie bio > BUT2_GB > 2_TDA > 2_BMB-1",
+    "name": "2_BMB-1"
+  },
+  {
+    "id": "10582",
+    "path": "Iutm > Iutm > G?nie bio > BUT2_GB > 2_TDA > 2_BMB-2",
+    "name": "2_BMB-2"
+  },
+  {
+    "id": "10718",
+    "path": "Iutm > Iutm > G?nie bio > BUT2_GB > 2_TDB > 2_BMB-3",
+    "name": "2_BMB-3"
+  },
+  {
+    "id": "10735",
+    "path": "Iutm > Iutm > DU PFST > Groupe 3 > ED3",
+    "name": "ED3"
+  },
+  {
+    "id": "10736",
+    "path": "Iutm > Iutm > DU PFST > Groupe 3 > PC3",
+    "name": "PC3"
+  },
+  {
+    "id": "10741",
+    "path": "Iutm > Iutm > G?nie bio > _ext > BAE_Exp_Niv2",
+    "name": "BAE_Exp_Niv2"
+  },
+  {
+    "id": "10760",
+    "path": "Iutm > Iutm > TC > BUT 1 TC FI > Groupe C FI1",
+    "name": "Groupe C FI1"
+  },
+  {
+    "id": "10766",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S4 > S4b",
+    "name": "S4b"
+  },
+  {
+    "id": "10776",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP2 > Groupe D > D1",
+    "name": "D1"
+  },
+  {
+    "id": "10780",
+    "path": "Iutm > Iutm > GEII > LP GEEB - F  Apprentissage > LP GEEB F  App GrB",
+    "name": "LP GEEB F  App GrB"
+  },
+  {
+    "id": "10787",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S1 > IIC",
+    "name": "IIC"
+  },
+  {
+    "id": "10788",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S1 > IIIE",
+    "name": "IIIE"
+  },
+  {
+    "id": "10794",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q2 > Q2a",
+    "name": "Q2a"
+  },
+  {
+    "id": "10800",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S5 > S5b",
+    "name": "S5b"
+  },
+  {
+    "id": "10804",
+    "path": "Iutm > Iutm > Chimie S?te > BUT2 Chimie > BUT2 S3 > IID",
+    "name": "IID"
+  },
+  {
+    "id": "10810",
+    "path": "Iutm > Iutm > Mesures Physiques > LP MMIC > Apprentis > Apprentis Gr1",
+    "name": "Apprentis Gr1"
+  },
+  {
+    "id": "10812",
+    "path": "Iutm > Iutm > Mesures Physiques > LP MMIC > Classique > Classiques",
+    "name": "Classiques"
+  },
+  {
+    "id": "10820",
+    "path": "Iutm > Iutm > Chimie S?te > BUT2 Chimie > BUT2 S3 > IA",
+    "name": "IA"
+  },
+  {
+    "id": "10833",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S1 > IB",
+    "name": "IB"
+  },
+  {
+    "id": "10836",
+    "path": "Iutm > Iutm > Informatique > DUT Informatique Annee Speciale > AS-Sem2 > AS2",
+    "name": "AS2"
+  },
+  {
+    "id": "10837",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP2 > Groupe D > D2",
+    "name": "D2"
+  },
+  {
+    "id": "10838",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S1 > IIIF",
+    "name": "IIIF"
+  },
+  {
+    "id": "10862",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S3 > S3a",
+    "name": "S3a"
+  },
+  {
+    "id": "10869",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q1 > Q1a",
+    "name": "Q1a"
+  },
+  {
+    "id": "10877",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S1 > IA",
+    "name": "IA"
+  },
+  {
+    "id": "10882",
+    "path": "Iutm > Iutm > G?nie bio > _BAE > TD > BAE-S3A",
+    "name": "BAE-S3A"
+  },
+  {
+    "id": "10883",
+    "path": "Iutm > Iutm > GEII > LP GEEB - F  Apprentissage > LP GEEB F  App GrA",
+    "name": "LP GEEB F  App GrA"
+  },
+  {
+    "id": "10887",
+    "path": "Iutm > Iutm > GEII > LP CAIEE > ?tudiants LP CAIEE Gr1",
+    "name": "?tudiants LP CAIEE Gr1"
+  },
+  {
+    "id": "10888",
+    "path": "Iutm > Iutm > Chimie S?te > BUT2 Chimie > BUT2 S3 > IIC",
+    "name": "IIC"
+  },
+  {
+    "id": "10902",
+    "path": "Iutm > Iutm > GEII > LP OSSI Charge de Maintenance Industrielle > S6 > Gr_OSSI_2",
+    "name": "Gr_OSSI_2"
+  },
+  {
+    "id": "10910",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q3 > Q3a",
+    "name": "Q3a"
+  },
+  {
+    "id": "10911",
+    "path": "Iutm > Iutm > Chimie S?te > BUT2 Chimie > BUT2 S3 > IB",
+    "name": "IB"
+  },
+  {
+    "id": "10912",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S1 > IID",
+    "name": "IID"
+  },
+  {
+    "id": "10913",
+    "path": "Iutm > Iutm > Mesures Physiques > LP MMIC > Apprentis > Apprentis Gr2",
+    "name": "Apprentis Gr2"
+  },
+  {
+    "id": "10917",
+    "path": "Iutm > Iutm > Informatique > DUT Informatique Annee Speciale > AS-Sem1 > AS",
+    "name": "AS"
+  },
+  {
+    "id": "10919",
+    "path": "Iutm > Iutm > GEII > LP OSSI Charge de Maintenance Industrielle > S5 > Gr_OSSI_2",
+    "name": "Gr_OSSI_2"
+  },
+  {
+    "id": "10928",
+    "path": "Iutm > Iutm > G?nie bio > NAH > TD > NAH-S1",
+    "name": "NAH-S1"
+  },
+  {
+    "id": "10929",
+    "path": "Iutm > Iutm > TC > BUT 1 TC FI > Groupe B FI1",
+    "name": "Groupe B FI1"
+  },
+  {
+    "id": "10936",
+    "path": "Iutm > Iutm > TC > LP ABF opt Banque > Licence Part  groupe B",
+    "name": "Licence Part  groupe B"
+  },
+  {
+    "id": "10944",
+    "path": "Iutm > Iutm > GEA > BUT 1 > BUT1 - TDA > BUT1 - TP A1",
+    "name": "BUT1 - TP A1"
+  },
+  {
+    "id": "10946",
+    "path": "Iutm > Iutm > DU PFST > Groupe 1 > ED1",
+    "name": "ED1"
+  },
+  {
+    "id": "10947",
+    "path": "Iutm > Iutm > DU PFST > Groupe 1 > PC1",
+    "name": "PC1"
+  },
+  {
+    "id": "10949",
+    "path": "Iutm > Iutm > DU PFST > Groupe 2 > ED2",
+    "name": "ED2"
+  },
+  {
+    "id": "10950",
+    "path": "Iutm > Iutm > DU PFST > Groupe 2 > PC2",
+    "name": "PC2"
+  },
+  {
+    "id": "10954",
+    "path": "Iutm > Iutm > GEA > BUT 2 - FA > BUT2 FA - GC2F",
+    "name": "BUT2 FA - GC2F"
+  },
+  {
+    "id": "10957",
+    "path": "Iutm > Iutm > DU PFST > Groupe 1 > ",
+    "name": ""
+  },
+  {
+    "id": "10958",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S3 > S3b",
+    "name": "S3b"
+  },
+  {
+    "id": "10969",
+    "path": "Iutm > Iutm > TC > BUT 2 TC FI > Groupe B FI2",
+    "name": "Groupe B FI2"
+  },
+  {
+    "id": "10971",
+    "path": "Iutm > Iutm > GEA > BUT 1 > BUT1 - TDB > BUT1 - TP B1",
+    "name": "BUT1 - TP B1"
+  },
+  {
+    "id": "10973",
+    "path": "Iutm > Iutm > GEA > BUT 1 > BUT1 - TDA > BUT1 - TP A2",
+    "name": "BUT1 - TP A2"
+  },
+  {
+    "id": "10975",
+    "path": "Iutm > Iutm > GEA > BUT 1 > BUT1 - TDD > BUT1 - TP D2",
+    "name": "BUT1 - TP D2"
+  },
+  {
+    "id": "10977",
+    "path": "Iutm > Iutm > GEA > BUT 1 > BUT1 - TDC > BUT1 - TP C2",
+    "name": "BUT1 - TP C2"
+  },
+  {
+    "id": "10987",
+    "path": "Iutm > Iutm > GEA > BUT 1 > BUT1 - TDB > BUT1 - TP B2",
+    "name": "BUT1 - TP B2"
+  },
+  {
+    "id": "10989",
+    "path": "Iutm > Iutm > TC > LP Gestion des achats dans les march?s publics > Etudiants Licence Achat",
+    "name": "Etudiants Licence Achat"
+  },
+  {
+    "id": "10991",
+    "path": "Iutm > Iutm > G?nie bio > _ext > Public",
+    "name": "Public"
+  },
+  {
+    "id": "10999",
+    "path": "Iutm > Iutm > TC > LP Technico-commercial ? l'international > Etudiants LPro TCI",
+    "name": "Etudiants LPro TCI"
+  },
+  {
+    "id": "11001",
+    "path": "Iutm > Iutm > TC > BUT 2 TC FI > Groupe A FI2",
+    "name": "Groupe A FI2"
+  },
+  {
+    "id": "11014",
+    "path": "Iutm > Iutm > GEA > BUT 1 > BUT1 - TDD > BUT1 - TP D1",
+    "name": "BUT1 - TP D1"
+  },
+  {
+    "id": "11020",
+    "path": "Iutm > Iutm > GEA > BUT 3 - FA > BUT3 FA - GPRH",
+    "name": "BUT3 FA - GPRH"
+  },
+  {
+    "id": "11043",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S6 FA > S6 FA > S6 FIFA - Sp? EME-SG1",
+    "name": "S6 FIFA - Sp? EME-SG1"
+  },
+  {
+    "id": "11047",
+    "path": "Iutm > Iutm > GEA > BUT 3 - FI > BUT3 FI - GPRH",
+    "name": "BUT3 FI - GPRH"
+  },
+  {
+    "id": "11048",
+    "path": "Iutm > Iutm > GEA > BUT 1 > BUT1 - TDC > BUT1 - TP C1",
+    "name": "BUT1 - TP C1"
+  },
+  {
+    "id": "11090",
+    "path": "Iutm > Iutm > TC > LP ABF opt Banque > Licence Part  groupe C",
+    "name": "Licence Part  groupe C"
+  },
+  {
+    "id": "11096",
+    "path": "Iutm > Iutm > GEII > LP CAIEE > ?tudiants LP CAIEE Gr2",
+    "name": "?tudiants LP CAIEE Gr2"
+  },
+  {
+    "id": "11099",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S2 > S2b",
+    "name": "S2b"
+  },
+  {
+    "id": "11108",
+    "path": "Iutm > Iutm > TC > BUT 1 TC FI > Groupe A FI1",
+    "name": "Groupe A FI1"
+  },
+  {
+    "id": "11122",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S1 > S1a",
+    "name": "S1a"
+  },
+  {
+    "id": "11126",
+    "path": "Iutm > Iutm > TC > LP ABF opt Banque > Licence Part",
+    "name": "Licence Part"
+  },
+  {
+    "id": "11130",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q4 > Q4a",
+    "name": "Q4a"
+  },
+  {
+    "id": "11132",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S4 > S4a",
+    "name": "S4a"
+  },
+  {
+    "id": "11134",
+    "path": "Iutm > Iutm > G?nie bio > _BAE > TD > BAE-S1",
+    "name": "BAE-S1"
+  },
+  {
+    "id": "11136",
+    "path": "Iutm > Iutm > Informatique > LP PSGI Progiciel de Gestion Integree (E R P ) > LP-PSGI",
+    "name": "LP-PSGI"
+  },
+  {
+    "id": "11138",
+    "path": "Iutm > Iutm > Informatique > DUT Informatique Annee Speciale > AS-Sem2 > AS1",
+    "name": "AS1"
+  },
+  {
+    "id": "11147",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S5 > S5a",
+    "name": "S5a"
+  },
+  {
+    "id": "11153",
+    "path": "Iutm > Iutm > G?nie bio > _BAE > TD > BAE-S2",
+    "name": "BAE-S2"
+  },
+  {
+    "id": "11156",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP1 > Groupe A > A2",
+    "name": "A2"
+  },
+  {
+    "id": "11158",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP1 > Groupe A > A1",
+    "name": "A1"
+  },
+  {
+    "id": "11160",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP1 > Groupe B > B2",
+    "name": "B2"
+  },
+  {
+    "id": "11161",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP1 > Groupe B > B1",
+    "name": "B1"
+  },
+  {
+    "id": "11164",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP1 > Groupe C > C2",
+    "name": "C2"
+  },
+  {
+    "id": "11165",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP1 > Groupe C > C1",
+    "name": "C1"
+  },
+  {
+    "id": "11167",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP1 > Groupe D > D2",
+    "name": "D2"
+  },
+  {
+    "id": "11168",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP1 > Groupe D > D1",
+    "name": "D1"
+  },
+  {
+    "id": "11169",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S1 > S1b",
+    "name": "S1b"
+  },
+  {
+    "id": "11170",
+    "path": "Iutm > Iutm > TC > LP ABF opt Banque > Licence Part  groupe A",
+    "name": "Licence Part  groupe A"
+  },
+  {
+    "id": "11172",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP2 > Groupe A > A1",
+    "name": "A1"
+  },
+  {
+    "id": "11173",
+    "path": "Iutm > Iutm > GEII > LP OSSI Charge de Maintenance Industrielle > S6 > Gr_OSSI_1",
+    "name": "Gr_OSSI_1"
+  },
+  {
+    "id": "11174",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP2 > Groupe A > A2",
+    "name": "A2"
+  },
+  {
+    "id": "11175",
+    "path": "Iutm > Iutm > TC > BUT 2 TC FI > Groupe C FI2",
+    "name": "Groupe C FI2"
+  },
+  {
+    "id": "11177",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP2 > Groupe B > B2",
+    "name": "B2"
+  },
+  {
+    "id": "11178",
+    "path": "Iutm > Iutm > Mesures Physiques > BUT1-BUT2-BUT3 MP > MP2 > Groupe B > B1",
+    "name": "B1"
+  },
+  {
+    "id": "11182",
+    "path": "Iutm > Iutm > GEII > LP OSSI Charge de Maintenance Industrielle > S5 > Gr_OSSI_1",
+    "name": "Gr_OSSI_1"
+  },
+  {
+    "id": "11187",
+    "path": "Iutm > Iutm > Informatique > LP-API Developpement d'applications E-Business > LP-API-DAE A",
+    "name": "LP-API-DAE A"
+  },
+  {
+    "id": "11188",
+    "path": "Iutm > Iutm > Informatique > LP PSGI Progiciel de Gestion Integree (E R P ) > LP-PSGI-alternance",
+    "name": "LP-PSGI-alternance"
+  },
+  {
+    "id": "11189",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S2 > S2a",
+    "name": "S2a"
+  },
+  {
+    "id": "11191",
+    "path": "Iutm > Iutm > Informatique > LP ACPI Assistant Chef de projet Informatique > LP-ACPI",
+    "name": "LP-ACPI"
+  },
+  {
+    "id": "11193",
+    "path": "Iutm > Iutm > TC > BUT 1 TCAp > BUT FA1",
+    "name": "BUT FA1"
+  },
+  {
+    "id": "11196",
+    "path": "Iutm > Iutm > GEII > LP SE > LP SE",
+    "name": "LP SE"
+  },
+  {
+    "id": "11526",
+    "path": "Iutm > Iutm > G?nie bio > BUT2_GB > 2_TDB > 2_BMB-4",
+    "name": "2_BMB-4"
+  },
+  {
+    "id": "11703",
+    "path": "Iutm > Iutm > TC > BUT 3 TCAp > FA3 BDMRC",
+    "name": "FA3 BDMRC"
+  },
+  {
+    "id": "11706",
+    "path": "Iutm > Iutm > TC > BUT 3 TCAp > FA3 MDEE",
+    "name": "FA3 MDEE"
+  },
+  {
+    "id": "12060",
+    "path": "Iutm > Iutm > Chimie S?te > BUT3 Chimie > BUT3 S5 > IA",
+    "name": "IA"
+  },
+  {
+    "id": "12371",
+    "path": "Iutm > Iutm > TC > BUT 1 TC FI > Groupe D FI1",
+    "name": "Groupe D FI1"
+  },
+  {
+    "id": "12474",
+    "path": "Iutm > Iutm > G?nie bio > NAH > TD > NAH-S2",
+    "name": "NAH-S2"
+  },
+  {
+    "id": "13042",
+    "path": "Iutm > Iutm > G?nie bio > BUT3_GB > 3_TDA > 3_BMB-1",
+    "name": "3_BMB-1"
+  },
+  {
+    "id": "13194",
+    "path": "Iutm > Iutm > Chimie S?te > BUT3 Chimie > BUT3 S5 > IB",
+    "name": "IB"
+  },
+  {
+    "id": "14721",
+    "path": "Iutm > Iutm > Chimie S?te > BUT3 Chimie > BUT3 S5 > IIC",
+    "name": "IIC"
+  },
+  {
+    "id": "14724",
+    "path": "Iutm > Iutm > Chimie S?te > BUT3 Chimie > BUT3 S6 > IA",
+    "name": "IA"
+  },
+  {
+    "id": "15192",
+    "path": "Iutm > Iutm > Chimie S?te > LP GASTE > Gp E",
+    "name": "Gp E"
+  },
+  {
+    "id": "15424",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S3 FI > S3 FI - AII",
+    "name": "S3 FI - AII"
+  },
+  {
+    "id": "15582",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S3 FI > S3 FI - ESE",
+    "name": "S3 FI - ESE"
+  },
+  {
+    "id": "15847",
+    "path": "Iutm > Iutm > G?nie bio > BUT2_GB > 2_TDC > 2_DN-1",
+    "name": "2_DN-1"
+  },
+  {
+    "id": "25857",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S3 FA > S3 FA - AII",
+    "name": "S3 FA - AII"
+  },
+  {
+    "id": "25858",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S3 FA > S3 FA - EME",
+    "name": "S3 FA - EME"
+  },
+  {
+    "id": "25861",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S6 FA > S6 FA > S6 FIFA - Sp? ESE-SG1",
+    "name": "S6 FIFA - Sp? ESE-SG1"
+  },
+  {
+    "id": "25862",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S6 FA > S6 FA > S6 FIFA - Sp? EME-SG2",
+    "name": "S6 FIFA - Sp? EME-SG2"
+  },
+  {
+    "id": "25863",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S6 FA > S6 FA > S6 FA - Sp? AII",
+    "name": "S6 FA - Sp? AII"
+  },
+  {
+    "id": "25866",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S5 FA > S5 FA - tous > S5 FIFA - Sp? ESE Gr2",
+    "name": "S5 FIFA - Sp? ESE Gr2"
+  },
+  {
+    "id": "25867",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S5 FA > S5 FA - tous > S5 FIFA - Sp? EME Ss-Gr2",
+    "name": "S5 FIFA - Sp? EME Ss-Gr2"
+  },
+  {
+    "id": "25868",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S5 FA > S5 FA - tous > S5 FA - Sp? AII",
+    "name": "S5 FA - Sp? AII"
+  },
+  {
+    "id": "25872",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-5 > G1 > G1",
+    "name": "G1"
+  },
+  {
+    "id": "25874",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-5 > G2 > G2",
+    "name": "G2"
+  },
+  {
+    "id": "25876",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-5 > G3 > G3",
+    "name": "G3"
+  },
+  {
+    "id": "25878",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-5 > G4 > G4",
+    "name": "G4"
+  },
+  {
+    "id": "25880",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-5 > G-S?te > G-S?te",
+    "name": "G-S?te"
+  },
+  {
+    "id": "25907",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 5-6 > MPF_NuMat_FI",
+    "name": "MPF_NuMat_FI"
+  },
+  {
+    "id": "25913",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 5-6 > MPF_MatPol_FI",
+    "name": "MPF_MatPol_FI"
+  },
+  {
+    "id": "25961",
+    "path": "Iutm > Iutm > Chimie S?te > BUT3 Chimie > BUT3 S6 > IB",
+    "name": "IB"
+  },
+  {
+    "id": "25967",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 5-6 > ACQ_FA",
+    "name": "ACQ_FA"
+  },
+  {
+    "id": "25970",
+    "path": "Iutm > Iutm > Chimie S?te > BUT3 Chimie > BUT3 S6 > IID",
+    "name": "IID"
+  },
+  {
+    "id": "26224",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S3 FA > S3 FA - ESE",
+    "name": "S3 FA - ESE"
+  },
+  {
+    "id": "26233",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 5-6 > SYN_TPA",
+    "name": "SYN_TPA"
+  },
+  {
+    "id": "26390",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 5-6 > ACQ_FI",
+    "name": "ACQ_FI"
+  },
+  {
+    "id": "28011",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 1-GROUPE TD A > A1 Ana FI",
+    "name": "A1 Ana FI"
+  },
+  {
+    "id": "28014",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 2-GROUPE TD B > B2 Mpf FI",
+    "name": "B2 Mpf FI"
+  },
+  {
+    "id": "28017",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 1-GROUPE TD A > A2 Ana FA",
+    "name": "A2 Ana FA"
+  },
+  {
+    "id": "28018",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 3-GROUPE TD C > C1 Syn FI",
+    "name": "C1 Syn FI"
+  },
+  {
+    "id": "30105",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 5-6 > SYN_TPB",
+    "name": "SYN_TPB"
+  },
+  {
+    "id": "30107",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 5-6 > MPF_MatPol_FA",
+    "name": "MPF_MatPol_FA"
+  },
+  {
+    "id": "30174",
+    "path": "Iutm > Iutm > TC > LP ABF opt ASSURANCE > Licence Part groupe E",
+    "name": "Licence Part groupe E"
+  },
+  {
+    "id": "30496",
+    "path": "Iutm > Iutm > Mesures Physiques > LP AERO MSA > LP AERO MSA-1",
+    "name": "LP AERO MSA-1"
+  },
+  {
+    "id": "30749",
+    "path": "Iutm > Iutm > GEA S?te > BUT 2A PROMO FI > BUT2 TP1",
+    "name": "BUT2 TP1"
+  },
+  {
+    "id": "30750",
+    "path": "Iutm > Iutm > GEA S?te > BUT 2A PROMO FI > BUT2 TP2",
+    "name": "BUT2 TP2"
+  },
+  {
+    "id": "31091",
+    "path": "Iutm > Iutm > G?nie bio > BUT2_GB > 2_TDC > 2_DN-2",
+    "name": "2_DN-2"
+  },
+  {
+    "id": "31313",
+    "path": "Iutm > Iutm > G?nie bio > BUT2_GB > 2_TDD > 2_SAB-1",
+    "name": "2_SAB-1"
+  },
+  {
+    "id": "31314",
+    "path": "Iutm > Iutm > G?nie bio > BUT2_GB > 2_TDD > 2_SAB-2",
+    "name": "2_SAB-2"
+  },
+  {
+    "id": "32031",
+    "path": "Iutm > Iutm > G?nie bio > BUT3_GB > 3_TDA > 3_BMB-2",
+    "name": "3_BMB-2"
+  },
+  {
+    "id": "32032",
+    "path": "Iutm > Iutm > G?nie bio > BUT3_GB > 3_TDB > 3_BMB-3",
+    "name": "3_BMB-3"
+  },
+  {
+    "id": "32033",
+    "path": "Iutm > Iutm > G?nie bio > BUT3_GB > 3_TDB > 3_BMB-4",
+    "name": "3_BMB-4"
+  },
+  {
+    "id": "32623",
+    "path": "Iutm > Iutm > GEA S?te > BUT 2A PROMO FA > BUT2 TP1 FA",
+    "name": "BUT2 TP1 FA"
+  },
+  {
+    "id": "32624",
+    "path": "Iutm > Iutm > GEA S?te > BUT 2A PROMO FA > BUT2 TP2 FA",
+    "name": "BUT2 TP2 FA"
+  },
+  {
+    "id": "32626",
+    "path": "Iutm > Iutm > GEA S?te > BUT 3A PROMO FA > BUT3 TP2 FA",
+    "name": "BUT3 TP2 FA"
+  },
+  {
+    "id": "32627",
+    "path": "Iutm > Iutm > GEA S?te > BUT 3A PROMO FA > BUT3 TP1 FA",
+    "name": "BUT3 TP1 FA"
+  },
+  {
+    "id": "32629",
+    "path": "Iutm > Iutm > GEA S?te > BUT 3A PROMO FI > BUT3 TP2",
+    "name": "BUT3 TP2"
+  },
+  {
+    "id": "32632",
+    "path": "Iutm > Iutm > GEA S?te > BUT 3A PROMO FI > BUT3 TP1",
+    "name": "BUT3 TP1"
+  },
+  {
+    "id": "32669",
+    "path": "Iutm > Iutm > G?nie bio > BUT3_GB > 3_TDC > 3_DN-1",
+    "name": "3_DN-1"
+  },
+  {
+    "id": "32707",
+    "path": "Iutm > Iutm > G?nie bio > BUT3_GB > 3_TDD > 3_SAB-1",
+    "name": "3_SAB-1"
+  },
+  {
+    "id": "32828",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S1 > S1b",
+    "name": "S1b"
+  },
+  {
+    "id": "32829",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S2 > S2b",
+    "name": "S2b"
+  },
+  {
+    "id": "32844",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S3 > S3b",
+    "name": "S3b"
+  },
+  {
+    "id": "32949",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S4 > S4b",
+    "name": "S4b"
+  },
+  {
+    "id": "32952",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S5 > S5b",
+    "name": "S5b"
+  },
+  {
+    "id": "33245",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S?te > S?teB",
+    "name": "S?teB"
+  },
+  {
+    "id": "33304",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S?te > S?teA",
+    "name": "S?teA"
+  },
+  {
+    "id": "33339",
+    "path": "Iutm > Iutm > G?nie bio > BUT3_GB > 3_TDD > 3_SAB-2",
+    "name": "3_SAB-2"
+  },
+  {
+    "id": "33987",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S2 > IA",
+    "name": "IA"
+  },
+  {
+    "id": "33989",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S2 > IB",
+    "name": "IB"
+  },
+  {
+    "id": "33993",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S2 > IIIF",
+    "name": "IIIF"
+  },
+  {
+    "id": "33995",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S2 > IIIE",
+    "name": "IIIE"
+  },
+  {
+    "id": "33997",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S2 > IIC",
+    "name": "IIC"
+  },
+  {
+    "id": "34033",
+    "path": "Iutm > Iutm > Chimie S?te > BUT1 Chimie > BUT1 S2 > IID",
+    "name": "IID"
+  },
+  {
+    "id": "35747",
+    "path": "Iutm > Iutm > Chimie S?te > LP GASTE > Gp C",
+    "name": "Gp C"
+  },
+  {
+    "id": "35748",
+    "path": "Iutm > Iutm > Chimie S?te > LP GASTE > Gp D",
+    "name": "Gp D"
+  },
+  {
+    "id": "35749",
+    "path": "Iutm > Iutm > Chimie S?te > LP GASTE > Gp B",
+    "name": "Gp B"
+  },
+  {
+    "id": "35750",
+    "path": "Iutm > Iutm > Chimie S?te > LP GASTE > Gp A",
+    "name": "Gp A"
+  },
+  {
+    "id": "50539",
+    "path": "Iutm > Iutm > G?nie bio > BUT1_GB > 1_TDA > 1_BMB-1",
+    "name": "1_BMB-1"
+  },
+  {
+    "id": "50540",
+    "path": "Iutm > Iutm > G?nie bio > BUT1_GB > 1_TDD > 1_SAB-2",
+    "name": "1_SAB-2"
+  },
+  {
+    "id": "50541",
+    "path": "Iutm > Iutm > G?nie bio > BUT1_GB > 1_TDB > 1_BMB-3",
+    "name": "1_BMB-3"
+  },
+  {
+    "id": "50546",
+    "path": "Iutm > Iutm > G?nie bio > BUT1_GB > 1_TDA > 1_BMB-2",
+    "name": "1_BMB-2"
+  },
+  {
+    "id": "50547",
+    "path": "Iutm > Iutm > G?nie bio > BUT1_GB > 1_TDC > 1_DN-1",
+    "name": "1_DN-1"
+  },
+  {
+    "id": "50548",
+    "path": "Iutm > Iutm > G?nie bio > BUT1_GB > 1_TDB > 1_BMB-4",
+    "name": "1_BMB-4"
+  },
+  {
+    "id": "50571",
+    "path": "Iutm > Iutm > G?nie bio > BUT1_GB > 1_TDD > 1_SAB-1",
+    "name": "1_SAB-1"
+  },
+  {
+    "id": "50596",
+    "path": "Iutm > Iutm > G?nie bio > BUT1_GB > 1_TDC > 1_DN-2",
+    "name": "1_DN-2"
+  },
+  {
+    "id": "52586",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 2-GROUPE TD B > B1 Mpf FI",
+    "name": "B1 Mpf FI"
+  },
+  {
+    "id": "52610",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-2 > S?te > S6b",
+    "name": "S6b"
+  },
+  {
+    "id": "52623",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 2 > TD D > TP D2",
+    "name": "TP D2"
+  },
+  {
+    "id": "52624",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 2 > TD D > TP D1",
+    "name": "TP D1"
+  },
+  {
+    "id": "53032",
+    "path": "Iutm > Iutm > Mesures Physiques > LP MMIC > Apprentis > Apprentis Gr3",
+    "name": "Apprentis Gr3"
+  },
+  {
+    "id": "53033",
+    "path": "Iutm > Iutm > Mesures Physiques > LP MMIC > Apprentis > Apprentis Gr4",
+    "name": "Apprentis Gr4"
+  },
+  {
+    "id": "54504",
+    "path": "Iutm > Iutm > options inter-d?partements > LV2 Espagnol A",
+    "name": "LV2 Espagnol A"
+  },
+  {
+    "id": "54873",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-6 > G-S?te > G-S?te",
+    "name": "G-S?te"
+  },
+  {
+    "id": "54875",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-6 > G1 > G1",
+    "name": "G1"
+  },
+  {
+    "id": "55309",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 1 > TD A > TP A1",
+    "name": "TP A1"
+  },
+  {
+    "id": "55310",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 1 > TD A > TP A2",
+    "name": "TP A2"
+  },
+  {
+    "id": "55313",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 1 > TD B > TP B1",
+    "name": "TP B1"
+  },
+  {
+    "id": "55314",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 1 > TD B > TP B2",
+    "name": "TP B2"
+  },
+  {
+    "id": "55317",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 1 > TD C > TP C1",
+    "name": "TP C1"
+  },
+  {
+    "id": "55318",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 1 > TD C > TP C2",
+    "name": "TP C2"
+  },
+  {
+    "id": "55321",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 1 > TD D > TP D1",
+    "name": "TP D1"
+  },
+  {
+    "id": "55322",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 1 > TD D > TP D2",
+    "name": "TP D2"
+  },
+  {
+    "id": "55582",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-A > S1-A1",
+    "name": "S1-A1"
+  },
+  {
+    "id": "55584",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-A > S1-A2",
+    "name": "S1-A2"
+  },
+  {
+    "id": "55586",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-B > S1-B1",
+    "name": "S1-B1"
+  },
+  {
+    "id": "55587",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-B > S1-B2",
+    "name": "S1-B2"
+  },
+  {
+    "id": "55589",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-C > S1-C1",
+    "name": "S1-C1"
+  },
+  {
+    "id": "55590",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-C > S1-C2",
+    "name": "S1-C2"
+  },
+  {
+    "id": "55592",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-D > S1-D1",
+    "name": "S1-D1"
+  },
+  {
+    "id": "55593",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-D > S1-D2",
+    "name": "S1-D2"
+  },
+  {
+    "id": "55595",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-E > S1-E1",
+    "name": "S1-E1"
+  },
+  {
+    "id": "55596",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S1 > S1-E > S1-E2",
+    "name": "S1-E2"
+  },
+  {
+    "id": "55598",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S2 > S2-A > S2-A1",
+    "name": "S2-A1"
+  },
+  {
+    "id": "55599",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S2 > S2-A > S2-A2",
+    "name": "S2-A2"
+  },
+  {
+    "id": "55601",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S2 > S2-B > S2-B1",
+    "name": "S2-B1"
+  },
+  {
+    "id": "55602",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S2 > S2-B > S2-B2",
+    "name": "S2-B2"
+  },
+  {
+    "id": "55604",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S2 > S2-C > S2-C1",
+    "name": "S2-C1"
+  },
+  {
+    "id": "55605",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S2 > S2-C > S2-C2",
+    "name": "S2-C2"
+  },
+  {
+    "id": "55607",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S2 > S2-D > S2-D1",
+    "name": "S2-D1"
+  },
+  {
+    "id": "55608",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S2 > S2-D > S2-D2",
+    "name": "S2-D2"
+  },
+  {
+    "id": "55816",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S4 FI > S4 FI - AII",
+    "name": "S4 FI - AII"
+  },
+  {
+    "id": "55834",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 2-GROUPE TD B > B2 Mpf FA",
+    "name": "B2 Mpf FA"
+  },
+  {
+    "id": "55870",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q1 > Q1b",
+    "name": "Q1b"
+  },
+  {
+    "id": "55871",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q3 > Q3b",
+    "name": "Q3b"
+  },
+  {
+    "id": "55873",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q4 > Q4b",
+    "name": "Q4b"
+  },
+  {
+    "id": "55874",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q-S?te > Q-S?teA",
+    "name": "Q-S?teA"
+  },
+  {
+    "id": "55922",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q2 > Q2b",
+    "name": "Q2b"
+  },
+  {
+    "id": "56081",
+    "path": "Iutm > Iutm > options inter-d?partements > LV2 Allemand",
+    "name": "LV2 Allemand"
+  },
+  {
+    "id": "56082",
+    "path": "Iutm > Iutm > options inter-d?partements > LV2 Italien",
+    "name": "LV2 Italien"
+  },
+  {
+    "id": "56485",
+    "path": "Iutm > Iutm > GEA S?te > BUT 1A PROMO > BUT1 TP1",
+    "name": "BUT1 TP1"
+  },
+  {
+    "id": "56487",
+    "path": "Iutm > Iutm > GEA S?te > BUT 1A PROMO > BUT1 TP2",
+    "name": "BUT1 TP2"
+  },
+  {
+    "id": "57215",
+    "path": "Iutm > Iutm > options inter-d?partements > FLE",
+    "name": "FLE"
+  },
+  {
+    "id": "58722",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S6 > S6b",
+    "name": "S6b"
+  },
+  {
+    "id": "58723",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A1-Semestre-1 > S6 > S6a",
+    "name": "S6a"
+  },
+  {
+    "id": "58995",
+    "path": "Iutm > Iutm > TC > BUT 2 TCAp > BUT FA2",
+    "name": "BUT FA2"
+  },
+  {
+    "id": "58999",
+    "path": "Iutm > Iutm > GEA > BUT 2  - FI > BUT2 FI - GEMA > BUT2 FI - GEMA A",
+    "name": "BUT2 FI - GEMA A"
+  },
+  {
+    "id": "59000",
+    "path": "Iutm > Iutm > GEA > BUT 2  - FI > BUT2 FI - GPRH > BUT2 FI - GPRH A",
+    "name": "BUT2 FI - GPRH A"
+  },
+  {
+    "id": "59001",
+    "path": "Iutm > Iutm > GEA > BUT 2  - FI > BUT2 FI - GC2F > BUT2 FI - GC2F A",
+    "name": "BUT2 FI - GC2F A"
+  },
+  {
+    "id": "59003",
+    "path": "Iutm > Iutm > GEA > BUT 2  - FI > BUT2 FI - GC2F > BUT2 FI - GC2F B",
+    "name": "BUT2 FI - GC2F B"
+  },
+  {
+    "id": "59371",
+    "path": "Iutm > Iutm > Chimie S?te > BUT2 Chimie > BUT2 S4 > IA",
+    "name": "IA"
+  },
+  {
+    "id": "59372",
+    "path": "Iutm > Iutm > Chimie S?te > BUT2 Chimie > BUT2 S4 > IB",
+    "name": "IB"
+  },
+  {
+    "id": "59373",
+    "path": "Iutm > Iutm > Chimie S?te > BUT2 Chimie > BUT2 S4 > IIC",
+    "name": "IIC"
+  },
+  {
+    "id": "59374",
+    "path": "Iutm > Iutm > Chimie S?te > BUT2 Chimie > BUT2 S4 > IID",
+    "name": "IID"
+  },
+  {
+    "id": "59691",
+    "path": "Iutm > Iutm > GEA > BUT 2  - FI > BUT2 FI - GPRH > BUT2 FI - GPRH B",
+    "name": "BUT2 FI - GPRH B"
+  },
+  {
+    "id": "59780",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S3 FI > S3 FI - EME",
+    "name": "S3 FI - EME"
+  },
+  {
+    "id": "59794",
+    "path": "Iutm > Iutm > GEA > BUT 2  - FI > BUT2 FI - GEMA > BUT2 FI - GEMA B",
+    "name": "BUT2 FI - GEMA B"
+  },
+  {
+    "id": "59835",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 3-GROUPE TD C > C2 Syn FI",
+    "name": "C2 Syn FI"
+  },
+  {
+    "id": "59838",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 3-GROUPE TD C > C2 Syn FA",
+    "name": "C2 Syn FA"
+  },
+  {
+    "id": "60251",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-3 > Q-S?te > Q-S?teB",
+    "name": "Q-S?teB"
+  },
+  {
+    "id": "62383",
+    "path": "Iutm > Iutm > GEA > BUT 2 - FA > BUT2 FA - GPRH",
+    "name": "BUT2 FA - GPRH"
+  },
+  {
+    "id": "63657",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S6 FI > S6 FI - A > S6 FI - A1",
+    "name": "S6 FI - A1"
+  },
+  {
+    "id": "64423",
+    "path": "Iutm > Iutm > G?nie bio > _BAE > TD > BAE-S3B",
+    "name": "BAE-S3B"
+  },
+  {
+    "id": "64958",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 2 > TD A > TP A1",
+    "name": "TP A1"
+  },
+  {
+    "id": "64959",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 2 > TD A > TP A2",
+    "name": "TP A2"
+  },
+  {
+    "id": "64961",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 2 > TD B > TP B2",
+    "name": "TP B2"
+  },
+  {
+    "id": "64962",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 2 > TD B > TP B1",
+    "name": "TP B1"
+  },
+  {
+    "id": "64964",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 2 > TD C > TP C2",
+    "name": "TP C2"
+  },
+  {
+    "id": "64965",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 2 > TD C > TP C1",
+    "name": "TP C1"
+  },
+  {
+    "id": "65188",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S4 FI > S4 FI - EME",
+    "name": "S4 FI - EME"
+  },
+  {
+    "id": "65286",
+    "path": "Iutm > Iutm > GEII > BUT GEII FI > S4 FI > S4 FI - ESE",
+    "name": "S4 FI - ESE"
+  },
+  {
+    "id": "65383",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S4 FA > S4 FA - AII",
+    "name": "S4 FA - AII"
+  },
+  {
+    "id": "65384",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S4 FA > S4 FA - EME",
+    "name": "S4 FA - EME"
+  },
+  {
+    "id": "65385",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S4 FA > S4 FA - ESE",
+    "name": "S4 FA - ESE"
+  },
+  {
+    "id": "67938",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 1-GROUPE TD A > A2 Ana FI",
+    "name": "A2 Ana FI"
+  },
+  {
+    "id": "68051",
+    "path": "Iutm > Iutm > Informatique > LP-API Developpement d'applications E-Business > LP-API-DAE B",
+    "name": "LP-API-DAE B"
+  },
+  {
+    "id": "70030",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 1-GROUPE TD A > A1 Ana FI",
+    "name": "A1 Ana FI"
+  },
+  {
+    "id": "70031",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 1-GROUPE TD A > A2 ANA FI",
+    "name": "A2 ANA FI"
+  },
+  {
+    "id": "70039",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 3-GROUPE TD C > C1 Syn FI",
+    "name": "C1 Syn FI"
+  },
+  {
+    "id": "73718",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A2-Semestre-4 > Q-S?te > S?te",
+    "name": "S?te"
+  },
+  {
+    "id": "82612",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-6 > G2 > G2",
+    "name": "G2"
+  },
+  {
+    "id": "82617",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-6 > G3 > G3",
+    "name": "G3"
+  },
+  {
+    "id": "82619",
+    "path": "Iutm > Iutm > Informatique > BUT Informatique > A3-Semestre-6 > G4 > G4",
+    "name": "G4"
+  },
+  {
+    "id": "82700",
+    "path": "Iutm > Iutm > DU AccES > DU ACCES > UE2-tertiaire",
+    "name": "UE2-tertiaire"
+  },
+  {
+    "id": "82701",
+    "path": "Iutm > Iutm > DU AccES > DU ACCES > UE2-secondaire",
+    "name": "UE2-secondaire"
+  },
+  {
+    "id": "83831",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 2-GROUPE TD B > B1 Mpf FI",
+    "name": "B1 Mpf FI"
+  },
+  {
+    "id": "89002",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 3 > 3-GROUPE TD C > C2 Syn FA",
+    "name": "C2 Syn FA"
+  },
+  {
+    "id": "89003",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 1-GROUPE TD A > A2 ANA FA",
+    "name": "A2 ANA FA"
+  },
+  {
+    "id": "93508",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 2-GROUPE TD B > B2 Mpf FA",
+    "name": "B2 Mpf FA"
+  },
+  {
+    "id": "93510",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 2-GROUPE TD B > B2 Mpf FI",
+    "name": "B2 Mpf FI"
+  },
+  {
+    "id": "93511",
+    "path": "Iutm > Iutm > Chimie > B.U.T Chimie > Semestre 4 > 3-GROUPE TD C > C2 Syn FI",
+    "name": "C2 Syn FI"
+  },
+  {
+    "id": "97217",
+    "path": "Iutm > Iutm > GEII > BUT GEII FA > S6 FA > S6 FA > S6 FIFA - Sp? ESE-SG2",
+    "name": "S6 FIFA - Sp? ESE-SG2"
+  }
+]

@@ -15,3 +15,11 @@ scrape:
     # planning's current academic year are fetched; the rest are left alone.
     pastDays: 30
     futureDays: 365
+    # A resources.json from the proseconsult toolkit ([{ id, path, name }]).
+    # Set, every resource in it is scraped, the whole IUT, not only the groups
+    # the data= blob covers. Once set, never unset it: a run without it reads
+    # every other department's course as cancelled. See AGENTS.md.
+    # The image ships the 2026-27 map at this path (apps/scraper-ade/resources.json).
+    # resourceMap: /app/apps/scraper-ade/resources.json
+    # Weeks per ADE call. A year of 60 groups at once times out (504).
+    weeksPerCall: 8

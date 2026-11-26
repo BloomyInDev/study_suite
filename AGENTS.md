@@ -226,6 +226,42 @@ reads as a room instead, since that is what it usually is. Run once without it t
 discover the real groups, purge the bogus rows, then turn it on. It is ignored while
 the table is empty, so a fresh database still bootstraps.
 
+### apps/scraper-ade: the whole IUT
+
+`apps/scraper-ade` replays ADE's GWT-RPC calls over HTTP instead of driving a
+browser, and is what production runs. Its `data=` URL unlocks 50 resources, one
+department's groups, but **the session reads any resource id** handed to
+`getTimetable`. With `scrape.resourceMap` set to a `resources.json` from the
+proseconsult toolkit (`[{ id, path, name }]`, rebuilt each September), it
+scrapes every department in it.
+
+- **Batches.** ADE refuses more than 60 resources per call
+  (`#MsgSelectionSize`), and a year of 60 makes the IUT's gateway answer 504,
+  so calls go per department, at most 60 resources, `weeksPerCall` weeks
+  (default 8) at a time, with retries. About 100 calls, one minute. Any call
+  that still fails throws before reconciling.
+- **Group names.** The planning prints `S1` for an Informatique TD group and a
+  GEII one alike, and `internal_name` is unique. An event seen by the home
+  department's batch (the department of the `data=` resources) keeps bare
+  names, which is everything scraped before. An event only other departments
+  see gets `S1 (GEII)`, with `display_name` `S1`. The rule depends on the event
+  alone, never on what else a run saw, so names do not flip between runs.
+  Department names are folded to ASCII (`Genie bio`): the prose-etudiant tree
+  prints `G?nie bio`, and both spellings must give the same name.
+- **The map keys on ADE ids.** Ids survive a year; tree paths and names do not.
+  Only the department is read from a path.
+- **Never drop the map once used.** `applyWeekEvents` deletes what a run did
+  not return, so a run without it (or the old Playwright `scraper`) reads every
+  other department's course as cancelled, and fills `event_changes`.
+- **The first import** adds ~20 000 courses. Run it once as
+  `pnpm -F @studysuite/scraper-ade scrape --no-changes`, which reconciles
+  without writing `event_changes`, before the loop starts with the map, or the
+  changes feed of anyone with no group picked is nothing but additions.
+- **Event shapes other departments use.** A box spanning whole day columns is
+  the same hours on each day (refused if not aligned on columns). A second
+  hours line is a room change mid-course: one event per hours line. Room lines
+  after the last hours line are added to the event.
+
 ---
 
 ## apps/api

@@ -1,6 +1,6 @@
 import { createDb } from '@studysuite/db'
 import type { Config } from '../config.js'
-import { scrapePlanning } from '../scrape/scrape-planning.js'
+import { scrapePlanning, type ScrapeOptions } from '../scrape/scrape-planning.js'
 
 type Db = ReturnType<typeof createDb>
 
@@ -27,7 +27,12 @@ function sleep(ms: number): Promise<void> {
     })
 }
 
-export async function runWatchLoop(config: Config, db: Db, runOnce = false): Promise<void> {
+export async function runWatchLoop(
+    config: Config,
+    db: Db,
+    runOnce = false,
+    options: ScrapeOptions = {},
+): Promise<void> {
     process.on('SIGINT', () => {
         console.log('\n[scraper] Shutting down')
         process.exit(0)
@@ -38,7 +43,7 @@ export async function runWatchLoop(config: Config, db: Db, runOnce = false): Pro
         console.log(`[scraper] Starting scrape at ${new Date().toISOString()}`)
 
         try {
-            const result = await scrapePlanning(config, db)
+            const result = await scrapePlanning(config, db, options)
             console.log(
                 `[scraper] Done: ${result.events} events over ${result.weeks} weeks, ` +
                     `added ${result.added}, removed ${result.removed}, ` +
