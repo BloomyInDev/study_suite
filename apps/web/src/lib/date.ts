@@ -115,6 +115,10 @@ export const toIsoDateString = (date: Date): string => parisDayKey(date)
 export const weekdayFormat = (timestamp: { date: string }): string =>
     new Date(timestamp.date).toLocaleDateString('fr-FR', { weekday: 'long', timeZone: 'UTC' })
 
+/** Six columns on a phone leave no room for "mercredi". */
+export const weekdayShortFormat = (timestamp: { date: string }): string =>
+    new Date(timestamp.date).toLocaleDateString('fr-FR', { weekday: 'short', timeZone: 'UTC' })
+
 const isParisSunday = (date: Date): boolean => parisParts(date).weekday === 0
 
 export const nextDay = (date: Ref<Date>, increment: number): void => {

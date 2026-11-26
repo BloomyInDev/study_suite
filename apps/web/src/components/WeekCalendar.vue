@@ -10,7 +10,9 @@ import {
     skipSunday,
     toCalendarLocalDate,
     weekdayFormat,
+    weekdayShortFormat,
 } from '../lib/date.js'
+import { isPortraitPhone, usePickedCalendarView, type CalendarView } from '../lib/calendar-view.js'
 import { useNow } from '../lib/use-now.js'
 
 const props = withDefaults(
@@ -27,8 +29,27 @@ const props = withDefaults(
 
 const date = defineModel<Date>({ required: true })
 
-const { mobile } = useDisplay()
+const { mobile, width, height } = useDisplay()
 const now = useNow()
+const picked = usePickedCalendarView()
+
+// The user's pick if they made one, else one day on an upright phone and the
+// week everywhere else: rotating it or asking for the desktop site is enough.
+const view = computed<CalendarView>(
+    () => picked.value ?? (isPortraitPhone(width.value, height.value) ? 'day' : 'week'),
+)
+const showWeek = computed(() => view.value === 'week')
+// A click is an explicit pick, kept over the screen's default from then on.
+const viewModel = computed<CalendarView>({
+    get: () => view.value,
+    set: (v) => {
+        picked.value = v
+    },
+})
+// Six columns under ~960px leave no room for "mercredi".
+const weekdayFmt = computed(() =>
+    showWeek.value && width.value < 960 ? weekdayShortFormat : weekdayFormat,
+)
 
 // A Sunday renders as Mon–Sat of the ended week plus the next Monday, and pages
 // a week away from what the parent fetches (see `skipSunday`). Snap whatever
@@ -58,8 +79,8 @@ const calendarEvents = computed(() =>
     })),
 )
 
-const previous = () => previousDay(date, mobile.value ? 1 : 7)
-const next = () => nextDay(date, mobile.value ? 1 : 7)
+const previous = () => previousDay(date, showWeek.value ? 7 : 1)
+const next = () => nextDay(date, showWeek.value ? 7 : 1)
 const formatInterval = (ts: { hour: number }) => `${ts.hour}:00`
 
 const onKeydown = (e: KeyboardEvent) => {
@@ -99,6 +120,17 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
                 @click="next"
                 icon="mdi-chevron-right"
             />
+            <v-btn-toggle
+                v-model="viewModel"
+                mandatory
+                density="compact"
+                variant="outlined"
+                divided
+                class="ml-2"
+            >
+                <v-btn value="day" icon="mdi-calendar-today" aria-label="Jour" title="Jour" />
+                <v-btn value="week" icon="mdi-calendar-week" aria-label="Semaine" title="Semaine" />
+            </v-btn-toggle>
         </v-col>
         <v-col cols="auto" md="4" class="d-flex justify-end align-center ga-2">
             <slot name="append" />
@@ -111,8 +143,8 @@ onUnmounted(() => document.removeEventListener('keydown', onKeydown))
             :events="calendarEvents"
             :model-value="calendarDate"
             color="primary"
-            :type="mobile ? 'day' : 'week'"
-            :weekday-format="weekdayFormat"
+            :type="view"
+            :weekday-format="weekdayFmt"
             :weekdays="[1, 2, 3, 4, 5, 6]"
             :interval-format="formatInterval"
             :first-interval="7"
