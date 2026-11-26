@@ -3,11 +3,13 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { API_URL } from '../lib/api-url'
 import { SITE_URL } from '../lib/seo.js'
+import { useAuthStore } from '../stores/auth.js'
 import { useProvidersStore } from '../stores/providers.js'
 
 const route = useRoute()
 const error = route.query.error as string | undefined
 const providers = useProvidersStore()
+const auth = useAuthStore()
 
 // Icon and colour are a design choice, not configuration; only the name a
 // deployment calls its directory by comes from the api.
@@ -58,6 +60,14 @@ const errorMessages = computed<Record<string, string>>(() => {
                 Connectez-vous pour accéder à votre emploi du temps
             </v-card-subtitle>
             <v-card-text class="pa-6">
+                <v-alert
+                    v-if="auth.sessionExpired && !error"
+                    type="info"
+                    variant="tonal"
+                    class="mb-4"
+                >
+                    Votre session a expiré, reconnectez-vous.
+                </v-alert>
                 <v-alert v-if="error" type="error" variant="tonal" class="mb-4">
                     {{ errorMessages[error] ?? 'Une erreur est survenue.' }}
                 </v-alert>

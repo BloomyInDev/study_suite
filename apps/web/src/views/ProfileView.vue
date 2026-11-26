@@ -5,6 +5,7 @@ import GroupPickerDialog from '../components/GroupPickerDialog.vue'
 import ReminderSettingsCard from '../components/ReminderSettingsCard.vue'
 import TeacherIdentityCard from '../components/TeacherIdentityCard.vue'
 import { API_URL } from '../lib/api-url'
+import { authFetch } from '../lib/auth-fetch.js'
 import { fetchCourseTitles } from '../lib/course-titles.js'
 import { MAX_HIDDEN_COURSES } from '@studysuite/shared/hidden-courses'
 import { useHiddenCoursesStore } from '../stores/hidden-courses.js'
@@ -97,11 +98,10 @@ async function saveClass() {
     if (!classDraft.value) return
     savingGroup.value = true
     try {
-        const res = await fetch(`${API_URL}/api/auth/me/student-group`, {
+        const res = await authFetch(`${API_URL}/api/auth/me/student-group`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
             },
             body: JSON.stringify({ studentGroupId: classDraft.value }),
         })

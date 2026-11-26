@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { API_URL } from '../../lib/api-url'
-import { authHeaders } from '../../lib/auth-headers.js'
+import { authFetch } from '../../lib/auth-fetch.js'
 import { groupLabel } from '../../lib/group-label.js'
 import { useGroupsStore } from '../../stores/groups.js'
 import { useNotificationsStore } from '../../stores/notifications.js'
@@ -43,7 +43,7 @@ const canSubmit = computed(
 async function fetchMappings() {
     loading.value = true
     try {
-        const res = await fetch(`${API_URL}/api/admin/iut-mappings`, { headers: authHeaders() })
+        const res = await authFetch(`${API_URL}/api/admin/iut-mappings`)
         if (!res.ok) {
             notifs.error('Impossible de charger les liaisons')
             return
@@ -57,9 +57,9 @@ async function fetchMappings() {
 async function createMapping() {
     saving.value = true
     try {
-        const res = await fetch(`${API_URL}/api/admin/iut-mappings`, {
+        const res = await authFetch(`${API_URL}/api/admin/iut-mappings`, {
             method: 'POST',
-            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 claimValue: form.claimValue.trim(),
                 userRole: form.userRole,
@@ -84,9 +84,8 @@ async function createMapping() {
 async function removeMapping(id: string) {
     deleting.value = id
     try {
-        const res = await fetch(`${API_URL}/api/admin/iut-mappings/${id}`, {
+        const res = await authFetch(`${API_URL}/api/admin/iut-mappings/${id}`, {
             method: 'DELETE',
-            headers: authHeaders(),
         })
         if (!res.ok) {
             notifs.error('Impossible de supprimer la liaison')

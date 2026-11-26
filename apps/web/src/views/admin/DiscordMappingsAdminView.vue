@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { groupLabel } from '../../lib/group-label.js'
 import { API_URL } from '../../lib/api-url'
-import { authHeaders } from '../../lib/auth-headers.js'
+import { authFetch } from '../../lib/auth-fetch.js'
 import { ref, onMounted, computed } from 'vue'
 import { useGroupsStore } from '../../stores/groups.js'
 import { useNotificationsStore } from '../../stores/notifications.js'
@@ -64,7 +64,7 @@ const deletingMapping = ref<string | null>(null)
 async function fetchGuilds() {
     loading.value = true
     try {
-        const res = await fetch(`${API_URL}/api/admin/guilds`, { headers: authHeaders() })
+        const res = await authFetch(`${API_URL}/api/admin/guilds`)
         const body = (await res.json()) as { data: Guild[] }
         guilds.value = body.data
     } finally {
@@ -76,7 +76,7 @@ async function fetchMyDiscordGuilds() {
     loadingDiscordGuilds.value = true
     myDiscordGuilds.value = []
     try {
-        const res = await fetch(`${API_URL}/api/auth/discord/my-guilds`, { headers: authHeaders() })
+        const res = await authFetch(`${API_URL}/api/auth/discord/my-guilds`)
         if (!res.ok) {
             const body = (await res.json()) as { error: { code: string } }
             if (body.error.code === 'TOKEN_EXPIRED' || body.error.code === 'NO_TOKEN') {
@@ -107,9 +107,9 @@ function prefillGuildForm(dGuild: DiscordGuild) {
 async function addGuild() {
     savingGuild.value = true
     try {
-        const res = await fetch(`${API_URL}/api/admin/guilds`, {
+        const res = await authFetch(`${API_URL}/api/admin/guilds`, {
             method: 'POST',
-            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(guildForm.value),
         })
         if (!res.ok) throw new Error()
@@ -128,9 +128,8 @@ async function addGuild() {
 async function deleteGuild(guild: Guild) {
     deletingGuild.value = guild.id
     try {
-        await fetch(`${API_URL}/api/admin/guilds/${guild.id}`, {
+        await authFetch(`${API_URL}/api/admin/guilds/${guild.id}`, {
             method: 'DELETE',
-            headers: authHeaders(),
         })
         guilds.value = guilds.value.filter((g) => g.id !== guild.id)
         notifs.success('Serveur supprimé')
@@ -151,9 +150,9 @@ async function addMapping() {
     if (!mappingTarget.value) return
     savingMapping.value = true
     try {
-        const res = await fetch(`${API_URL}/api/admin/guilds/${mappingTarget.value.id}/mappings`, {
+        const res = await authFetch(`${API_URL}/api/admin/guilds/${mappingTarget.value.id}/mappings`, {
             method: 'POST',
-            headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(
                 mappingForm.value.userRole === 'student'
                     ? {
@@ -186,9 +185,8 @@ async function addMapping() {
 async function deleteMapping(guild: Guild, mapping: RoleMapping) {
     deletingMapping.value = mapping.id
     try {
-        await fetch(`${API_URL}/api/admin/guilds/${guild.id}/mappings/${mapping.id}`, {
+        await authFetch(`${API_URL}/api/admin/guilds/${guild.id}/mappings/${mapping.id}`, {
             method: 'DELETE',
-            headers: authHeaders(),
         })
         guild.mappings = guild.mappings.filter((m) => m.id !== mapping.id)
         notifs.success('Liaison supprimée')

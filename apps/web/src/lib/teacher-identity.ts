@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { API_URL } from './api-url'
-import { authHeaders } from './auth-headers.js'
+import { authFetch } from './auth-fetch.js'
 import { backend } from './api.js'
 import type { AuthUser } from '../stores/auth.js'
 
@@ -54,9 +54,9 @@ export async function fetchTeacherChoices(): Promise<TeacherChoice[]> {
 
 /** Links the account to a teacher, or unlinks it with null. Returns the updated profile. */
 export async function saveMyTeacher(teacherId: string | null): Promise<AuthUser> {
-    const res = await fetch(`${API_URL}/api/auth/me/teacher`, {
+    const res = await authFetch(`${API_URL}/api/auth/me/teacher`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teacherId }),
     })
     if (!res.ok) throw new Error(`PATCH /api/auth/me/teacher answered ${res.status}`)

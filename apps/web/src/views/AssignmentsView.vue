@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { API_URL } from '../lib/api-url'
-import { authHeaders } from '../lib/auth-headers.js'
+import { authFetch } from '../lib/auth-fetch.js'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useAuthStore } from '../stores/auth.js'
@@ -38,7 +38,7 @@ async function fetchAssignments() {
     loading.value = true
     try {
         const params = new URLSearchParams(ids.length > 0 ? { groupIds: ids.join(',') } : {})
-        const res = await fetch(`${API_URL}/api/assignments?${params}`, { headers: authHeaders() })
+        const res = await authFetch(`${API_URL}/api/assignments?${params}`)
         if (!res.ok) throw new Error('fetch failed')
         const body = (await res.json()) as { data: Assignment[] }
         if (seq !== fetchSeq) return
@@ -121,9 +121,8 @@ function onDeleted(id: string) {
 async function toggleDone(a: Assignment, done: boolean) {
     const method = done ? 'POST' : 'DELETE'
     try {
-        const res = await fetch(`${API_URL}/api/assignments/${a.id}/complete`, {
+        const res = await authFetch(`${API_URL}/api/assignments/${a.id}/complete`, {
             method,
-            headers: authHeaders(),
         })
         if (!res.ok) throw new Error()
         const body = (await res.json()) as { data: { completedByMe: boolean; completionCount: number } }

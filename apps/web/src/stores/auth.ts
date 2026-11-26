@@ -64,9 +64,27 @@ function readStoredUser(): AuthUser | null {
     }
 }
 
+/** Whether a JWT's `exp` has passed. A token we cannot read counts as valid: the api decides. */
+function isExpired(jwt: string): boolean {
+    try {
+        const payload = JSON.parse(atob(jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now()
+    } catch {
+        return false
+    }
+}
+
 export const useAuthStore = defineStore('auth', () => {
     const token = ref<string | null>(localStorage.getItem('auth_token'))
     const user = ref<AuthUser | null>(readStoredUser())
+
+    /**
+     * Set when the session ended on its own (expired or revoked token) rather
+     * than by a click on logout, so `App.vue` can ask the user to sign in
+     * again. Without it the app went on as a visitor in silence while every
+     * authenticated call answered 401.
+     */
+    const sessionExpired = ref(false)
 
     const isAuthenticated = computed(() => !!token.value && !!user.value)
     const isAdmin = computed(() => user.value?.isAdmin ?? false)
@@ -94,15 +112,19 @@ export const useAuthStore = defineStore('auth', () => {
         token.value = newToken
         user.value = newUser
         userFresh.value = true
+        sessionExpired.value = false
         localStorage.setItem('auth_token', newToken)
         localStorage.setItem('auth_user', JSON.stringify(newUser))
     }
 
     async function refresh(): Promise<void> {
         if (!token.value) return
+        const sent = token.value
         const res = await fetch(`${API_URL}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${token.value}` },
+            headers: { Authorization: `Bearer ${sent}` },
         })
+        noteResponse(res, sent)
+        // Anything else (a 5xx, a deploy in progress) keeps the cached session.
         if (!res.ok) return
         const { data, token: newToken } = await res.json()
         setAuth(newToken, data)
@@ -114,6 +136,26 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem('auth_token')
         localStorage.removeItem('auth_user')
     }
+
+    /** Drop a session the api no longer accepts, and say so. */
+    function expire() {
+        if (!token.value) return
+        logout()
+        sessionExpired.value = true
+    }
+
+    /**
+     * Call with the response of any request that carried `sentToken`. A 401
+     * means the api rejected that token. Comparing with the current one keeps
+     * a slow request sent before a fresh sign-in from ending the new session.
+     */
+    function noteResponse(res: Response, sentToken: string | null) {
+        if (res.status === 401 && sentToken && sentToken === token.value) expire()
+    }
+
+    // Caught before the first route guard runs, so a page that needs an
+    // account sends to /login instead of rendering with a dead token.
+    if (token.value && isExpired(token.value)) expire()
 
     return {
         token,
@@ -127,8 +169,11 @@ export const useAuthStore = defineStore('auth', () => {
         isTeacher,
         ownTeacherId,
         hasProvider,
+        sessionExpired,
         setAuth,
         refresh,
         logout,
+        expire,
+        noteResponse,
     }
 })

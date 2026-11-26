@@ -2,6 +2,7 @@ import { TERMS_VERSION } from '@studysuite/shared/legal'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { API_URL } from '../lib/api-url'
+import { authFetch } from '../lib/auth-fetch.js'
 import { useAuthStore } from './auth.js'
 
 const LS_KEY = 'study_suite_terms_version'
@@ -45,11 +46,10 @@ export const useTermsStore = defineStore('terms', () => {
     async function syncAccount(): Promise<void> {
         if (!auth.isAuthenticated || localVersion.value !== TERMS_VERSION) return
         if (auth.user?.termsAcceptedVersion === TERMS_VERSION) return
-        const res = await fetch(`${API_URL}/api/auth/me/terms`, {
+        const res = await authFetch(`${API_URL}/api/auth/me/terms`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${auth.token}`,
             },
             body: JSON.stringify({ version: TERMS_VERSION }),
         })

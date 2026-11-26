@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { groupLabel } from '../lib/group-label.js'
 import { API_URL } from '../lib/api-url'
+import { authFetch } from '../lib/auth-fetch.js'
 import { computed, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useNotificationsStore } from '../stores/notifications.js'
 import { useEventsStore } from '../stores/events.js'
-import { authHeaders } from '../lib/auth-headers.js'
 import type { Assignment, Event } from '../lib/types.js'
 import { addParisDays, formatShortDay, formatTime, parisDayStart } from '../lib/date.js'
 import { fetchCourseTitles } from '../lib/course-titles.js'
@@ -113,7 +113,7 @@ const groupItems = computed(() => {
 })
 
 async function loadWritableGroups() {
-    const res = await fetch(`${API_URL}/api/assignments/groups`, { headers: authHeaders() })
+    const res = await authFetch(`${API_URL}/api/assignments/groups`)
     if (!res.ok) return
     writable.value = ((await res.json()) as { data: { all: boolean; groupIds: string[] } }).data
     // A new assignment opens on a group the account may actually write to.
@@ -241,9 +241,9 @@ async function save() {
         const url = isEditing.value
             ? `${API_URL}/api/assignments/${props.editing!.id}`
             : `${API_URL}/api/assignments`
-        const res = await fetch(url, {
+        const res = await authFetch(url, {
             method: isEditing.value ? 'PATCH' : 'POST',
-            headers: { 'Content-Type': 'application/json', ...authHeaders() },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         })
         if (!res.ok) throw new Error('save failed')
@@ -262,9 +262,8 @@ async function deleteAssignment() {
     if (!props.editing) return
     deleting.value = true
     try {
-        const res = await fetch(`${API_URL}/api/assignments/${props.editing.id}`, {
+        const res = await authFetch(`${API_URL}/api/assignments/${props.editing.id}`, {
             method: 'DELETE',
-            headers: authHeaders(),
         })
         if (!res.ok) throw new Error('delete failed')
         emit('deleted', props.editing.id)

@@ -57,6 +57,19 @@ function logoutFromDrawer() {
     logout()
 }
 
+// The api stopped accepting the token (expired, or the account was revoked).
+// The login page says so itself, so the dialog stays off there.
+const expiredDialog = computed({
+    get: () => auth.sessionExpired && route.path !== '/login',
+    set: (open) => {
+        if (!open) auth.sessionExpired = false
+    },
+})
+
+function reconnect() {
+    void router.push('/login')
+}
+
 function toggleTheme() {
     isDark.value = !isDark.value
     theme.change(isDark.value ? 'dark' : 'light')
@@ -270,6 +283,21 @@ const navItems = [
         </v-footer>
 
         <TermsBanner />
+        <v-dialog v-model="expiredDialog" max-width="400">
+            <v-card title="Session expirée" prepend-icon="mdi-account-clock">
+                <v-card-text>
+                    Votre connexion a expiré. Reconnectez-vous pour retrouver vos devoirs et votre
+                    profil.
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn variant="text" @click="expiredDialog = false">Plus tard</v-btn>
+                    <v-btn color="primary" variant="flat" @click="reconnect">
+                        Se reconnecter
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
         <TeacherIdentityDialog />
 
         <template v-for="notif in notifs.notifications" :key="notif.id">

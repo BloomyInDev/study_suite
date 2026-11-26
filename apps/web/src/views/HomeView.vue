@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { API_URL } from '../lib/api-url'
-import { authHeaders } from '../lib/auth-headers.js'
+import { authFetch } from '../lib/auth-fetch.js'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useGroupsStore } from '../stores/groups.js'
 import { useEventsStore } from '../stores/events.js'
@@ -64,9 +64,7 @@ async function load() {
                 to: cutoff.toISOString(),
             })
             promises.push(
-                fetch(`${API_URL}/api/assignments?${params}`, {
-                    headers: authHeaders(),
-                })
+                authFetch(`${API_URL}/api/assignments?${params}`, {})
                     .then((r) => (r.ok ? r.json() : { data: [] }))
                     .then((body: { data: Assignment[] }) => {
                         assignments.value = body.data
@@ -132,9 +130,8 @@ function openDetail(a: Assignment) {
 
 async function toggleDone(a: Assignment, done: boolean) {
     const method = done ? 'POST' : 'DELETE'
-    const res = await fetch(`${API_URL}/api/assignments/${a.id}/complete`, {
+    const res = await authFetch(`${API_URL}/api/assignments/${a.id}/complete`, {
         method,
-        headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
     })
     if (!res.ok) return
     const body = (await res.json()) as { data: { completedByMe: boolean; completionCount: number } }

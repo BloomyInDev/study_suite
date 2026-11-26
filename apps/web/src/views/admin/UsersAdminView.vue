@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { groupLabel } from '../../lib/group-label.js'
 import { API_URL } from '../../lib/api-url'
+import { authFetch } from '../../lib/auth-fetch.js'
 import { backend } from '../../lib/api.js'
 import { ref, onMounted, computed, reactive } from 'vue'
 import type { AuthUser } from '../../stores/auth.js'
@@ -53,9 +54,7 @@ async function fetchTeachers() {
 async function fetchUsers() {
     loading.value = true
     try {
-        const res = await fetch(`${API_URL}/api/admin/users`, {
-            headers: { Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
-        })
+        const res = await authFetch(`${API_URL}/api/admin/users`, {})
         const body = (await res.json()) as { data: AuthUser[] }
         users.value = body.data
     } finally {
@@ -69,11 +68,10 @@ const others = computed(() => users.value.filter((u) => u.status !== 'pending'))
 async function updateUser(id: string, patch: Partial<AuthUser>) {
     saving.value = id
     try {
-        const res = await fetch(`${API_URL}/api/admin/users/${id}`, {
+        const res = await authFetch(`${API_URL}/api/admin/users/${id}`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
             },
             body: JSON.stringify(patch),
         })
